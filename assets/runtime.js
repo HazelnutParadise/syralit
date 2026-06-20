@@ -254,7 +254,11 @@
       case "header":    return el("h2", "sy-header", p.text);
       case "subheader": return el("h3", "sy-subheader", p.text);
       case "text":      return el("p", "sy-text", p.text);
-      case "markdown":  return el("div", "sy-markdown", p.text);
+      case "markdown": {
+        var md = el("div", "sy-markdown");
+        if (p.html) { md.innerHTML = p.html; } else { md.textContent = p.text || ""; }
+        return md;
+      }
       case "caption":   return el("p", "sy-caption", p.text);
       // --- Status ---
       case "status":    return el("div", "sy-status sy-status-" + p.level, p.text);

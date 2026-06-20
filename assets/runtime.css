@@ -172,6 +172,50 @@ body {
   margin: 1.25rem 0 .5rem;
 }
 .sy-text, .sy-markdown { margin: .5rem 0; }
+
+.sy-markdown h1, .sy-markdown h2, .sy-markdown h3,
+.sy-markdown h4, .sy-markdown h5, .sy-markdown h6 {
+  margin: 1rem 0 .5rem;
+}
+.sy-markdown p { margin: .5rem 0; }
+.sy-markdown ul, .sy-markdown ol { padding-left: 1.5rem; margin: .5rem 0; }
+.sy-markdown blockquote {
+  border-left: 3px solid var(--sy-border);
+  margin: .5rem 0;
+  padding: .25rem 1rem;
+  color: var(--sy-muted);
+}
+.sy-markdown pre {
+  background: var(--sy-sidebar-bg);
+  padding: .75rem 1rem;
+  border-radius: var(--sy-radius);
+  overflow-x: auto;
+  margin: .5rem 0;
+}
+.sy-markdown code {
+  background: var(--sy-sidebar-bg);
+  padding: .15rem .35rem;
+  border-radius: 4px;
+  font-size: .9em;
+}
+.sy-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.sy-markdown a { color: var(--sy-accent); text-decoration: none; }
+.sy-markdown a:hover { text-decoration: underline; }
+.sy-markdown img { max-width: 100%; border-radius: var(--sy-radius); }
+.sy-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: .5rem 0;
+}
+.sy-markdown th, .sy-markdown td {
+  border: 1px solid var(--sy-border);
+  padding: .5rem .75rem;
+  text-align: left;
+}
+.sy-markdown th { background: var(--sy-sidebar-bg); font-weight: 600; }
 .sy-caption {
   color: var(--sy-muted);
   font-size: .85rem;

@@ -1,9 +1,12 @@
 package syralit
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"strings"
+
+	"github.com/yuin/goldmark"
 )
 
 // Option configures a widget. See Key, Min, Max, Step, Placeholder, etc.
@@ -63,7 +66,14 @@ func Subheader(text string) { current().add(textNode("subheader", text)) }
 func Text(text string)      { current().add(textNode("text", text)) }
 func Caption(text string)   { current().add(textNode("caption", text)) }
 
-func Markdown(text string) { current().add(textNode("markdown", text)) }
+func Markdown(text string) {
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(text), &buf); err != nil {
+		current().add(textNode("markdown", text))
+		return
+	}
+	current().add(&Node{Type: "markdown", Props: map[string]any{"html": buf.String()}})
+}
 
 func Textf(format string, a ...any) { Text(fmt.Sprintf(format, a...)) }
 

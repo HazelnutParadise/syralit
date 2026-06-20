@@ -290,6 +290,11 @@
       case "progress":  return progressBar(node, p);
       case "link":      return linkEl(node, p);
       case "download_button": return downloadBtn(node, p);
+      case "file_uploader":   return fileUploader(node, p);
+      // --- Charts ---
+      case "line_chart":  return lineChartEl(node, p);
+      case "bar_chart":   return barChartEl(node, p);
+      case "area_chart":  return areaChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -770,5 +775,204 @@
     return a;
   }
 
+  // --- File Uploader ----------------------------------------------------
+
+  function fileUploader(node, p) {
+    var wrap = el("div", "sy-file-uploader-wrap");
+    if (p.file_name) {
+      var info = el("div", "sy-file-info");
+      info.textContent = "📄 " + p.file_name + " (" + formatSize(p.file_size || 0) + ")";
+      wrap.appendChild(info);
+    }
+    var input = document.createElement("input");
+    input.type = "file";
+    input.className = "sy-file-input";
+    input.dataset.id = node.id;
+    input.onchange = function () {
+      if (!input.files || !input.files.length) return;
+      var file = input.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        alert("File too large (max 10 MB)");
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var b64 = reader.result.split(",")[1] || "";
+        send(node.id, { name: file.name, size: file.size, type: file.type, data: b64 }, false);
+      };
+      reader.readAsDataURL(file);
+    };
+    wrap.appendChild(input);
+    return field(p.label, wrap, p.help);
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1048576).toFixed(1) + " MB";
+  }
+
+  // --- Charts (SVG) -----------------------------------------------------
+
+  var CHART_COLORS = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+
+  function svgNS(tag, attrs) {
+    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    if (attrs) { for (var k in attrs) { e.setAttribute(k, attrs[k]); } }
+    return e;
+  }
+
+  function formatNum(n) {
+    if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
+    if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + "K";
+    if (n === Math.floor(n)) return String(n);
+    return n.toFixed(1);
+  }
+
+  function chartSetup(p) {
+    var series = p.series || {};
+    var names = Object.keys(series);
+    var w = p.width || 600, h = p.height || 300;
+    var pad = { top: 20, right: 20, bottom: 30, left: 55 };
+    var plotW = w - pad.left - pad.right;
+    var plotH = h - pad.top - pad.bottom;
+    var allVals = [], maxLen = 0;
+    names.forEach(function (name) {
+      allVals = allVals.concat(series[name]);
+      maxLen = Math.max(maxLen, series[name].length);
+    });
+    var minV = allVals.length ? Math.min.apply(null, allVals) : 0;
+    var maxV = allVals.length ? Math.max.apply(null, allVals) : 1;
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    return { series: series, names: names, w: w, h: h, pad: pad, plotW: plotW, plotH: plotH, minV: minV, maxV: maxV, range: maxV - minV, maxLen: maxLen };
+  }
+
+  function chartAxes(svg, c) {
+    var cs = getComputedStyle(document.documentElement);
+    var borderC = cs.getPropertyValue("--sy-border").trim() || "#e5e7eb";
+    var mutedC = cs.getPropertyValue("--sy-muted").trim() || "#6b7280";
+    var ticks = 5;
+    for (var i = 0; i <= ticks; i++) {
+      var y = c.pad.top + c.plotH - (i / ticks) * c.plotH;
+      svg.appendChild(svgNS("line", { x1: c.pad.left, y1: y, x2: c.w - c.pad.right, y2: y, stroke: borderC, "stroke-dasharray": "3,3", "stroke-width": "1" }));
+      var val = c.minV + (i / ticks) * c.range;
+      var txt = svgNS("text", { x: c.pad.left - 8, y: y + 4, fill: mutedC, "font-size": "11", "text-anchor": "end", "font-family": "inherit" });
+      txt.textContent = formatNum(val);
+      svg.appendChild(txt);
+    }
+    svg.appendChild(svgNS("line", { x1: c.pad.left, y1: c.h - c.pad.bottom, x2: c.w - c.pad.right, y2: c.h - c.pad.bottom, stroke: borderC, "stroke-width": "1" }));
+  }
+
+  function chartLegend(names) {
+    if (names.length < 2) return null;
+    var legend = el("div", "sy-chart-legend");
+    names.forEach(function (name, i) {
+      var item = el("span", "sy-legend-item");
+      var swatch = el("span", "sy-legend-swatch");
+      swatch.style.background = CHART_COLORS[i % CHART_COLORS.length];
+      item.appendChild(swatch);
+      item.appendChild(document.createTextNode(name));
+      legend.appendChild(item);
+    });
+    return legend;
+  }
+
+  function wrapChart(svg, c) {
+    var wrap = el("div", "sy-chart-wrap");
+    wrap.appendChild(svg);
+    var legend = chartLegend(c.names);
+    if (legend) wrap.appendChild(legend);
+    return wrap;
+  }
+
+  function lineChartEl(node, p) {
+    var c = chartSetup(p);
+    if (!c.names.length) return el("div", "sy-chart-empty", "No data");
+    var svg = svgNS("svg", { viewBox: "0 0 " + c.w + " " + c.h, class: "sy-chart" });
+    svg.style.width = "100%";
+    svg.style.maxWidth = c.w + "px";
+    chartAxes(svg, c);
+    c.names.forEach(function (name, si) {
+      var vals = c.series[name];
+      var n = vals.length;
+      if (n === 0) return;
+      var pts = [];
+      for (var j = 0; j < n; j++) {
+        var x = c.pad.left + (j / (n - 1 || 1)) * c.plotW;
+        var y = c.pad.top + c.plotH - ((vals[j] - c.minV) / c.range) * c.plotH;
+        pts.push(x + "," + y);
+      }
+      svg.appendChild(svgNS("polyline", {
+        points: pts.join(" "), fill: "none",
+        stroke: CHART_COLORS[si % CHART_COLORS.length],
+        "stroke-width": "2", "stroke-linejoin": "round", "stroke-linecap": "round",
+      }));
+    });
+    return wrapChart(svg, c);
+  }
+
+  function barChartEl(node, p) {
+    var c = chartSetup(p);
+    if (!c.names.length) return el("div", "sy-chart-empty", "No data");
+    c.minV = Math.min(0, c.minV);
+    c.range = c.maxV - c.minV;
+    var svg = svgNS("svg", { viewBox: "0 0 " + c.w + " " + c.h, class: "sy-chart" });
+    svg.style.width = "100%";
+    svg.style.maxWidth = c.w + "px";
+    chartAxes(svg, c);
+    var groupW = c.plotW / c.maxLen;
+    var barW = groupW / (c.names.length + 1);
+    var baseY = c.pad.top + c.plotH - ((-c.minV) / c.range) * c.plotH;
+    c.names.forEach(function (name, si) {
+      var vals = c.series[name];
+      for (var j = 0; j < vals.length; j++) {
+        var x = c.pad.left + j * groupW + (si + 0.5) * barW;
+        var barH = (vals[j] / c.range) * c.plotH;
+        var y = vals[j] >= 0 ? baseY - barH : baseY;
+        svg.appendChild(svgNS("rect", {
+          x: x, y: y, width: barW * 0.8, height: Math.abs(barH),
+          fill: CHART_COLORS[si % CHART_COLORS.length], rx: "2",
+        }));
+      }
+    });
+    return wrapChart(svg, c);
+  }
+
+  function areaChartEl(node, p) {
+    var c = chartSetup(p);
+    if (!c.names.length) return el("div", "sy-chart-empty", "No data");
+    var svg = svgNS("svg", { viewBox: "0 0 " + c.w + " " + c.h, class: "sy-chart" });
+    svg.style.width = "100%";
+    svg.style.maxWidth = c.w + "px";
+    chartAxes(svg, c);
+    var baselineY = c.pad.top + c.plotH;
+    c.names.forEach(function (name, si) {
+      var vals = c.series[name];
+      var n = vals.length;
+      if (n === 0) return;
+      var pts = [];
+      var linePoints = [];
+      for (var j = 0; j < n; j++) {
+        var x = c.pad.left + (j / (n - 1 || 1)) * c.plotW;
+        var y = c.pad.top + c.plotH - ((vals[j] - c.minV) / c.range) * c.plotH;
+        pts.push(x + "," + y);
+        linePoints.push(x + "," + y);
+      }
+      var firstX = c.pad.left;
+      var lastX = c.pad.left + c.plotW;
+      var areaPath = "M" + firstX + "," + baselineY + " L" + pts.join(" L") + " L" + lastX + "," + baselineY + " Z";
+      var color = CHART_COLORS[si % CHART_COLORS.length];
+      svg.appendChild(svgNS("path", {
+        d: areaPath, fill: color, opacity: "0.15",
+      }));
+      svg.appendChild(svgNS("polyline", {
+        points: linePoints.join(" "), fill: "none",
+        stroke: color, "stroke-width": "2", "stroke-linejoin": "round",
+      }));
+    });
+    return wrapChart(svg, c);
+  }
+
   connect();
 })();
+

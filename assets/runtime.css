@@ -717,6 +717,83 @@ body {
   text-decoration: none;
 }
 
+/* --- File Uploader ----------------------------------------------------- */
+
+.sy-file-uploader-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.sy-file-input {
+  font: inherit;
+  font-size: .9rem;
+  cursor: pointer;
+}
+.sy-file-input::file-selector-button {
+  padding: .4rem .8rem;
+  border: 1px solid var(--sy-border);
+  border-radius: calc(var(--sy-radius) * 0.6);
+  background: var(--sy-bg);
+  color: var(--sy-fg);
+  font: inherit;
+  font-size: .85rem;
+  cursor: pointer;
+  margin-right: .6rem;
+  transition: background .15s;
+}
+.sy-file-input::file-selector-button:hover {
+  background: var(--sy-hover);
+}
+
+.sy-file-info {
+  font-size: .88rem;
+  color: var(--sy-fg);
+  padding: .3rem .5rem;
+  background: var(--sy-hover);
+  border-radius: calc(var(--sy-radius) * 0.5);
+}
+
+/* --- Charts ------------------------------------------------------------ */
+
+.sy-chart-wrap {
+  margin: .75rem 0;
+}
+
+.sy-chart {
+  display: block;
+}
+
+.sy-chart-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--sy-muted);
+  font-size: .9rem;
+}
+
+.sy-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: .5rem;
+  padding-left: .25rem;
+}
+
+.sy-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .82rem;
+  color: var(--sy-muted);
+}
+
+.sy-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
 /* --- Mobile Sidebar ---------------------------------------------------- */
 
 .sy-sidebar-toggle {

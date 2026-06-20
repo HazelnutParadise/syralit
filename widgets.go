@@ -1,6 +1,9 @@
 package syralit
 
-import "fmt"
+import (
+	"encoding/base64"
+	"fmt"
+)
 
 // Option configures a widget. See Key, Min, Max, Step, Placeholder, etc.
 type Option func(*widgetOpts)
@@ -360,6 +363,47 @@ func Toggle(label string, opts ...Option) bool {
 	}
 	rc.add(&Node{ID: id, Type: "toggle", Props: props})
 	return b
+}
+
+// UploadedFile holds the data from a FileUploader widget.
+type UploadedFile struct {
+	Name string
+	Size int64
+	Type string
+	Data []byte
+}
+
+// FileUploader renders a file upload widget and returns the uploaded file (or
+// nil if nothing has been uploaded). The file data is sent as base64 over the
+// WebSocket, so this is suited for files up to a few MB.
+func FileUploader(label string, opts ...Option) *UploadedFile {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("file_uploader", o.key)
+	val, _ := rc.sess.widgetValue(id)
+
+	var file *UploadedFile
+	if m, ok := val.(map[string]any); ok {
+		name, _ := m["name"].(string)
+		size := toFloat64(m["size"])
+		typ, _ := m["type"].(string)
+		dataStr, _ := m["data"].(string)
+		data, err := base64.StdEncoding.DecodeString(dataStr)
+		if err == nil && name != "" {
+			file = &UploadedFile{Name: name, Size: int64(size), Type: typ, Data: data}
+		}
+	}
+
+	props := map[string]any{"label": label}
+	if file != nil {
+		props["file_name"] = file.Name
+		props["file_size"] = file.Size
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "file_uploader", Props: props})
+	return file
 }
 
 func toFloat64(v any) float64 {

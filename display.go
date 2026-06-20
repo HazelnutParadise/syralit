@@ -175,6 +175,42 @@ func Video(src string, opts ...Option) {
 	current().add(&Node{Type: "video", Props: props})
 }
 
+// Echo displays source code alongside its output. Pass the code text and a
+// function that produces the output widgets.
+func Echo(code string, fn func()) {
+	Code(code, Language("go"))
+	fn()
+}
+
+// DataEditor renders an editable data table. Returns the current rows,
+// reflecting any edits made by the user. Each cell edit triggers a rerun.
+func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("data_editor", o.key)
+	val, hasVal := rc.sess.widgetValue(id)
+	if hasVal {
+		if edited, ok := val.([]any); ok {
+			result := make([][]any, len(edited))
+			for i, row := range edited {
+				if r, ok := row.([]any); ok {
+					result[i] = r
+				}
+			}
+			rows = result
+		}
+	}
+	props := map[string]any{"headers": headers, "rows": rows}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	rc.add(&Node{ID: id, Type: "data_editor", Props: props})
+	return rows
+}
+
 // Toast shows a brief notification that auto-dismisses. Level is one of
 // "info", "success", "warning", "error".
 func Toast(text string, level ...string) {

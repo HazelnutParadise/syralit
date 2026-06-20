@@ -331,6 +331,7 @@
       case "audio":      return audioEl(node, p);
       case "video":      return videoEl(node, p);
       case "dataframe":  return dataframeEl(node, p);
+      case "data_editor": return dataEditorEl(node, p);
       case "dialog":     return dialogEl(node, p);
       case "html":       return htmlEl(node, p);
       case "latex":      return latexEl(node, p);
@@ -994,6 +995,56 @@
   }
 
   // --- Dialog (modal) ---------------------------------------------------
+
+  function dataEditorEl(node, p) {
+    var headers = p.headers || [];
+    var rows = (p.rows || []).map(function (r) { return (r || []).slice(); });
+    var disabled = !!p.disabled;
+
+    var wrap = el("div", "sy-dataframe-wrap sy-data-editor");
+    if (p.height) wrap.style.maxHeight = p.height + "px";
+    wrap.style.overflowY = "auto";
+
+    var t = document.createElement("table");
+    t.className = "sy-table sy-dataframe";
+    var thead = document.createElement("thead");
+    var tr = document.createElement("tr");
+    headers.forEach(function (h) {
+      var th = document.createElement("th");
+      th.textContent = h;
+      tr.appendChild(th);
+    });
+    thead.appendChild(tr);
+    t.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    rows.forEach(function (row, ri) {
+      var tr2 = document.createElement("tr");
+      (row || []).forEach(function (cell, ci) {
+        var td = document.createElement("td");
+        if (disabled) {
+          td.textContent = cell == null ? "" : String(cell);
+        } else {
+          var inp = document.createElement("input");
+          inp.type = "text";
+          inp.className = "sy-data-editor-input";
+          inp.value = cell == null ? "" : String(cell);
+          inp.onchange = function () {
+            var v = inp.value;
+            var num = parseFloat(v);
+            rows[ri][ci] = (v !== "" && !isNaN(num) && String(num) === v) ? num : v;
+            send(node.id, rows, false);
+          };
+          td.appendChild(inp);
+        }
+        tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    });
+    t.appendChild(tbody);
+    wrap.appendChild(t);
+    return wrap;
+  }
 
   function dialogEl(node, p) {
     var outer = el("div", "sy-dialog-backdrop" + (p.open ? " sy-dialog-open" : ""));

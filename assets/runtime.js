@@ -414,21 +414,58 @@
   }
 
   function selectBox(node, p) {
-    var sel = document.createElement("select");
-    sel.className = "sy-select";
-    sel.dataset.id = node.id;
-    if (p.disabled) sel.disabled = true;
-    (p.options || []).forEach(function (opt) {
-      var o = document.createElement("option");
-      o.value = opt;
-      o.textContent = opt;
-      if (opt === p.value) o.selected = true;
-      sel.appendChild(o);
-    });
-    sel.onchange = function () {
-      if (!inForm(sel)) send(node.id, sel.value, false);
-    };
-    return field(p.label, sel, p.help);
+    var options = p.options || [];
+    if (options.length <= 20) {
+      var sel = document.createElement("select");
+      sel.className = "sy-select";
+      sel.dataset.id = node.id;
+      if (p.disabled) sel.disabled = true;
+      options.forEach(function (opt) {
+        var o = document.createElement("option");
+        o.value = opt;
+        o.textContent = opt;
+        if (opt === p.value) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.onchange = function () {
+        if (!inForm(sel)) send(node.id, sel.value, false);
+      };
+      return field(p.label, sel, p.help, p.label_visibility);
+    }
+    var wrap = el("div", "sy-searchable-select");
+    wrap.dataset.id = node.id;
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "sy-input";
+    input.value = p.value || "";
+    input.placeholder = "Type to search...";
+    if (p.disabled) input.disabled = true;
+    var dropdown = el("div", "sy-searchable-dropdown");
+    dropdown.style.display = "none";
+
+    function showFiltered(query) {
+      dropdown.innerHTML = "";
+      var q = query.toLowerCase();
+      var matches = options.filter(function (o) { return o.toLowerCase().indexOf(q) >= 0; });
+      matches.slice(0, 50).forEach(function (opt) {
+        var item = el("div", "sy-searchable-item", opt);
+        item.onmousedown = function (e) {
+          e.preventDefault();
+          input.value = opt;
+          dropdown.style.display = "none";
+          if (!inForm(wrap)) send(node.id, opt, false);
+        };
+        dropdown.appendChild(item);
+      });
+      dropdown.style.display = matches.length ? "" : "none";
+    }
+
+    input.onfocus = function () { showFiltered(input.value); };
+    input.oninput = function () { showFiltered(input.value); };
+    input.onblur = function () { setTimeout(function () { dropdown.style.display = "none"; }, 150); };
+    wrap.appendChild(input);
+    wrap.appendChild(dropdown);
+    return field(p.label, wrap, p.help, p.label_visibility);
   }
 
   function button(node, p) {

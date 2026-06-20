@@ -163,6 +163,35 @@ body {
   padding: .4rem .75rem;
 }
 
+/* --- Searchable Select ------------------------------------------------- */
+
+.sy-searchable-select {
+  position: relative;
+}
+
+.sy-searchable-dropdown {
+  position: absolute;
+  z-index: 100;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  margin-top: 2px;
+}
+
+.sy-searchable-item {
+  padding: .5rem .75rem;
+  cursor: pointer;
+  font-size: .875rem;
+}
+
+.sy-searchable-item:hover {
+  background: var(--sy-sidebar-bg);
+}
+
 /* --- Loading State ----------------------------------------------------- */
 
 .sy-loading {

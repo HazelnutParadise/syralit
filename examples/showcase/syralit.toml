@@ -1,0 +1,7 @@
+title = "Syralit Showcase"
+port = 8601
+
+[theme]
+mode = "system"
+accent = "#7C3AED"
+radius = "12px"

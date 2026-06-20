@@ -24,11 +24,11 @@ func main() {
 
 ### Input Widgets
 
-TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox, Toggle, Radio, SelectBox (auto-searchable for 20+ options), MultiSelect, DateInput, TimeInput, ColorPicker, FileUploader, CameraInput, Button, ChatInput
+TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox, Toggle, Radio, SelectBox (auto-searchable for 20+ options), MultiSelect, DateInput, TimeInput, ColorPicker, FileUploader, CameraInput, Button, ChatInput, SegmentedControl, Pills, Pagination
 
 ### Display
 
-Title, Header, Subheader, Text, Markdown, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables), Link, LinkButton, Metric (with delta), Progress, Spinner, Map (Leaflet.js)
+Title, Header, Subheader, Text, Markdown, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables), Link, LinkButton, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output)
 
 ### Layout
 

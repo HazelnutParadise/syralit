@@ -53,7 +53,7 @@ Examples auto-pick the next free port if 8600 is taken (e.g. 8601), and log the 
 - Match existing file/style: option-pattern constructors (`type Option func(*widgetOpts)`, e.g. `sy.Key`, `sy.DefaultValue`, `sy.Height`, `sy.ChartTitle`). New widgets follow the same shape.
 - Built-in charts go through `chartProps` in `chart.go` (Chart.js). External chart libs (Vega-Lite, Plotly, Bokeh, deck.gl) are CDN-lazy-loaded from a JSON spec — follow the existing pattern when adding more.
 - Keep the public API Streamlit-flavored where a clear equivalent exists.
-- Examples live in `examples/`; the agent skill lives in `Skills/syralit-dev/SKILL.md`. Update both when adding user-facing features.
+- Examples live in `examples/`; the agent skill lives in `skills/syralit-dev/SKILL.md`. Update both when adding user-facing features.
 
 ## Workflow notes
 

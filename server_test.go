@@ -235,6 +235,113 @@ func TestMultiPage(t *testing.T) {
 	}
 }
 
+// TestQueryParams verifies that URL query parameters are passed through to the
+// Go code via QueryParam/QueryParams.
+func TestQueryParams(t *testing.T) {
+	app := func() {
+		name := QueryParam("name")
+		if name != "" {
+			Text("Hello, " + name)
+		} else {
+			Text("No name")
+		}
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Connect with query params.
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws?name=Alice"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Hello, Alice"); !ok {
+		t.Fatal("expected QueryParam to return 'Alice'")
+	}
+}
+
+// TestDataEditor verifies the DataEditor widget renders and accepts edits.
+func TestDataEditor(t *testing.T) {
+	app := func() {
+		rows := DataEditor(
+			[]string{"Name", "Score"},
+			[][]any{{"Alice", 95}, {"Bob", 82}},
+			Key("editor"),
+		)
+		if len(rows) > 0 {
+			Textf("First: %v", rows[0])
+		}
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := nodeByID(nodes, "editor"); !ok {
+		t.Fatal("data_editor widget not found")
+	}
+
+	// Edit the table.
+	sendChange(t, ctx, c, "editor", []any{[]any{"Carol", 100}, []any{"Dave", 77}}, false)
+	nodes = readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Carol"); !ok {
+		t.Fatal("expected edited data to be reflected")
+	}
+}
+
+// TestStatusContainer verifies the Status container renders with children.
+func TestStatusContainer(t *testing.T) {
+	app := func() {
+		Status("Loading", "running", func() {
+			Text("Processing...")
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "status_container" {
+			props, _ := n["props"].(map[string]any)
+			if props["label"] == "Loading" && props["state"] == "running" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("status_container not found in render output")
+	}
+}
+
 func TestIndexServed(t *testing.T) {
 	srv := httptest.NewServer((&server{cfg: Config{Title: "T"}, appFn: func() {}}).handler())
 	defer srv.Close()

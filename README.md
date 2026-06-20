@@ -1,13 +1,141 @@
 # Syralit
 
-Syralit is a Go-native, Streamlit-inspired framework for building interactive data apps, dashboards, reports, and AI tool interfaces.
+Syralit is a Go-native framework for building interactive data apps, dashboards, and AI tool interfaces — inspired by Streamlit, designed for Go.
 
-It is designed to work beautifully with Insyra, while remaining useful as a standalone Go framework.
+Write Go functions, get a live web app. No JavaScript, no HTML templates, no frontend build step.
 
-## Status
+```go
+package main
 
-Syralit is currently in early development.
+import sy "github.com/HazelnutParadise/syralit"
 
-## Goal
+func main() {
+    sy.App(func() {
+        sy.Title("Hello Syralit")
+        name := sy.TextInput("Your name")
+        if name != "" {
+            sy.Success("Hello, " + name + "!")
+        }
+    })
+}
+```
 
-Turn Go code into interactive data apps.
+## Features
+
+### Input Widgets
+
+TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox, Toggle, Radio, SelectBox (auto-searchable for 20+ options), MultiSelect, DateInput, TimeInput, ColorPicker, FileUploader, CameraInput, Button, ChatInput
+
+### Display
+
+Title, Header, Subheader, Text, Markdown, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables), Link, LinkButton, Metric (with delta), Progress, Spinner, Map (Leaflet.js)
+
+### Layout
+
+Columns, WeightedColumns, Tabs, Sidebar, Expander, Container, Form, Status, Popover, Empty, Fragment, Divider
+
+### Charts
+
+LineChart, BarChart, AreaChart, ScatterChart, PieChart — all with title and x-axis label support
+
+### State & Navigation
+
+- Session state: `sy.State("key", defaultVal)` with `.Get()` / `.Set()`
+- Multi-page apps: `sy.AddPage(title, fn, PageIcon(), PageOrder())`
+- Page switching: `sy.SwitchPage(title)`
+- Query parameters: `sy.QueryParam("key")`, `sy.QueryParams()`
+- Flow control: `sy.Stop()`, `sy.Rerun()`
+
+### Feedback
+
+Toast notifications, Balloons, Snow, Dialog (modal), Error/Warning/Info/Success status blocks
+
+### Performance
+
+- Fragment: wrap a function with `sy.Fragment(key, fn)` for partial reruns — only the fragment re-renders on widget change, not the entire app
+- Caching: `sy.CacheData(key, fn)` and `sy.CacheResource(key, fn)` with optional `sy.TTL()`
+
+### Configuration
+
+- `syralit.toml` for file-based config (title, host, port, theme)
+- Runtime: `sy.SetPageConfig(PageTitle(), PageLayout(), ConfigIcon(), ConfigLogo())`
+- Theme: built-in light/dark toggle, custom colors via `PrimaryColor()`, `BackgroundColor()`, `TextColor()`
+- Secrets management: `sy.Secrets("key")` reads from `[secrets]` in config
+
+### Developer Experience
+
+- `syralit dev` — hot reload with state preservation across rebuilds
+- `syralit new <name>` — scaffold a new project
+- `syralit run` — build and run in production mode
+- Responsive mobile layout, loading states, error recovery with stack traces
+
+## Installation
+
+```bash
+go install github.com/HazelnutParadise/syralit/cmd/syralit@latest
+```
+
+## Quick Start
+
+```bash
+syralit new myapp
+cd myapp
+syralit dev
+```
+
+## Insyra Integration
+
+Syralit has first-class support for [Insyra](https://github.com/HazelnutParadise/insyra) DataTables via the `syinsyra` adapter package. The core framework never imports Insyra — the integration is cleanly separated.
+
+```go
+import syi "github.com/HazelnutParadise/syralit/integrations/insyra"
+
+syi.Table(dt)                           // render a DataTable
+syi.Preview(dt, 5)                      // first 5 rows
+syi.EditableTable(dt)                   // editable DataTable
+col := syi.ColumnSelect("Column", dt)   // column picker dropdown
+syi.Metrics(dt, col)                    // count, mean, min, max
+syi.BarChart(dt, "Category", "Value")   // chart from DataTable columns
+```
+
+## Example
+
+Multi-page app with sidebar, charts, and state:
+
+```go
+package main
+
+import sy "github.com/HazelnutParadise/syralit"
+
+func init() {
+    sy.AddPage("Dashboard", dashboard, sy.PageIcon("📊"), sy.PageOrder(1))
+    sy.AddPage("Settings", settings, sy.PageIcon("⚙️"), sy.PageOrder(2))
+}
+
+func main() { sy.App(nil) }
+
+func dashboard() {
+    sy.Title("Dashboard")
+    
+    cols := sy.Columns(3)
+    cols[0](func() { sy.Metric("Users", "1,234", sy.Delta("+12%")) })
+    cols[1](func() { sy.Metric("Revenue", "$5.6K", sy.Delta("+8%")) })
+    cols[2](func() { sy.Metric("Uptime", "99.9%") })
+    
+    sy.LineChart([]float64{10, 25, 18, 42, 35, 60}, sy.ChartTitle("Growth"))
+}
+
+func settings() {
+    sy.Title("Settings")
+    theme := sy.SelectBox("Theme", []string{"Light", "Dark", "Auto"})
+    sy.Info("Selected: " + theme)
+}
+```
+
+## Requirements
+
+- Go 1.25+
+
+## License
+
+MIT

@@ -342,6 +342,8 @@
       case "data_editor": return dataEditorEl(node, p);
       case "dialog":     return dialogEl(node, p);
       case "html":       return htmlEl(node, p);
+      case "component":  return componentEl(node, p);
+      case "iframe":     return iframeEl(node, p);
       case "latex":      return latexEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
@@ -1121,6 +1123,7 @@
     var headers = p.headers || [];
     var rows = (p.rows || []).map(function (r) { return (r || []).slice(); });
     var disabled = !!p.disabled;
+    var colCfg = p.column_config || {};
 
     var wrap = el("div", "sy-dataframe-wrap sy-data-editor");
     if (p.height) wrap.style.maxHeight = p.height + "px";
@@ -1133,6 +1136,8 @@
     headers.forEach(function (h) {
       var th = document.createElement("th");
       th.textContent = h;
+      var cfg = colCfg[h] || {};
+      if (cfg.width) th.style.width = cfg.width + "px";
       tr.appendChild(th);
     });
     thead.appendChild(tr);
@@ -1143,17 +1148,53 @@
       var tr2 = document.createElement("tr");
       (row || []).forEach(function (cell, ci) {
         var td = document.createElement("td");
+        var colName = headers[ci] || "";
+        var cfg = colCfg[colName] || {};
+        var colType = cfg.type || "text";
+
         if (disabled) {
-          td.textContent = cell == null ? "" : String(cell);
+          if (colType === "checkbox") {
+            td.textContent = cell ? "✓" : "✗";
+          } else {
+            td.textContent = cell == null ? "" : String(cell);
+          }
+        } else if (colType === "checkbox") {
+          var cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = !!cell;
+          cb.onchange = function () {
+            rows[ri][ci] = cb.checked;
+            send(node.id, rows, false);
+          };
+          td.appendChild(cb);
+        } else if (colType === "select" && cfg.options) {
+          var sel = document.createElement("select");
+          sel.className = "sy-data-editor-input";
+          cfg.options.forEach(function (opt) {
+            var o = document.createElement("option");
+            o.value = opt;
+            o.textContent = opt;
+            if (String(cell) === opt) o.selected = true;
+            sel.appendChild(o);
+          });
+          sel.onchange = function () {
+            rows[ri][ci] = sel.value;
+            send(node.id, rows, false);
+          };
+          td.appendChild(sel);
         } else {
           var inp = document.createElement("input");
-          inp.type = "text";
+          inp.type = colType === "number" ? "number" : "text";
           inp.className = "sy-data-editor-input";
           inp.value = cell == null ? "" : String(cell);
           inp.onchange = function () {
             var v = inp.value;
-            var num = parseFloat(v);
-            rows[ri][ci] = (v !== "" && !isNaN(num) && String(num) === v) ? num : v;
+            if (colType === "number") {
+              rows[ri][ci] = v === "" ? 0 : parseFloat(v);
+            } else {
+              var num = parseFloat(v);
+              rows[ri][ci] = (v !== "" && !isNaN(num) && String(num) === v) ? num : v;
+            }
             send(node.id, rows, false);
           };
           td.appendChild(inp);
@@ -1274,6 +1315,35 @@
     var div = el("div", "sy-html");
     div.innerHTML = p.html || "";
     return div;
+  }
+
+  // --- Custom Component / IFrame -----------------------------------------
+
+  function componentEl(node, p) {
+    var iframe = document.createElement("iframe");
+    iframe.className = "sy-component";
+    iframe.style.border = "none";
+    iframe.style.width = (p.width || 100) + (p.width ? "px" : "%");
+    iframe.style.height = (p.height || 300) + "px";
+    iframe.srcdoc = p.html || "";
+    iframe.sandbox = "allow-scripts allow-same-origin";
+
+    window.addEventListener("message", function (ev) {
+      if (ev.source === iframe.contentWindow && ev.data && ev.data.syralitValue !== undefined) {
+        send(node.id, ev.data.syralitValue, false);
+      }
+    });
+    return iframe;
+  }
+
+  function iframeEl(node, p) {
+    var iframe = document.createElement("iframe");
+    iframe.className = "sy-iframe";
+    iframe.style.border = "none";
+    iframe.style.width = (p.width || 100) + (p.width ? "px" : "%");
+    iframe.style.height = (p.height || 400) + "px";
+    iframe.src = p.url || "";
+    return iframe;
   }
 
   // --- Audio / Video -----------------------------------------------------

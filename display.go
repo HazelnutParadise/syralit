@@ -229,6 +229,39 @@ func WriteStream(fn func(yield func(string)), opts ...Option) {
 	rc.sess.setWidget(id, buf.String())
 }
 
+// Component renders a custom HTML/JS widget. The html parameter is rendered
+// inside an iframe. The component can communicate with Syralit by calling
+// parent.postMessage({syralitValue: value}, "*") to set its return value.
+// Returns the last value sent by the component, or nil.
+func Component(html string, opts ...Option) any {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("component", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	props := map[string]any{"html": html}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	rc.add(&Node{ID: id, Type: "component", Props: props})
+	return val
+}
+
+// IFrame renders an external URL in an iframe.
+func IFrame(url string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"url": url}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "iframe", Props: props})
+}
+
 // Audio renders an HTML audio player. src can be a URL or data URI.
 func Audio(src string, opts ...Option) {
 	current().add(&Node{Type: "audio", Props: map[string]any{"src": src}})
@@ -252,8 +285,23 @@ func Echo(code string, fn func()) {
 	fn()
 }
 
+// ColumnConfig defines the type and options for a DataEditor column.
+type ColumnConfig struct {
+	Type    string   // "text" (default), "number", "checkbox", "select"
+	Options []string // for "select" type: dropdown options
+	Width   int      // optional column width in pixels
+}
+
+// ColConfig is an Option that sets column configurations for DataEditor.
+func ColConfig(configs map[string]ColumnConfig) Option {
+	return func(o *widgetOpts) {
+		o.colConfig = configs
+	}
+}
+
 // DataEditor renders an editable data table. Returns the current rows,
 // reflecting any edits made by the user. Each cell edit triggers a rerun.
+// Use ColConfig() to set column types (text, number, checkbox, select).
 func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
 	rc := current()
 	o := applyOpts(opts)
@@ -276,6 +324,20 @@ func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
 	}
 	if o.disabled {
 		props["disabled"] = true
+	}
+	if o.colConfig != nil {
+		cc := map[string]any{}
+		for col, cfg := range o.colConfig {
+			entry := map[string]any{"type": cfg.Type}
+			if len(cfg.Options) > 0 {
+				entry["options"] = cfg.Options
+			}
+			if cfg.Width > 0 {
+				entry["width"] = cfg.Width
+			}
+			cc[col] = entry
+		}
+		props["column_config"] = cc
 	}
 	rc.add(&Node{ID: id, Type: "data_editor", Props: props})
 	return rows

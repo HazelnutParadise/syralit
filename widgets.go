@@ -36,6 +36,7 @@ type widgetOpts struct {
 	labelVisibility string // "visible" (default), "hidden", "collapsed"
 	title           string
 	xLabels         []string
+	colConfig       map[string]ColumnConfig
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }

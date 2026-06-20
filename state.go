@@ -1,8 +1,10 @@
 package syralit
 
 import (
+	"database/sql"
 	"os"
 	"reflect"
+	"sync"
 )
 
 // coerceNumeric converts a JSON-decoded number (float64) back to the declared
@@ -131,6 +133,141 @@ func QueryParam(key string) string {
 	rc.sess.mu.Lock()
 	defer rc.sess.mu.Unlock()
 	return rc.sess.queryParams[key]
+}
+
+// --- Connection --------------------------------------------------------
+
+var (
+	connMu    sync.Mutex
+	connCache = map[string]*sql.DB{}
+)
+
+// Connection returns a cached *sql.DB for the given name. The DSN is read
+// from Secrets(name + "_DSN") or the [connections.<name>] section of
+// syralit.toml. The driver must be registered by importing the appropriate
+// database/sql driver package (e.g., _ "github.com/mattn/go-sqlite3").
+//
+//	db := sy.Connection("mydb")
+//	rows, _ := db.Query("SELECT * FROM users")
+func Connection(name string) *sql.DB {
+	connMu.Lock()
+	defer connMu.Unlock()
+
+	if db, ok := connCache[name]; ok {
+		return db
+	}
+
+	dsn := Secrets(name + "_DSN")
+	if dsn == "" {
+		dsn = Secrets(name)
+	}
+
+	driver := Secrets(name + "_DRIVER")
+	if driver == "" {
+		driver = "sqlite3"
+	}
+
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		panic("syralit: connection " + name + ": " + err.Error())
+	}
+	connCache[name] = db
+	return db
+}
+
+// SQLQuery executes a SQL query and returns the results as headers and rows,
+// ready to pass to DataFrame or DataEditor.
+func SQLQuery(db *sql.DB, query string, args ...any) ([]string, [][]any) {
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		Error("SQL error: " + err.Error())
+		return nil, nil
+	}
+	defer rows.Close()
+
+	cols, _ := rows.Columns()
+	var result [][]any
+	for rows.Next() {
+		values := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range values {
+			ptrs[i] = &values[i]
+		}
+		if err := rows.Scan(ptrs...); err != nil {
+			continue
+		}
+		row := make([]any, len(cols))
+		for i, v := range values {
+			if b, ok := v.([]byte); ok {
+				row[i] = string(b)
+			} else {
+				row[i] = v
+			}
+		}
+		result = append(result, row)
+	}
+	return cols, result
+}
+
+// --- Auth ---------------------------------------------------------------
+
+// User returns the current session's authenticated user info. Returns nil
+// if no user is logged in.
+func User() map[string]string {
+	sess := current().sess
+	sess.mu.Lock()
+	defer sess.mu.Unlock()
+	if u, ok := sess.store["__syralit_user"].(map[string]string); ok {
+		return u
+	}
+	return nil
+}
+
+// Login sets the current session's authenticated user. Call this after
+// validating credentials.
+func Login(user map[string]string) {
+	sess := current().sess
+	sess.mu.Lock()
+	sess.store["__syralit_user"] = user
+	sess.mu.Unlock()
+}
+
+// Logout clears the current session's authenticated user.
+func Logout() {
+	sess := current().sess
+	sess.mu.Lock()
+	delete(sess.store, "__syralit_user")
+	sess.mu.Unlock()
+}
+
+// LoginGate renders a login form and blocks the rest of the app until the
+// user authenticates. The check function receives (username, password) and
+// returns true if the credentials are valid. Returns the logged-in username.
+//
+//	user := sy.LoginGate(func(u, p string) bool {
+//	    return u == "admin" && p == sy.Secrets("ADMIN_PASS")
+//	})
+//	sy.Title("Welcome, " + user)
+func LoginGate(check func(username, password string) bool) string {
+	u := User()
+	if u != nil {
+		return u["username"]
+	}
+
+	Title("Login")
+	username := TextInput("Username", Key("__login_user"), Placeholder("Username"))
+	password := PasswordInput("Password", Key("__login_pass"))
+
+	if Button("Login", Key("__login_btn")) {
+		if check(username, password) {
+			Login(map[string]string{"username": username})
+			Rerun()
+		} else {
+			Error("Invalid credentials")
+		}
+	}
+	Stop()
+	return ""
 }
 
 // Secrets returns a secret value from the [secrets] section of syralit.toml,

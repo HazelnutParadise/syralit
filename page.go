@@ -97,6 +97,58 @@ func SwitchPage(title string) {
 	Stop()
 }
 
+// Page represents a page definition for use with Navigation.
+type Page struct {
+	Title string
+	Fn    func()
+	Icon  string
+}
+
+// Navigation provides a declarative way to define multi-page apps inline.
+// It registers pages, renders the active one, and returns the active page title.
+// Unlike AddPage (which is called in init()), Navigation is called inside the
+// app function and can be used with dynamic page lists.
+//
+//	active := sy.Navigation([]sy.Page{
+//	    {Title: "Home", Fn: homePage, Icon: "🏠"},
+//	    {Title: "Settings", Fn: settingsPage, Icon: "⚙️"},
+//	})
+func Navigation(pages []Page) string {
+	rc := current()
+	for i, p := range pages {
+		found := false
+		for _, existing := range pageRegistry {
+			if existing.title == p.Title {
+				found = true
+				break
+			}
+		}
+		if !found {
+			entry := pageEntry{title: p.Title, fn: p.Fn, icon: p.Icon, order: i + 1}
+			pageRegistry = append(pageRegistry, entry)
+		}
+	}
+
+	active := rc.sess.activePage()
+	found := false
+	for _, p := range pages {
+		if p.Title == active {
+			found = true
+			break
+		}
+	}
+	if !found && len(pages) > 0 {
+		active = pages[0].Title
+		rc.sess.setCurrentPage(active)
+	}
+
+	fn := pageByTitle(active)
+	if fn != nil {
+		fn()
+	}
+	return active
+}
+
 // resetPages clears the registry (for tests only).
 func resetPages() {
 	pageRegistry = nil

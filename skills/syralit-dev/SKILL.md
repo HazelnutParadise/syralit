@@ -418,13 +418,24 @@ sy.WriteStream("response", func(w func(string)) {
 ```go
 import syi "github.com/HazelnutParadise/syralit/integrations/insyra"
 
+// DataTable (multi-column)
 syi.Table(dt)                           // render DataTable
 syi.Preview(dt, 5)                      // first N rows
 syi.EditableTable(dt, sy.Key("edit"))   // editable
-syi.Metrics(dt, "column")              // statistics
+syi.Metrics(dt, "column")              // statistics for one column
 syi.BarChart(dt, "x_col", "y_col")     // chart from columns
 col := syi.ColumnSelect("Pick", dt)    // column picker
+
+// DataList (single series) — symmetric helpers
+syi.List(dl)                            // single-column table
+syi.ListPreview(dl, 5)                  // first N values
+syi.EditableList(dl, sy.Key("edl"))     // editable → []any
+syi.ListMetrics(dl)                     // count, mean, min, max
+syi.ListBarChart(dl)                    // also ListLineChart / ListAreaChart
+syi.Histogram(dl, 20)                   // distribution (list-only)
 ```
+Note: name a column/list with `insyra.NewDataList(vals...).SetName("X")` so
+`GetColByName` and table/chart headers work.
 
 ## Common Mistakes
 1. **Missing Key in loops/conditionals**: Widgets in `if` blocks or loops need explicit `sy.Key()` for stable identity.

@@ -335,11 +335,12 @@ sy.UseContainerWidth()      // make a button span its container
 
 ## Insyra Integration
 
-Syralit has first-class support for [Insyra](https://github.com/HazelnutParadise/insyra) DataTables via a cleanly separated adapter package. The core framework never imports Insyra.
+Syralit has first-class support for [Insyra](https://github.com/HazelnutParadise/insyra) `DataTable` and `DataList` via a cleanly separated adapter package. The core framework never imports Insyra.
 
 ```go
 import syi "github.com/HazelnutParadise/syralit/integrations/insyra"
 
+// DataTable (multi-column)
 syi.Table(dt)                           // render DataTable
 syi.Preview(dt, 5)                      // first N rows
 syi.EditableTable(dt, sy.Key("edit"))   // editable DataTable
@@ -348,6 +349,16 @@ syi.Metrics(dt, col)                    // count, mean, min, max
 syi.BarChart(dt, "Category", "Value")   // chart from columns
 syi.LineChart(dt, "Month", "Revenue")
 syi.ScatterChart(dt, "X", "Y")
+
+// DataList (single series) — the symmetric counterpart
+syi.List(dl)                            // single-column table
+syi.ListPreview(dl, 5)                  // first N values
+syi.EditableList(dl, sy.Key("edl"))     // editable single column → []any
+syi.ListMetrics(dl)                     // count, mean, min, max
+syi.ListBarChart(dl)                    // value over index
+syi.ListLineChart(dl)
+syi.ListAreaChart(dl)
+syi.Histogram(dl, 20)                   // distribution (list-only)
 ```
 
 ## Examples

@@ -427,9 +427,23 @@ syralit build -o myapp .   # custom output path
 You can also wire static files manually with `sy.Static(fsys)` (served at the
 root) and `sy.StaticAssets(fsys)` (overrides the built-in front-end assets).
 
+## Testing
+
+`sy.RenderOnce(appFn) *Node` runs an app function once in an isolated session
+and returns the UI tree — no server needed. Walk it with `Node.Find(type)`:
+
+```go
+tree := sy.RenderOnce(func() { sy.Metric("Users", "24,891") })
+if len(tree.Find("metric")) != 1 { t.Fatal("expected a metric") }
+```
+
 ## Requirements
 
 - Go 1.25+
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

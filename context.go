@@ -84,6 +84,15 @@ func Rerun() {
 	panic(stopSentinel{})
 }
 
+// RenderOnce executes appFn once in a fresh, isolated session and returns the
+// root Node of the UI tree it produces. No server is started and no socket is
+// opened — it is meant for unit-testing widgets and integrations. Walk the
+// result with Node.Find / Node.Children. Note: it renders appFn directly and
+// does not consult pages registered via AddPage.
+func RenderOnce(appFn func()) *Node {
+	return runRerun(newSession(appFn))
+}
+
 // runRerun executes the user's App function once and returns the produced UI
 // tree. A panic in user code is caught and rendered as an error node so a single
 // rerun cannot crash the server (SPEC §14).

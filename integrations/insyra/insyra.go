@@ -6,6 +6,8 @@ package syinsyra
 
 import (
 	"fmt"
+	"math"
+	"strconv"
 
 	sy "github.com/HazelnutParadise/syralit"
 
@@ -186,7 +188,7 @@ func ListMetrics(dl *insyra.DataList) {
 	}
 	cols := sy.Columns(4)
 	cols[0](func() { sy.Metric("Count", fmt.Sprintf("%d", dl.Len())) })
-	cols[1](func() { sy.Metric("Mean", fmt.Sprintf("%.2f", dl.Mean())) })
+	cols[1](func() { sy.Metric("Mean", statStr(dl.Mean(), 2)) })
 	cols[2](func() { sy.Metric("Min", numStr(dl.Min())) })
 	cols[3](func() { sy.Metric("Max", numStr(dl.Max())) })
 }
@@ -198,7 +200,7 @@ func ListDescribe(dl *insyra.DataList, opts ...sy.Option) {
 		sy.Warning("nil DataList")
 		return
 	}
-	f := func(v float64) string { return fmt.Sprintf("%.2f", v) }
+	f := func(v float64) string { return statStr(v, 2) }
 	rows := [][]string{
 		{"count", fmt.Sprintf("%d", dl.Len())},
 		{"mean", f(dl.Mean())},
@@ -277,9 +279,23 @@ func numericList(dl *insyra.DataList) []float64 {
 	return nums
 }
 
-// numStr formats a float without trailing zeros (e.g. 3, 3.5, 3.14).
+// numStr formats a float without trailing zeros (e.g. 3, 3.5, 3.14). A NaN or
+// Inf — which is what Insyra returns for stats on a non-numeric column — renders
+// as an em dash rather than a bare "NaN".
 func numStr(f float64) string {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return "—"
+	}
 	return fmt.Sprintf("%g", f)
+}
+
+// statStr formats a statistic to a fixed precision, with the same NaN/Inf
+// guard as numStr.
+func statStr(f float64, prec int) string {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return "—"
+	}
+	return strconv.FormatFloat(f, 'f', prec, 64)
 }
 
 func extractNumericCol(dt *insyra.DataTable, col string) []float64 {

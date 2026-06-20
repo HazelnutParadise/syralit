@@ -1644,6 +1644,25 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestRenderOnce(t *testing.T) {
+	tree := RenderOnce(func() {
+		Title("Hi")
+		cols := Columns(2)
+		cols[0](func() { Metric("A", "1") })
+		cols[1](func() { Metric("B", "2") })
+	})
+	if got := len(tree.Find("title")); got != 1 {
+		t.Fatalf("expected 1 title, got %d", got)
+	}
+	metrics := tree.Find("metric") // must descend into columns
+	if len(metrics) != 2 {
+		t.Fatalf("expected 2 metrics across columns, got %d", len(metrics))
+	}
+	if metrics[0].Props["value"] != "1" || metrics[1].Props["value"] != "2" {
+		t.Fatalf("unexpected metric values: %v %v", metrics[0].Props, metrics[1].Props)
+	}
+}
+
 func TestDateSlider(t *testing.T) {
 	app := func() {
 		d := DateSlider("D", "2026-01-01", "2026-12-31", DefaultValue("2026-06-15"), Key("ds"))

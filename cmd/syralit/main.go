@@ -397,11 +397,6 @@ compiled app runs anywhere with no files alongside it.
 
 Add a page: create a new .go file in pages/ with an init() that calls
 sy.AddPage(). Save, and the page appears in the sidebar.
-
-> Syralit is pre-release and not yet tagged. Until it is, add a replace
-> directive in go.mod pointing at your local checkout, e.g.
->
->     replace github.com/HazelnutParadise/syralit => ../syralit
 `
 }
 

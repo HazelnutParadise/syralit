@@ -46,6 +46,7 @@ Charting library integrations (CDN-loaded, accepting JSON specs):
 - **PlotlyChart** — Plotly figure specs via Plotly.js (Go equivalent of `st.plotly_chart`)
 - **PyplotChart** — SVG or base64 PNG chart images (Go equivalent of `st.pyplot`)
 - **BokehChart** — Bokeh JSON docs via BokehJS (Go equivalent of `st.bokeh_chart`)
+- **PydeckChart** — deck.gl 3D map specs via deck.gl (Go equivalent of `st.pydeck_chart`)
 
 ### State & Navigation
 

@@ -891,6 +891,96 @@ body {
   100% { transform: translateY(110vh) translateX(30px); }
 }
 
+/* --- DataFrame (sortable) ---------------------------------------------- */
+
+.sy-dataframe-wrap {
+  margin: .75rem 0;
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  overflow: hidden;
+}
+
+.sy-dataframe {
+  margin: 0;
+  border: none;
+}
+
+.sy-df-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.sy-df-header:hover {
+  background: color-mix(in srgb, var(--sy-accent) 8%, transparent);
+}
+
+/* --- Dialog (Modal) ---------------------------------------------------- */
+
+.sy-dialog-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,.45);
+  align-items: center;
+  justify-content: center;
+}
+.sy-dialog-backdrop.sy-dialog-open {
+  display: flex;
+}
+
+.sy-dialog {
+  background: var(--sy-bg);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 16px 48px rgba(0,0,0,.25);
+  max-width: 560px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: sy-fade-in .2s ease;
+}
+
+.sy-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--sy-border);
+}
+
+.sy-dialog-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+
+.sy-dialog-close {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--sy-muted);
+  line-height: 1;
+  padding: .2rem .4rem;
+  transition: color .15s;
+}
+.sy-dialog-close:hover { color: var(--sy-fg); }
+
+.sy-dialog-body {
+  padding: 1.25rem;
+}
+
+/* --- Sidebar Logo ------------------------------------------------------ */
+
+.sy-sidebar-logo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 50px;
+  margin-bottom: .5rem;
+}
+
 /* --- Chat Interface ---------------------------------------------------- */
 
 .sy-chat-message {

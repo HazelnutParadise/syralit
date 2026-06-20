@@ -293,8 +293,11 @@
       case "link":      return linkEl(node, p);
       case "download_button": return downloadBtn(node, p);
       case "file_uploader":   return fileUploader(node, p);
-      case "audio":   return audioEl(node, p);
-      case "video":   return videoEl(node, p);
+      case "audio":      return audioEl(node, p);
+      case "video":      return videoEl(node, p);
+      case "dataframe":  return dataframeEl(node, p);
+      case "dialog":     return dialogEl(node, p);
+      case "html":       return htmlEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
       case "spinner":      return spinnerEl(node, p);
@@ -787,6 +790,90 @@
     return a;
   }
 
+  // --- DataFrame (sortable table) ----------------------------------------
+
+  function dataframeEl(node, p) {
+    var headers = p.headers || [];
+    var rows = (p.rows || []).slice();
+    var sortCol = -1, sortAsc = true;
+
+    var wrap = el("div", "sy-dataframe-wrap");
+    if (p.height) wrap.style.maxHeight = p.height + "px";
+    wrap.style.overflowY = "auto";
+
+    function rebuild() {
+      var t = document.createElement("table");
+      t.className = "sy-table sy-dataframe";
+      var thead = document.createElement("thead");
+      var tr = document.createElement("tr");
+      headers.forEach(function (h, ci) {
+        var th = document.createElement("th");
+        th.className = "sy-df-header";
+        th.textContent = h;
+        if (ci === sortCol) th.textContent += sortAsc ? " ▲" : " ▼";
+        th.onclick = function () {
+          if (sortCol === ci) { sortAsc = !sortAsc; }
+          else { sortCol = ci; sortAsc = true; }
+          rows.sort(function (a, b) {
+            var va = a[ci], vb = b[ci];
+            var na = parseFloat(va), nb = parseFloat(vb);
+            if (!isNaN(na) && !isNaN(nb)) return sortAsc ? na - nb : nb - na;
+            va = String(va); vb = String(vb);
+            return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+          });
+          wrap.replaceChildren();
+          rebuild();
+        };
+        tr.appendChild(th);
+      });
+      thead.appendChild(tr);
+      t.appendChild(thead);
+      var tbody = document.createElement("tbody");
+      rows.forEach(function (row) {
+        var tr2 = document.createElement("tr");
+        (row || []).forEach(function (cell) {
+          var td = document.createElement("td");
+          td.textContent = cell == null ? "" : String(cell);
+          tr2.appendChild(td);
+        });
+        tbody.appendChild(tr2);
+      });
+      t.appendChild(tbody);
+      wrap.appendChild(t);
+    }
+    rebuild();
+    return wrap;
+  }
+
+  // --- Dialog (modal) ---------------------------------------------------
+
+  function dialogEl(node, p) {
+    var outer = el("div", "sy-dialog-backdrop" + (p.open ? " sy-dialog-open" : ""));
+    var dialog = el("div", "sy-dialog");
+    var header = el("div", "sy-dialog-header");
+    header.appendChild(el("h3", "sy-dialog-title", p.title));
+    var closeBtn = el("button", "sy-dialog-close", "×");
+    closeBtn.onclick = function () { send(node.id, false, false); };
+    header.appendChild(closeBtn);
+    dialog.appendChild(header);
+    var body = el("div", "sy-dialog-body");
+    childNodes(node).forEach(function (c) { body.appendChild(c); });
+    dialog.appendChild(body);
+    outer.appendChild(dialog);
+    outer.onclick = function (e) {
+      if (e.target === outer) send(node.id, false, false);
+    };
+    return outer;
+  }
+
+  // --- Raw HTML ----------------------------------------------------------
+
+  function htmlEl(node, p) {
+    var div = el("div", "sy-html");
+    div.innerHTML = p.html || "";
+    return div;
+  }
+
   // --- Audio / Video -----------------------------------------------------
 
   function audioEl(node, p) {
@@ -877,6 +964,21 @@
       root.style.maxWidth = "100%";
     } else if (cfg.layout === "centered") {
       root.style.maxWidth = "";
+    }
+    if (cfg.logo) {
+      var header = sidebar ? sidebar.querySelector(".sy-sidebar-header") : null;
+      if (header) {
+        var existing = header.querySelector(".sy-sidebar-logo");
+        if (!existing) {
+          var img = document.createElement("img");
+          img.className = "sy-sidebar-logo";
+          img.src = cfg.logo;
+          img.alt = "";
+          header.insertBefore(img, header.firstChild);
+        } else {
+          existing.src = cfg.logo;
+        }
+      }
     }
   }
 

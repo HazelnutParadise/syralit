@@ -96,6 +96,63 @@ func DownloadButton(label string, data []byte, filename string, opts ...Option) 
 	}})
 }
 
+// DataFrame renders a sortable, interactive data table. Sorting is handled
+// client-side. Rows can contain any printable values.
+func DataFrame(headers []string, rows [][]any, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"headers": headers, "rows": rows}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	current().add(&Node{Type: "dataframe", Props: props})
+}
+
+// HTML renders raw HTML content directly. Use with care — user-supplied
+// content should be sanitized before passing to this function.
+func HTML(html string) {
+	current().add(&Node{Type: "html", Props: map[string]any{"html": html}})
+}
+
+// Dialog renders a modal dialog overlay. Content is always rendered in the
+// tree (for consistent widget IDs) but only visible when open. Use
+// ShowDialog/CloseDialog to toggle, or let the user click the backdrop/×.
+//
+// Key is required to identify the dialog for ShowDialog/CloseDialog.
+func Dialog(title string, fn func(), opts ...Option) {
+	rc := current()
+	o := applyOpts(opts)
+	key := o.key
+	if key == "" {
+		key = title
+	}
+	id := "dialog:" + key
+	val, _ := rc.sess.widgetValue(id)
+	open, _ := val.(bool)
+	dialog := &Node{ID: id, Type: "dialog", Props: map[string]any{
+		"title": title,
+		"open":  open,
+	}}
+	rc.add(dialog)
+	rc.stack = append(rc.stack, dialog)
+	fn()
+	rc.stack = rc.stack[:len(rc.stack)-1]
+}
+
+// ShowDialog opens a dialog by its key.
+func ShowDialog(key string) {
+	current().sess.setWidget("dialog:"+key, true)
+}
+
+// CloseDialog closes a dialog by its key.
+func CloseDialog(key string) {
+	current().sess.setWidget("dialog:"+key, false)
+}
+
+// ConfigLogo sets the sidebar logo image URL.
+func ConfigLogo(src string) PageConfigOption {
+	return func(c *pageConfig) { c.logo = src }
+}
+
 // Audio renders an HTML audio player. src can be a URL or data URI.
 func Audio(src string, opts ...Option) {
 	current().add(&Node{Type: "audio", Props: map[string]any{"src": src}})

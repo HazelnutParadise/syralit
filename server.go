@@ -219,6 +219,9 @@ func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
 		if sess.pageConfig.layout != "" {
 			pc["layout"] = sess.pageConfig.layout
 		}
+		if sess.pageConfig.logo != "" {
+			pc["logo"] = sess.pageConfig.logo
+		}
 		if len(pc) > 0 {
 			msg["page_config"] = pc
 		}

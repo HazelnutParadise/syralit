@@ -26,6 +26,7 @@ type pageConfig struct {
 	title  string
 	icon   string
 	layout string // "centered" or "wide"
+	logo   string // sidebar logo URL
 }
 
 func newSession(appFn func()) *session {

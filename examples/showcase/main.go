@@ -15,6 +15,7 @@ func init() {
 	sy.AddPage("Charts", charts, sy.PageIcon("📈"), sy.PageOrder(3))
 	sy.AddPage("Layout", layout, sy.PageIcon("🧩"), sy.PageOrder(4))
 	sy.AddPage("Data", data, sy.PageIcon("🗃️"), sy.PageOrder(5))
+	sy.AddPage("Map & Media", mapMedia, sy.PageIcon("🗺️"), sy.PageOrder(6))
 }
 
 func main() {
@@ -343,9 +344,46 @@ func main() {
 	sy.LaTeX(`E = mc^2`)
 	sy.LaTeX(`\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}`)
 
+	sy.Header("Fragment (Partial Rerun)")
+	sy.Caption("The counter below re-renders independently without affecting the rest of the page.")
+	sy.Fragment("data-counter", func() {
+		count := sy.State("frag_demo_count", 0)
+		cols := sy.Columns(2)
+		cols[0](func() {
+			if sy.Button("Increment", sy.Key("frag_inc")) {
+				count.Set(count.Get() + 1)
+			}
+		})
+		cols[1](func() {
+			sy.Metric("Fragment Counter", fmt.Sprintf("%d", count.Get()))
+		})
+	})
+
 	sy.Sidebar(func() {
 		sy.Caption("Sidebar Content")
 		sy.Text("This appears in the sidebar below the page links.")
 		sy.Textf("Current time: %s", time.Now().Format("15:04:05"))
 	})
+}
+
+func mapMedia() {
+	sy.Title("Map & Media")
+
+	sy.Header("Interactive Map")
+	sy.Map([]sy.MapPoint{
+		{Lat: 25.0330, Lon: 121.5654, Text: "Taipei 101"},
+		{Lat: 25.0478, Lon: 121.5170, Text: "Taipei Main Station"},
+		{Lat: 25.0340, Lon: 121.5645, Text: "Xinyi District"},
+		{Lat: 25.0524, Lon: 121.5207, Text: "Zhongshan District"},
+	}, sy.Height(450))
+
+	sy.Divider()
+
+	sy.Header("Camera Input")
+	sy.Caption("Click 'Take Photo' to capture from your webcam.")
+	photo := sy.CameraInput("Camera", sy.Key("cam"))
+	if photo != "" {
+		sy.Success("Photo captured!")
+		sy.Image(photo, sy.ImageCaption("Captured photo"))
+	}
 }

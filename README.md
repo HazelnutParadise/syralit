@@ -24,11 +24,11 @@ func main() {
 
 ### Input Widgets
 
-TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox, Toggle, Radio, SelectBox (auto-searchable for 20+ options), MultiSelect, DateInput, TimeInput, ColorPicker, FileUploader, CameraInput, Button, ChatInput, SegmentedControl, Pills, Pagination
+TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox, Toggle, Radio, SelectBox (auto-searchable for 20+ options), MultiSelect, DateInput, TimeInput, ColorPicker, FileUploader, CameraInput, AudioInput, Button, ChatInput, SegmentedControl, Pills, Pagination, Feedback
 
 ### Display
 
-Title, Header, Subheader, Text, Markdown, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables with column config), Link, LinkButton, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output), Component (custom HTML/JS widgets), IFrame
+Title, Header, Subheader, Text, Markdown, Caption, Badge, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables with column config), Link, LinkButton, PageLink, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output), Component (custom HTML/JS widgets), IFrame
 
 ### Layout
 
@@ -36,7 +36,7 @@ Columns, WeightedColumns, Tabs, Sidebar, Expander, Container, Form, Status, Popo
 
 ### Charts
 
-LineChart, BarChart, AreaChart, ScatterChart, PieChart — all with title and x-axis label support
+LineChart, BarChart, AreaChart, ScatterChart, PieChart, GraphvizChart — all with title and x-axis label support
 
 ### State & Navigation
 

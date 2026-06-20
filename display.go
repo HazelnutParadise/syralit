@@ -251,6 +251,21 @@ func ConfigIcon(i string) PageConfigOption { return func(c *pageConfig) { c.icon
 // PageLayout sets the content layout. "centered" (default) or "wide".
 func PageLayout(l string) PageConfigOption { return func(c *pageConfig) { c.layout = l } }
 
+// PrimaryColor sets the accent/primary color for the theme.
+func PrimaryColor(color string) PageConfigOption {
+	return func(c *pageConfig) { c.primaryColor = color }
+}
+
+// BackgroundColor sets the main background color.
+func BackgroundColor(color string) PageConfigOption {
+	return func(c *pageConfig) { c.bgColor = color }
+}
+
+// TextColor sets the primary text color.
+func TextColor(color string) PageConfigOption {
+	return func(c *pageConfig) { c.textColor = color }
+}
+
 // SetPageConfig configures page-level settings such as the browser tab title
 // and content layout. Call this at the top of your page function.
 func SetPageConfig(opts ...PageConfigOption) {

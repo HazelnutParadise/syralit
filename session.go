@@ -25,10 +25,13 @@ type session struct {
 }
 
 type pageConfig struct {
-	title  string
-	icon   string
-	layout string // "centered" or "wide"
-	logo   string // sidebar logo URL
+	title        string
+	icon         string
+	layout       string // "centered" or "wide"
+	logo         string // sidebar logo URL
+	primaryColor string
+	bgColor      string
+	textColor    string
 }
 
 func newSession(appFn func()) *session {

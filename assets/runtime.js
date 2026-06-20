@@ -1197,6 +1197,10 @@
     } else if (cfg.layout === "centered") {
       root.style.maxWidth = "";
     }
+    var r = document.documentElement;
+    if (cfg.primary_color) r.style.setProperty("--sy-accent", cfg.primary_color);
+    if (cfg.bg_color) r.style.setProperty("--sy-bg", cfg.bg_color);
+    if (cfg.text_color) r.style.setProperty("--sy-fg", cfg.text_color);
     if (cfg.logo) {
       var header = sidebar ? sidebar.querySelector(".sy-sidebar-header") : null;
       if (header) {

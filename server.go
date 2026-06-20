@@ -244,6 +244,15 @@ func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
 		if sess.pageConfig.logo != "" {
 			pc["logo"] = sess.pageConfig.logo
 		}
+		if sess.pageConfig.primaryColor != "" {
+			pc["primary_color"] = sess.pageConfig.primaryColor
+		}
+		if sess.pageConfig.bgColor != "" {
+			pc["bg_color"] = sess.pageConfig.bgColor
+		}
+		if sess.pageConfig.textColor != "" {
+			pc["text_color"] = sess.pageConfig.textColor
+		}
 		if len(pc) > 0 {
 			msg["page_config"] = pc
 		}

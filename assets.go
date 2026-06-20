@@ -23,7 +23,7 @@ const indexHTML = `<!doctype html>
 <body>
 <div id="syralit-root">
 <nav id="syralit-sidebar"></nav>
-<main id="syralit-app"></main>
+<main id="syralit-app"><div class="sy-loading"><div class="sy-loading-spinner"></div><p>Connecting…</p></div></main>
 </div>
 <script src="/_syralit/assets/runtime.js"></script>
 </body>

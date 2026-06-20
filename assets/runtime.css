@@ -163,6 +163,27 @@ body {
   padding: .4rem .75rem;
 }
 
+/* --- Loading State ----------------------------------------------------- */
+
+.sy-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem;
+  color: var(--sy-muted);
+}
+
+.sy-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid var(--sy-border);
+  border-top-color: var(--sy-accent);
+  border-radius: 50%;
+  animation: sy-spin 1s linear infinite;
+}
+
 /* --- Container --------------------------------------------------------- */
 
 .sy-container-bordered {

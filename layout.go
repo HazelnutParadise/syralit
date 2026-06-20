@@ -10,9 +10,14 @@ type Column func(fn func())
 
 // Columns creates n side-by-side columns. Call each returned Column with a
 // callback to populate it.
-func Columns(n int) []Column {
+func Columns(n int, opts ...Option) []Column {
 	rc := current()
-	colsNode := &Node{Type: "columns", Props: map[string]any{"count": n}}
+	o := applyOpts(opts)
+	props := map[string]any{"count": n}
+	if o.gap > 0 {
+		props["gap"] = o.gap
+	}
+	colsNode := &Node{Type: "columns", Props: props}
 	rc.add(colsNode)
 
 	cols := make([]Column, n)

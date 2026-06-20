@@ -633,6 +633,7 @@
       var n = p.count || 2;
       div.style.gridTemplateColumns = "repeat(" + n + ", 1fr)";
     }
+    if (p.gap) div.style.gap = p.gap + "px";
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
   }

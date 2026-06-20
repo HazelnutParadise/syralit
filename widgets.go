@@ -32,6 +32,7 @@ type widgetOpts struct {
 	defaultVal    any
 	border        bool
 	maxSelections int
+	gap           int
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -53,6 +54,7 @@ func Help(v string) Option         { return func(o *widgetOpts) { o.helpText = v
 func DefaultValue(v any) Option    { return func(o *widgetOpts) { o.defaultVal = v } }
 func Border() Option               { return func(o *widgetOpts) { o.border = true } }
 func MaxSelections(n int) Option   { return func(o *widgetOpts) { o.maxSelections = n } }
+func Gap(px int) Option            { return func(o *widgetOpts) { o.gap = px } }
 
 func applyOpts(opts []Option) widgetOpts {
 	var o widgetOpts

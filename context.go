@@ -56,6 +56,14 @@ func (rc *renderContext) widgetID(typ, key string) string {
 	return fmt.Sprintf("__%s_%d", typ, rc.autoSeq[typ])
 }
 
+type stopSentinel struct{}
+
+// Stop halts the current rerun early. Widgets rendered so far are kept.
+// Useful for conditional guards:
+//
+//	if !loggedIn { sy.Warning("Please log in"); sy.Stop() }
+func Stop() { panic(stopSentinel{}) }
+
 // runRerun executes the user's App function once and returns the produced UI
 // tree. A panic in user code is caught and rendered as an error node so a single
 // rerun cannot crash the server (SPEC §14).
@@ -75,7 +83,9 @@ func runRerun(sess *session) *Node {
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				rc.add(&Node{Type: "error", Props: map[string]any{"text": fmt.Sprintf("App panic: %v", r)}})
+				if _, ok := r.(stopSentinel); !ok {
+					rc.add(&Node{Type: "error", Props: map[string]any{"text": fmt.Sprintf("App panic: %v", r)}})
+				}
 			}
 		}()
 		fn := sess.appFn

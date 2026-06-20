@@ -28,9 +28,10 @@ type widgetOpts struct {
 	alt         string
 	caption     string
 	mime        string
-	helpText    string
-	defaultVal  any
-	border      bool
+	helpText      string
+	defaultVal    any
+	border        bool
+	maxSelections int
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -51,6 +52,7 @@ func MimeType(v string) Option     { return func(o *widgetOpts) { o.mime = v } }
 func Help(v string) Option         { return func(o *widgetOpts) { o.helpText = v } }
 func DefaultValue(v any) Option    { return func(o *widgetOpts) { o.defaultVal = v } }
 func Border() Option               { return func(o *widgetOpts) { o.border = true } }
+func MaxSelections(n int) Option   { return func(o *widgetOpts) { o.maxSelections = n } }
 
 func applyOpts(opts []Option) widgetOpts {
 	var o widgetOpts
@@ -299,6 +301,9 @@ func MultiSelect(label string, options []string, opts ...Option) []string {
 	props := map[string]any{"label": label, "options": options, "value": selected}
 	if o.disabled {
 		props["disabled"] = true
+	}
+	if o.maxSelections > 0 {
+		props["max_selections"] = o.maxSelections
 	}
 	if o.helpText != "" {
 		props["help"] = o.helpText

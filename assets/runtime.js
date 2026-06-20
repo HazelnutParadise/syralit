@@ -528,8 +528,10 @@
     });
     wrap.appendChild(chips);
 
+    var maxSel = p.max_selections || 0;
+    var atLimit = maxSel > 0 && vals.length >= maxSel;
     var available = options.filter(function (o) { return vals.indexOf(o) < 0; });
-    if (available.length > 0 && !p.disabled) {
+    if (available.length > 0 && !p.disabled && !atLimit) {
       var sel = document.createElement("select");
       sel.className = "sy-select sy-multi-add";
       var ph = document.createElement("option");

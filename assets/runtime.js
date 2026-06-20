@@ -703,6 +703,10 @@
       div.style.gridTemplateColumns = "repeat(" + n + ", 1fr)";
     }
     if (p.gap) div.style.gap = p.gap + "px";
+    if (p.vertical_alignment) {
+      var va = p.vertical_alignment;
+      div.style.alignItems = va === "center" ? "center" : va === "bottom" ? "flex-end" : "flex-start";
+    }
     if (p.border) div.classList.add("sy-columns-bordered");
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;

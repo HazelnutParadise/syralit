@@ -39,6 +39,7 @@ type widgetOpts struct {
 	colConfig       map[string]ColumnConfig
 	color           string
 	dynamicRows     bool
+	verticalAlign   string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -68,6 +69,7 @@ func Color(c string) Option        { return func(o *widgetOpts) { o.color = c } 
 func XLabels(l []string) Option    { return func(o *widgetOpts) { o.xLabels = l } }
 func Expanded() Option             { return DefaultValue(true) }
 func DynamicRows() Option          { return func(o *widgetOpts) { o.dynamicRows = true } }
+func VerticalAlignment(align string) Option { return func(o *widgetOpts) { o.verticalAlign = align } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

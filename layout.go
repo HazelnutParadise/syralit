@@ -20,6 +20,9 @@ func Columns(n int, opts ...Option) []Column {
 	if o.border {
 		props["border"] = true
 	}
+	if o.verticalAlign != "" {
+		props["vertical_alignment"] = o.verticalAlign
+	}
 	colsNode := &Node{Type: "columns", Props: props}
 	rc.add(colsNode)
 

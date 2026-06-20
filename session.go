@@ -21,6 +21,7 @@ type session struct {
 	pendingToasts []map[string]any
 	pageConfig    *pageConfig
 	needsRerun    bool // set by SwitchPage to re-render after stop
+	queryParams   map[string]string
 }
 
 type pageConfig struct {

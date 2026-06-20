@@ -315,6 +315,7 @@
       case "form":      return formContainer(node);
       case "form_submit": return formSubmitBtn(node, p);
       case "divider":   return el("hr", "sy-divider");
+      case "status_container": return statusContainer(node, p);
       // --- Display ---
       case "table":     return tableEl(node, p);
       case "metric":    return metric(node, p);
@@ -696,6 +697,22 @@
     if (p.height) { div.style.maxHeight = p.height + "px"; div.style.overflowY = "auto"; }
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
+  }
+
+  function statusContainer(node, p) {
+    var wrap = el("div", "sy-status-container sy-status-container-" + (p.state || "running"));
+    var header = el("div", "sy-status-container-header");
+    var icon = el("span", "sy-status-container-icon");
+    if (p.state === "complete") icon.textContent = "✓";
+    else if (p.state === "error") icon.textContent = "✕";
+    else icon.innerHTML = '<span class="sy-status-spinner"></span>';
+    header.appendChild(icon);
+    header.appendChild(el("span", "sy-status-container-label", p.label));
+    wrap.appendChild(header);
+    var body = el("div", "sy-status-container-body");
+    childNodes(node).forEach(function (c) { body.appendChild(c); });
+    wrap.appendChild(body);
+    return wrap;
   }
 
   function formContainer(node) {

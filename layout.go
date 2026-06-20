@@ -157,6 +157,26 @@ func WeightedColumns(weights ...float64) []Column {
 	return cols
 }
 
+// Status renders a collapsible status container with a state indicator.
+// state is "running", "complete", or "error". While "running", a spinner is
+// shown next to the label.
+//
+//	sy.Status("Loading data", "running", func() {
+//	    sy.Text("Fetching from API...")
+//	    sy.Progress(0.5)
+//	})
+func Status(label, state string, fn func()) {
+	rc := current()
+	node := &Node{Type: "status_container", Props: map[string]any{
+		"label": label,
+		"state": state,
+	}}
+	rc.add(node)
+	rc.stack = append(rc.stack, node)
+	fn()
+	rc.stack = rc.stack[:len(rc.stack)-1]
+}
+
 // Divider renders a horizontal rule.
 func Divider() {
 	current().add(&Node{Type: "divider"})

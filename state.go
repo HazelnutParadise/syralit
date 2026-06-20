@@ -108,6 +108,31 @@ func (s *SessionStore) Get(key string) (any, bool) {
 	return v, ok
 }
 
+// QueryParams returns a copy of the URL query parameters from the current
+// session's WebSocket connection. Useful for deep linking and sharing app
+// state via URL.
+//
+//	params := sy.QueryParams()
+//	filter := params["filter"]
+func QueryParams() map[string]string {
+	rc := current()
+	rc.sess.mu.Lock()
+	defer rc.sess.mu.Unlock()
+	cp := make(map[string]string, len(rc.sess.queryParams))
+	for k, v := range rc.sess.queryParams {
+		cp[k] = v
+	}
+	return cp
+}
+
+// QueryParam returns a single URL query parameter value.
+func QueryParam(key string) string {
+	rc := current()
+	rc.sess.mu.Lock()
+	defer rc.sess.mu.Unlock()
+	return rc.sess.queryParams[key]
+}
+
 // Secrets returns a secret value from the [secrets] section of syralit.toml,
 // falling back to an environment variable of the same name. This lets apps
 // keep API keys out of source code.

@@ -184,6 +184,50 @@ body {
   animation: sy-spin 1s linear infinite;
 }
 
+/* --- Status Container -------------------------------------------------- */
+
+.sy-status-container {
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  margin: .75rem 0;
+  overflow: hidden;
+}
+
+.sy-status-container-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  background: var(--sy-sidebar-bg);
+  font-weight: 600;
+}
+
+.sy-status-container-icon {
+  display: flex;
+  align-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  justify-content: center;
+}
+
+.sy-status-container-running .sy-status-container-icon { color: var(--sy-accent); }
+.sy-status-container-complete .sy-status-container-icon { color: var(--sy-success); }
+.sy-status-container-error .sy-status-container-icon { color: var(--sy-error); }
+
+.sy-status-spinner {
+  display: inline-block;
+  width: .9rem;
+  height: .9rem;
+  border: 2px solid var(--sy-border);
+  border-top-color: var(--sy-accent);
+  border-radius: 50%;
+  animation: sy-spin 1s linear infinite;
+}
+
+.sy-status-container-body {
+  padding: .75rem 1rem;
+}
+
 /* --- Container --------------------------------------------------------- */
 
 .sy-container-bordered {

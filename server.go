@@ -128,6 +128,16 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	sess := newSession(s.appFn)
 
+	qp := make(map[string]string)
+	for k, v := range r.URL.Query() {
+		if len(v) > 0 {
+			qp[k] = v[0]
+		}
+	}
+	sess.mu.Lock()
+	sess.queryParams = qp
+	sess.mu.Unlock()
+
 	// Initial render.
 	if err := pushUI(ctx, c, sess); err != nil {
 		return

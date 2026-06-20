@@ -119,3 +119,111 @@ func GraphvizChart(dot string, opts ...Option) {
 	}
 	current().add(&Node{Type: "graphviz_chart", Props: props})
 }
+
+// VegaLiteChart renders a Vega-Lite chart from a spec. The spec is a
+// map[string]any matching the Vega-Lite JSON schema. The chart is rendered
+// client-side using the Vega-Lite JavaScript library (CDN).
+//
+// This is the Go equivalent of Streamlit's st.altair_chart — Altair is a
+// Python API that generates Vega-Lite JSON specs, so accepting the spec
+// directly provides the same capability.
+//
+//	sy.VegaLiteChart(map[string]any{
+//	    "mark": "bar",
+//	    "encoding": map[string]any{
+//	        "x": map[string]any{"field": "category", "type": "nominal"},
+//	        "y": map[string]any{"field": "value", "type": "quantitative"},
+//	    },
+//	    "data": map[string]any{
+//	        "values": []map[string]any{
+//	            {"category": "A", "value": 28},
+//	            {"category": "B", "value": 55},
+//	        },
+//	    },
+//	})
+func VegaLiteChart(spec map[string]any, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"spec": spec}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	if o.title != "" {
+		props["title"] = o.title
+	}
+	current().add(&Node{Type: "vega_lite_chart", Props: props})
+}
+
+// PlotlyChart renders a Plotly chart from a figure spec. The spec is a
+// map[string]any matching the Plotly JSON schema (data + layout). Rendered
+// client-side using Plotly.js (CDN).
+//
+// This is the Go equivalent of Streamlit's st.plotly_chart — Plotly figures
+// in Python serialize to JSON, so accepting the JSON spec directly provides
+// the same capability.
+//
+//	sy.PlotlyChart(map[string]any{
+//	    "data": []map[string]any{{
+//	        "x": []string{"giraffes", "orangutans", "monkeys"},
+//	        "y": []float64{20, 14, 23},
+//	        "type": "bar",
+//	    }},
+//	    "layout": map[string]any{"title": "Animals"},
+//	})
+func PlotlyChart(spec map[string]any, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"spec": spec}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "plotly_chart", Props: props})
+}
+
+// PyplotChart renders a static chart image from raw PNG/SVG bytes. This is
+// the Go equivalent of Streamlit's st.pyplot — in Python, matplotlib figures
+// are exported as images. In Go, any charting library that can export PNG or
+// SVG can be used.
+//
+// The format is auto-detected: if data starts with "<svg" it is treated as
+// inline SVG; otherwise it is treated as a base64-encoded PNG data URI.
+//
+//	// From SVG string:
+//	sy.PyplotChart(svgString)
+//	// From PNG bytes:
+//	sy.PyplotChart(base64.StdEncoding.EncodeToString(pngBytes))
+func PyplotChart(data string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"data": data}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	if o.caption != "" {
+		props["caption"] = o.caption
+	}
+	current().add(&Node{Type: "pyplot_chart", Props: props})
+}
+
+// BokehChart renders a Bokeh chart from a JSON spec. The spec is a
+// map[string]any matching Bokeh's JSON document format. Rendered client-side
+// using BokehJS (CDN).
+//
+// This is the Go equivalent of Streamlit's st.bokeh_chart.
+func BokehChart(spec map[string]any, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"spec": spec}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "bokeh_chart", Props: props})
+}

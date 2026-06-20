@@ -1126,3 +1126,153 @@ func TestDataEditorDynamicRows(t *testing.T) {
 		t.Fatal("data_editor with dynamic_rows not found")
 	}
 }
+
+func TestVegaLiteChart(t *testing.T) {
+	app := func() {
+		VegaLiteChart(map[string]any{
+			"mark": "bar",
+			"encoding": map[string]any{
+				"x": map[string]any{"field": "a", "type": "nominal"},
+				"y": map[string]any{"field": "b", "type": "quantitative"},
+			},
+			"data": map[string]any{
+				"values": []map[string]any{
+					{"a": "A", "b": 28},
+					{"a": "B", "b": 55},
+				},
+			},
+		}, Height(400))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "vega_lite_chart" {
+			props := n["props"].(map[string]any)
+			if spec, ok := props["spec"].(map[string]any); ok {
+				if spec["mark"] == "bar" {
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("vega_lite_chart not found")
+	}
+}
+
+func TestPlotlyChart(t *testing.T) {
+	app := func() {
+		PlotlyChart(map[string]any{
+			"data": []map[string]any{{
+				"x":    []string{"a", "b", "c"},
+				"y":    []float64{1, 2, 3},
+				"type": "scatter",
+			}},
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "plotly_chart" {
+			props := n["props"].(map[string]any)
+			if _, ok := props["spec"].(map[string]any); ok {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("plotly_chart not found")
+	}
+}
+
+func TestPyplotChart(t *testing.T) {
+	app := func() {
+		PyplotChart(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><circle cx="50" cy="50" r="40"/></svg>`)
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "pyplot_chart" {
+			props := n["props"].(map[string]any)
+			if data, ok := props["data"].(string); ok && len(data) > 0 {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("pyplot_chart not found")
+	}
+}
+
+func TestBokehChart(t *testing.T) {
+	app := func() {
+		BokehChart(map[string]any{
+			"doc": map[string]any{"title": "test"},
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "bokeh_chart" {
+			props := n["props"].(map[string]any)
+			if _, ok := props["spec"].(map[string]any); ok {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("bokeh_chart not found")
+	}
+}

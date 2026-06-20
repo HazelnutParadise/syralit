@@ -369,6 +369,10 @@
       case "doughnut_chart":  return doughnutChartEl(node, p);
       case "radar_chart":     return radarChartEl(node, p);
       case "graphviz_chart":  return graphvizChartEl(node, p);
+      case "vega_lite_chart": return vegaLiteChartEl(node, p);
+      case "plotly_chart":    return plotlyChartEl(node, p);
+      case "pyplot_chart":    return pyplotChartEl(node, p);
+      case "bokeh_chart":     return bokehChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -2090,6 +2094,190 @@
         }).catch(function (e) {
           wrap.textContent = "Graphviz error: " + e.message;
         });
+      }
+    });
+    return wrap;
+  }
+
+  // --- Vega-Lite Chart (st.altair_chart equivalent) --------------------------
+
+  var vegaState = "idle";
+  var vegaQueue = [];
+
+  function loadVegaLite(cb) {
+    if (window.vegaEmbed) { cb(); return; }
+    vegaQueue.push(cb);
+    if (vegaState !== "idle") return;
+    vegaState = "loading";
+    var scripts = [
+      "https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js",
+      "https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js",
+      "https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js"
+    ];
+    var idx = 0;
+    function next() {
+      if (idx >= scripts.length) {
+        vegaState = "ready";
+        var q = vegaQueue; vegaQueue = [];
+        q.forEach(function (f) { f(); });
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = scripts[idx++];
+      s.onload = next;
+      s.onerror = function () {
+        vegaState = "idle";
+        vegaQueue.forEach(function (f) { f(); });
+        vegaQueue = [];
+      };
+      document.head.appendChild(s);
+    }
+    next();
+  }
+
+  function vegaLiteChartEl(node, p) {
+    var wrap = el("div", "sy-vega-chart");
+    if (p.height) wrap.style.height = p.height + "px";
+    if (p.width) wrap.style.width = p.width + "px";
+    wrap.textContent = "Loading Vega-Lite chart…";
+    loadVegaLite(function () {
+      if (window.vegaEmbed) {
+        var spec = p.spec || {};
+        if (!spec["$schema"]) {
+          spec["$schema"] = "https://vega.github.io/schema/vega-lite/v5.json";
+        }
+        wrap.textContent = "";
+        window.vegaEmbed(wrap, spec, { actions: false, renderer: "svg" })
+          .catch(function (e) {
+            wrap.textContent = "Vega-Lite error: " + e.message;
+          });
+      } else {
+        wrap.textContent = "Failed to load Vega-Lite library.";
+      }
+    });
+    return wrap;
+  }
+
+  // --- Plotly Chart (st.plotly_chart equivalent) -----------------------------
+
+  var plotlyState = "idle";
+  var plotlyQueue = [];
+
+  function loadPlotly(cb) {
+    if (window.Plotly) { cb(); return; }
+    plotlyQueue.push(cb);
+    if (plotlyState !== "idle") return;
+    plotlyState = "loading";
+    var s = document.createElement("script");
+    s.src = "https://cdn.plot.ly/plotly-2.35.0.min.js";
+    s.onload = function () {
+      plotlyState = "ready";
+      var q = plotlyQueue; plotlyQueue = [];
+      q.forEach(function (f) { f(); });
+    };
+    s.onerror = function () {
+      plotlyState = "idle";
+      plotlyQueue.forEach(function (f) { f(); });
+      plotlyQueue = [];
+    };
+    document.head.appendChild(s);
+  }
+
+  function plotlyChartEl(node, p) {
+    var wrap = el("div", "sy-plotly-chart");
+    if (p.height) wrap.style.height = p.height + "px";
+    if (p.width) wrap.style.width = p.width + "px";
+    wrap.textContent = "Loading Plotly chart…";
+    loadPlotly(function () {
+      if (window.Plotly) {
+        var spec = p.spec || {};
+        var data = spec.data || [];
+        var layout = Object.assign({}, spec.layout || {});
+        layout.autosize = true;
+        if (!layout.margin) layout.margin = { l: 50, r: 30, t: 40, b: 40 };
+        wrap.textContent = "";
+        window.Plotly.newPlot(wrap, data, layout, {
+          responsive: true,
+          displayModeBar: true,
+          displaylogo: false
+        }).catch(function (e) {
+          wrap.textContent = "Plotly error: " + (e.message || e);
+        });
+      } else {
+        wrap.textContent = "Failed to load Plotly library.";
+      }
+    });
+    return wrap;
+  }
+
+  // --- Pyplot Chart (st.pyplot equivalent) -----------------------------------
+
+  function pyplotChartEl(node, p) {
+    var wrap = el("div", "sy-pyplot-chart");
+    if (p.height) wrap.style.height = p.height + "px";
+    if (p.width) wrap.style.width = p.width + "px";
+    var data = p.data || "";
+    if (data.trimStart().startsWith("<svg")) {
+      wrap.innerHTML = data;
+      var svg = wrap.querySelector("svg");
+      if (svg) {
+        svg.style.maxWidth = "100%";
+        svg.style.height = "auto";
+      }
+    } else {
+      var img = document.createElement("img");
+      img.className = "sy-image";
+      if (data.startsWith("data:")) {
+        img.src = data;
+      } else {
+        img.src = "data:image/png;base64," + data;
+      }
+      wrap.appendChild(img);
+    }
+    if (p.caption) wrap.appendChild(el("p", "sy-caption", p.caption));
+    return wrap;
+  }
+
+  // --- Bokeh Chart (st.bokeh_chart equivalent) -------------------------------
+
+  var bokehState = "idle";
+  var bokehQueue = [];
+
+  function loadBokeh(cb) {
+    if (window.Bokeh) { cb(); return; }
+    bokehQueue.push(cb);
+    if (bokehState !== "idle") return;
+    bokehState = "loading";
+    var s = document.createElement("script");
+    s.src = "https://cdn.bokeh.org/bokeh/release/bokeh-3.4.1.min.js";
+    s.onload = function () {
+      bokehState = "ready";
+      var q = bokehQueue; bokehQueue = [];
+      q.forEach(function (f) { f(); });
+    };
+    s.onerror = function () {
+      bokehState = "idle";
+      bokehQueue.forEach(function (f) { f(); });
+      bokehQueue = [];
+    };
+    document.head.appendChild(s);
+  }
+
+  function bokehChartEl(node, p) {
+    var wrap = el("div", "sy-bokeh-chart");
+    if (p.height) wrap.style.height = p.height + "px";
+    if (p.width) wrap.style.width = p.width + "px";
+    wrap.textContent = "Loading Bokeh chart…";
+    loadBokeh(function () {
+      if (window.Bokeh) {
+        wrap.textContent = "";
+        try {
+          window.Bokeh.embed.embed_item(p.spec || {}, wrap);
+        } catch (e) {
+          wrap.textContent = "Bokeh error: " + e.message;
+        }
+      } else {
+        wrap.textContent = "Failed to load Bokeh library.";
       }
     });
     return wrap;

@@ -17,6 +17,9 @@ func Columns(n int, opts ...Option) []Column {
 	if o.gap > 0 {
 		props["gap"] = o.gap
 	}
+	if o.border {
+		props["border"] = true
+	}
 	colsNode := &Node{Type: "columns", Props: props}
 	rc.add(colsNode)
 

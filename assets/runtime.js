@@ -703,6 +703,7 @@
       div.style.gridTemplateColumns = "repeat(" + n + ", 1fr)";
     }
     if (p.gap) div.style.gap = p.gap + "px";
+    if (p.border) div.classList.add("sy-columns-bordered");
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
   }
@@ -1290,12 +1291,45 @@
     });
     t.appendChild(tbody);
     wrap.appendChild(t);
+
+    if (p.dynamic_rows && !disabled) {
+      var toolbar = el("div", "sy-data-editor-toolbar");
+      var addBtn = el("button", "sy-button", "+ Add row");
+      addBtn.onclick = function () {
+        var newRow = headers.map(function () { return ""; });
+        rows.push(newRow);
+        send(node.id, rows, false);
+      };
+      toolbar.appendChild(addBtn);
+      wrap.appendChild(toolbar);
+
+      var delHeader = document.createElement("th");
+      delHeader.textContent = "";
+      delHeader.style.width = "32px";
+      tr.appendChild(delHeader);
+
+      var trs = tbody.querySelectorAll("tr");
+      for (var ri2 = 0; ri2 < trs.length; ri2++) {
+        (function (idx) {
+          var delTd = document.createElement("td");
+          var delBtn = el("button", "sy-data-editor-del", "✕");
+          delBtn.onclick = function () {
+            rows.splice(idx, 1);
+            send(node.id, rows, false);
+          };
+          delTd.appendChild(delBtn);
+          trs[idx].appendChild(delTd);
+        })(ri2);
+      }
+    }
+
     return wrap;
   }
 
   function dialogEl(node, p) {
     var outer = el("div", "sy-dialog-backdrop" + (p.open ? " sy-dialog-open" : ""));
     var dialog = el("div", "sy-dialog");
+    if (p.width) dialog.style.width = p.width + "px";
     var header = el("div", "sy-dialog-header");
     header.appendChild(el("h3", "sy-dialog-title", p.title));
     var closeBtn = el("button", "sy-dialog-close", "×");

@@ -141,10 +141,11 @@ func Dialog(title string, fn func(), opts ...Option) {
 	id := "dialog:" + key
 	val, _ := rc.sess.widgetValue(id)
 	open, _ := val.(bool)
-	dialog := &Node{ID: id, Type: "dialog", Props: map[string]any{
-		"title": title,
-		"open":  open,
-	}}
+	props := map[string]any{"title": title, "open": open}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	dialog := &Node{ID: id, Type: "dialog", Props: props}
 	rc.add(dialog)
 	rc.stack = append(rc.stack, dialog)
 	fn()
@@ -328,6 +329,9 @@ func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
 	}
 	if o.disabled {
 		props["disabled"] = true
+	}
+	if o.dynamicRows {
+		props["dynamic_rows"] = true
 	}
 	if o.colConfig != nil {
 		cc := map[string]any{}

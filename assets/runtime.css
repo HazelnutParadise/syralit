@@ -431,6 +431,24 @@ body {
 .sy-data-editor td {
   padding: 0;
 }
+.sy-data-editor-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+}
+.sy-data-editor-del {
+  background: none;
+  border: none;
+  color: var(--sy-muted);
+  cursor: pointer;
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.sy-data-editor-del:hover {
+  color: #dc2626;
+  background: rgba(220,38,38,0.1);
+}
 
 /* --- Status Container -------------------------------------------------- */
 
@@ -856,6 +874,11 @@ body {
 
 .sy-column {
   min-width: 0;
+}
+.sy-columns-bordered > .sy-column {
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  padding: 1rem;
 }
 
 /* --- Layout: Expander -------------------------------------------------- */

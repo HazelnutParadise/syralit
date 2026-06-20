@@ -365,7 +365,10 @@
       case "area_chart":    return areaChartEl(node, p);
       case "scatter_chart": return scatterChartEl(node, p);
       case "pie_chart":     return pieChartEl(node, p);
-      case "graphviz_chart": return graphvizChartEl(node, p);
+      case "histogram_chart": return histogramChartEl(node, p);
+      case "doughnut_chart":  return doughnutChartEl(node, p);
+      case "radar_chart":     return radarChartEl(node, p);
+      case "graphviz_chart":  return graphvizChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -1182,6 +1185,29 @@
         if (disabled) {
           if (colType === "checkbox") {
             td.textContent = cell ? "✓" : "✗";
+          } else if (colType === "link") {
+            var a = document.createElement("a");
+            a.href = cell || "#";
+            a.textContent = cell || "";
+            a.target = "_blank";
+            td.appendChild(a);
+          } else if (colType === "image") {
+            var img = document.createElement("img");
+            img.src = cell || "";
+            img.style.maxHeight = "40px";
+            td.appendChild(img);
+          } else if (colType === "progress") {
+            var bar = document.createElement("div");
+            bar.className = "sy-progress";
+            var fill = document.createElement("div");
+            fill.className = "sy-progress-fill";
+            var pctMax = cfg.max || 100;
+            var pctVal = Math.min(Math.max((parseFloat(cell) || 0) / pctMax, 0), 1) * 100;
+            fill.style.width = pctVal + "%";
+            bar.appendChild(fill);
+            td.appendChild(bar);
+          } else if (colType === "list") {
+            td.textContent = Array.isArray(cell) ? cell.join(", ") : String(cell || "");
           } else {
             td.textContent = cell == null ? "" : String(cell);
           }
@@ -1209,11 +1235,43 @@
             send(node.id, rows, false);
           };
           td.appendChild(sel);
+        } else if (colType === "link") {
+          var linkInp = document.createElement("input");
+          linkInp.type = "url";
+          linkInp.className = "sy-data-editor-input";
+          linkInp.value = cell == null ? "" : String(cell);
+          linkInp.onchange = function () { rows[ri][ci] = linkInp.value; send(node.id, rows, false); };
+          td.appendChild(linkInp);
+        } else if (colType === "date") {
+          var dateInp = document.createElement("input");
+          dateInp.type = "date";
+          dateInp.className = "sy-data-editor-input";
+          dateInp.value = cell == null ? "" : String(cell);
+          dateInp.onchange = function () { rows[ri][ci] = dateInp.value; send(node.id, rows, false); };
+          td.appendChild(dateInp);
+        } else if (colType === "time") {
+          var timeInp = document.createElement("input");
+          timeInp.type = "time";
+          timeInp.className = "sy-data-editor-input";
+          timeInp.value = cell == null ? "" : String(cell);
+          timeInp.onchange = function () { rows[ri][ci] = timeInp.value; send(node.id, rows, false); };
+          td.appendChild(timeInp);
+        } else if (colType === "datetime") {
+          var dtInp = document.createElement("input");
+          dtInp.type = "datetime-local";
+          dtInp.className = "sy-data-editor-input";
+          dtInp.value = cell == null ? "" : String(cell);
+          dtInp.onchange = function () { rows[ri][ci] = dtInp.value; send(node.id, rows, false); };
+          td.appendChild(dtInp);
         } else {
           var inp = document.createElement("input");
           inp.type = colType === "number" ? "number" : "text";
           inp.className = "sy-data-editor-input";
           inp.value = cell == null ? "" : String(cell);
+          if (colType === "number") {
+            if (cfg.min !== undefined) inp.min = cfg.min;
+            if (cfg.max !== undefined) inp.max = cfg.max;
+          }
           inp.onchange = function () {
             var v = inp.value;
             if (colType === "number") {
@@ -1755,274 +1813,209 @@
     return (bytes / 1048576).toFixed(1) + " MB";
   }
 
-  // --- Charts (SVG) -----------------------------------------------------
+  // --- Charts (Chart.js) ------------------------------------------------
 
   var CHART_COLORS = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+  var chartjsState = "idle";
+  var chartjsQueue = [];
 
-  function svgNS(tag, attrs) {
-    var e = document.createElementNS("http://www.w3.org/2000/svg", tag);
-    if (attrs) { for (var k in attrs) { e.setAttribute(k, attrs[k]); } }
-    return e;
+  function loadChartJS(cb) {
+    if (chartjsState === "ready") { cb(); return; }
+    chartjsQueue.push(cb);
+    if (chartjsState === "loading") return;
+    chartjsState = "loading";
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js";
+    s.onload = function () {
+      chartjsState = "ready";
+      chartjsQueue.forEach(function (fn) { fn(); });
+      chartjsQueue = [];
+    };
+    document.head.appendChild(s);
   }
 
-  function formatNum(n) {
-    if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + "M";
-    if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + "K";
-    if (n === Math.floor(n)) return String(n);
-    return n.toFixed(1);
-  }
-
-  function chartSetup(p) {
-    var series = p.series || {};
-    var names = Object.keys(series);
-    var w = p.width || 600, h = p.height || 300;
-    var hasTitle = !!p.title;
-    var hasXLabels = p.x_labels && p.x_labels.length > 0;
-    var pad = { top: hasTitle ? 40 : 20, right: 20, bottom: hasXLabels ? 50 : 30, left: 55 };
-    var plotW = w - pad.left - pad.right;
-    var plotH = h - pad.top - pad.bottom;
-    var allVals = [], maxLen = 0;
-    names.forEach(function (name) {
-      allVals = allVals.concat(series[name]);
-      maxLen = Math.max(maxLen, series[name].length);
-    });
-    var minV = allVals.length ? Math.min.apply(null, allVals) : 0;
-    var maxV = allVals.length ? Math.max.apply(null, allVals) : 1;
-    if (minV === maxV) { minV -= 1; maxV += 1; }
-    return { series: series, names: names, w: w, h: h, pad: pad, plotW: plotW, plotH: plotH, minV: minV, maxV: maxV, range: maxV - minV, maxLen: maxLen, title: p.title, xLabels: p.x_labels };
-  }
-
-  function chartAxes(svg, c) {
-    var cs = getComputedStyle(document.documentElement);
-    var borderC = cs.getPropertyValue("--sy-border").trim() || "#e5e7eb";
-    var mutedC = cs.getPropertyValue("--sy-muted").trim() || "#6b7280";
-    if (c.title) {
-      var titleTxt = svgNS("text", { x: c.w / 2, y: 20, fill: mutedC, "font-size": "14", "text-anchor": "middle", "font-weight": "600", "font-family": "inherit" });
-      titleTxt.textContent = c.title;
-      svg.appendChild(titleTxt);
-    }
-    var ticks = 5;
-    for (var i = 0; i <= ticks; i++) {
-      var y = c.pad.top + c.plotH - (i / ticks) * c.plotH;
-      svg.appendChild(svgNS("line", { x1: c.pad.left, y1: y, x2: c.w - c.pad.right, y2: y, stroke: borderC, "stroke-dasharray": "3,3", "stroke-width": "1" }));
-      var val = c.minV + (i / ticks) * c.range;
-      var txt = svgNS("text", { x: c.pad.left - 8, y: y + 4, fill: mutedC, "font-size": "11", "text-anchor": "end", "font-family": "inherit" });
-      txt.textContent = formatNum(val);
-      svg.appendChild(txt);
-    }
-    svg.appendChild(svgNS("line", { x1: c.pad.left, y1: c.h - c.pad.bottom, x2: c.w - c.pad.right, y2: c.h - c.pad.bottom, stroke: borderC, "stroke-width": "1" }));
-    if (c.xLabels && c.xLabels.length > 0) {
-      var n = c.xLabels.length;
-      for (var j = 0; j < n; j++) {
-        var xPos = c.pad.left + (j / (n - 1 || 1)) * c.plotW;
-        var lbl = svgNS("text", { x: xPos, y: c.h - c.pad.bottom + 18, fill: mutedC, "font-size": "10", "text-anchor": "middle", "font-family": "inherit" });
-        lbl.textContent = c.xLabels[j];
-        svg.appendChild(lbl);
-      }
-    }
-  }
-
-  function chartLegend(names) {
-    if (names.length < 2) return null;
-    var legend = el("div", "sy-chart-legend");
-    names.forEach(function (name, i) {
-      var item = el("span", "sy-legend-item");
-      var swatch = el("span", "sy-legend-swatch");
-      swatch.style.background = CHART_COLORS[i % CHART_COLORS.length];
-      item.appendChild(swatch);
-      item.appendChild(document.createTextNode(name));
-      legend.appendChild(item);
-    });
-    return legend;
-  }
-
-  function wrapChart(svg, c) {
+  function makeChartJS(type, p, configFn) {
     var wrap = el("div", "sy-chart-wrap");
-    wrap.appendChild(svg);
-    var legend = chartLegend(c.names);
-    if (legend) wrap.appendChild(legend);
+    var canvas = document.createElement("canvas");
+    wrap.style.maxWidth = (p.width || 600) + "px";
+    wrap.style.height = (p.height || 300) + "px";
+    wrap.appendChild(canvas);
+    loadChartJS(function () {
+      var cfg = configFn();
+      new Chart(canvas, cfg);
+    });
     return wrap;
   }
 
-  function lineChartEl(node, p) {
-    var c = chartSetup(p);
-    if (!c.names.length) return el("div", "sy-chart-empty", "No data");
-    var svg = svgNS("svg", { viewBox: "0 0 " + c.w + " " + c.h, class: "sy-chart" });
-    svg.style.width = "100%";
-    svg.style.maxWidth = c.w + "px";
-    chartAxes(svg, c);
-    c.names.forEach(function (name, si) {
-      var vals = c.series[name];
-      var n = vals.length;
-      if (n === 0) return;
-      var pts = [];
-      for (var j = 0; j < n; j++) {
-        var x = c.pad.left + (j / (n - 1 || 1)) * c.plotW;
-        var y = c.pad.top + c.plotH - ((vals[j] - c.minV) / c.range) * c.plotH;
-        pts.push(x + "," + y);
+  function seriesDatasets(p, type) {
+    var series = p.series || {};
+    var names = Object.keys(series);
+    var maxLen = 0;
+    names.forEach(function (n) { maxLen = Math.max(maxLen, series[n].length); });
+    var labels = p.x_labels && p.x_labels.length > 0
+      ? p.x_labels
+      : Array.from({ length: maxLen }, function (_, i) { return String(i + 1); });
+    var datasets = names.map(function (name, si) {
+      var color = CHART_COLORS[si % CHART_COLORS.length];
+      var ds = { label: name, data: series[name], borderColor: color, backgroundColor: color };
+      if (type === "line") {
+        ds.fill = false;
+        ds.tension = 0.3;
+        ds.pointRadius = 3;
+      } else if (type === "area") {
+        ds.fill = true;
+        ds.backgroundColor = color + "26";
+        ds.tension = 0.3;
+        ds.pointRadius = 2;
+      } else if (type === "bar") {
+        ds.backgroundColor = color + "cc";
       }
-      svg.appendChild(svgNS("polyline", {
-        points: pts.join(" "), fill: "none",
-        stroke: CHART_COLORS[si % CHART_COLORS.length],
-        "stroke-width": "2", "stroke-linejoin": "round", "stroke-linecap": "round",
-      }));
+      return ds;
     });
-    return wrapChart(svg, c);
+    return { labels: labels, datasets: datasets, title: p.title };
+  }
+
+  function chartOptions(title, type) {
+    var opts = {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: true, position: "top" },
+        tooltip: { enabled: true },
+      },
+      scales: type !== "pie" && type !== "doughnut" ? {
+        x: { grid: { display: false } },
+        y: { beginAtZero: type === "bar" }
+      } : undefined,
+    };
+    if (title) {
+      opts.plugins.title = { display: true, text: title, font: { size: 14 } };
+    }
+    return opts;
+  }
+
+  function lineChartEl(node, p) {
+    return makeChartJS("line", p, function () {
+      var d = seriesDatasets(p, "line");
+      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line") };
+    });
   }
 
   function barChartEl(node, p) {
-    var c = chartSetup(p);
-    if (!c.names.length) return el("div", "sy-chart-empty", "No data");
-    c.minV = Math.min(0, c.minV);
-    c.range = c.maxV - c.minV;
-    var svg = svgNS("svg", { viewBox: "0 0 " + c.w + " " + c.h, class: "sy-chart" });
-    svg.style.width = "100%";
-    svg.style.maxWidth = c.w + "px";
-    chartAxes(svg, c);
-    var groupW = c.plotW / c.maxLen;
-    var barW = groupW / (c.names.length + 1);
-    var baseY = c.pad.top + c.plotH - ((-c.minV) / c.range) * c.plotH;
-    c.names.forEach(function (name, si) {
-      var vals = c.series[name];
-      for (var j = 0; j < vals.length; j++) {
-        var x = c.pad.left + j * groupW + (si + 0.5) * barW;
-        var barH = (vals[j] / c.range) * c.plotH;
-        var y = vals[j] >= 0 ? baseY - barH : baseY;
-        svg.appendChild(svgNS("rect", {
-          x: x, y: y, width: barW * 0.8, height: Math.abs(barH),
-          fill: CHART_COLORS[si % CHART_COLORS.length], rx: "2",
-        }));
-      }
+    return makeChartJS("bar", p, function () {
+      var d = seriesDatasets(p, "bar");
+      return { type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar") };
     });
-    return wrapChart(svg, c);
   }
 
   function areaChartEl(node, p) {
-    var c = chartSetup(p);
-    if (!c.names.length) return el("div", "sy-chart-empty", "No data");
-    var svg = svgNS("svg", { viewBox: "0 0 " + c.w + " " + c.h, class: "sy-chart" });
-    svg.style.width = "100%";
-    svg.style.maxWidth = c.w + "px";
-    chartAxes(svg, c);
-    var baselineY = c.pad.top + c.plotH;
-    c.names.forEach(function (name, si) {
-      var vals = c.series[name];
-      var n = vals.length;
-      if (n === 0) return;
-      var pts = [];
-      var linePoints = [];
-      for (var j = 0; j < n; j++) {
-        var x = c.pad.left + (j / (n - 1 || 1)) * c.plotW;
-        var y = c.pad.top + c.plotH - ((vals[j] - c.minV) / c.range) * c.plotH;
-        pts.push(x + "," + y);
-        linePoints.push(x + "," + y);
-      }
-      var firstX = c.pad.left;
-      var lastX = c.pad.left + c.plotW;
-      var areaPath = "M" + firstX + "," + baselineY + " L" + pts.join(" L") + " L" + lastX + "," + baselineY + " Z";
-      var color = CHART_COLORS[si % CHART_COLORS.length];
-      svg.appendChild(svgNS("path", {
-        d: areaPath, fill: color, opacity: "0.15",
-      }));
-      svg.appendChild(svgNS("polyline", {
-        points: linePoints.join(" "), fill: "none",
-        stroke: color, "stroke-width": "2", "stroke-linejoin": "round",
-      }));
+    return makeChartJS("line", p, function () {
+      var d = seriesDatasets(p, "area");
+      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area") };
     });
-    return wrapChart(svg, c);
   }
 
   function pieChartEl(node, p) {
     var data = p.data || {};
     var names = Object.keys(data);
-    if (!names.length) return el("div", "sy-chart-empty", "No data");
-    var total = 0;
-    names.forEach(function (n) { total += data[n]; });
-    if (total === 0) return el("div", "sy-chart-empty", "No data");
-
-    var w = p.width || 400, h = p.height || 300;
-    var cx = w / 2, cy = h / 2, r = Math.min(cx, cy) - 20;
-    var svg = svgNS("svg", { viewBox: "0 0 " + w + " " + h, class: "sy-chart" });
-    svg.style.width = "100%";
-    svg.style.maxWidth = w + "px";
-
-    var angle = -Math.PI / 2;
-    names.forEach(function (name, si) {
-      var frac = data[name] / total;
-      var endAngle = angle + frac * 2 * Math.PI;
-      var large = frac > 0.5 ? 1 : 0;
-      var x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
-      var x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
-      var d = "M " + cx + " " + cy +
-              " L " + x1 + " " + y1 +
-              " A " + r + " " + r + " 0 " + large + " 1 " + x2 + " " + y2 + " Z";
-      var path = svgNS("path", { d: d, fill: CHART_COLORS[si % CHART_COLORS.length] });
-      svg.appendChild(path);
-
-      var midAngle = angle + frac * Math.PI;
-      var labelR = r * 0.65;
-      var lx = cx + labelR * Math.cos(midAngle);
-      var ly = cy + labelR * Math.sin(midAngle);
-      if (frac >= 0.05) {
-        var t = svgNS("text", { x: lx, y: ly, fill: "#fff", "font-size": "12", "text-anchor": "middle", "dominant-baseline": "central" });
-        t.textContent = Math.round(frac * 100) + "%";
-        svg.appendChild(t);
-      }
-      angle = endAngle;
+    return makeChartJS("pie", p, function () {
+      return {
+        type: "pie",
+        data: {
+          labels: names,
+          datasets: [{
+            data: names.map(function (n) { return data[n]; }),
+            backgroundColor: names.map(function (_, i) { return CHART_COLORS[i % CHART_COLORS.length]; }),
+          }],
+        },
+        options: chartOptions(p.title, "pie"),
+      };
     });
-
-    return wrapChart(svg, { names: names });
   }
 
   function scatterChartEl(node, p) {
     var series = p.series || {};
     var names = Object.keys(series);
-    if (!names.length) return el("div", "sy-chart-empty", "No data");
-
-    var w = p.width || 600, h = p.height || 300;
-    var pad = { top: 20, right: 20, bottom: 30, left: 55 };
-    var plotW = w - pad.left - pad.right;
-    var plotH = h - pad.top - pad.bottom;
-    var allX = [], allY = [];
-    names.forEach(function (name) {
-      (series[name] || []).forEach(function (pt) { allX.push(pt[0]); allY.push(pt[1]); });
-    });
-    if (!allX.length) return el("div", "sy-chart-empty", "No data");
-    var minX = Math.min.apply(null, allX), maxX = Math.max.apply(null, allX);
-    var minY = Math.min.apply(null, allY), maxY = Math.max.apply(null, allY);
-    if (minX === maxX) { minX -= 1; maxX += 1; }
-    if (minY === maxY) { minY -= 1; maxY += 1; }
-    var rangeX = maxX - minX, rangeY = maxY - minY;
-
-    var svg = svgNS("svg", { viewBox: "0 0 " + w + " " + h, class: "sy-chart" });
-    svg.style.width = "100%";
-    svg.style.maxWidth = w + "px";
-    var cs = getComputedStyle(document.documentElement);
-    var borderC = cs.getPropertyValue("--sy-border").trim() || "#e5e7eb";
-    var mutedC = cs.getPropertyValue("--sy-muted").trim() || "#6b7280";
-
-    var ticks = 5;
-    for (var i = 0; i <= ticks; i++) {
-      var yy = pad.top + plotH - (i / ticks) * plotH;
-      svg.appendChild(svgNS("line", { x1: pad.left, y1: yy, x2: w - pad.right, y2: yy, stroke: borderC, "stroke-dasharray": "3,3" }));
-      var valY = minY + (i / ticks) * rangeY;
-      var tY = svgNS("text", { x: pad.left - 8, y: yy + 4, fill: mutedC, "font-size": "11", "text-anchor": "end" });
-      tY.textContent = formatNum(valY);
-      svg.appendChild(tY);
-    }
-    svg.appendChild(svgNS("line", { x1: pad.left, y1: h - pad.bottom, x2: w - pad.right, y2: h - pad.bottom, stroke: borderC }));
-    svg.appendChild(svgNS("line", { x1: pad.left, y1: pad.top, x2: pad.left, y2: h - pad.bottom, stroke: borderC }));
-
-    names.forEach(function (name, si) {
-      var color = CHART_COLORS[si % CHART_COLORS.length];
-      (series[name] || []).forEach(function (pt) {
-        var cx = pad.left + ((pt[0] - minX) / rangeX) * plotW;
-        var cy = pad.top + plotH - ((pt[1] - minY) / rangeY) * plotH;
-        svg.appendChild(svgNS("circle", { cx: cx, cy: cy, r: "4", fill: color, opacity: "0.7" }));
+    return makeChartJS("scatter", p, function () {
+      var datasets = names.map(function (name, si) {
+        var pts = (series[name] || []).map(function (pt) { return { x: pt[0], y: pt[1] }; });
+        return { label: name, data: pts, backgroundColor: CHART_COLORS[si % CHART_COLORS.length], pointRadius: 5 };
       });
+      return { type: "scatter", data: { datasets: datasets }, options: chartOptions(p.title, "scatter") };
     });
+  }
 
-    return wrapChart(svg, { names: names });
+  function histogramChartEl(node, p) {
+    var values = p.data || [];
+    var bins = p.bins || 10;
+    return makeChartJS("bar", p, function () {
+      if (!values.length) return { type: "bar", data: { labels: [], datasets: [] }, options: {} };
+      var mn = Math.min.apply(null, values);
+      var mx = Math.max.apply(null, values);
+      if (mn === mx) { mn -= 1; mx += 1; }
+      var step = (mx - mn) / bins;
+      var counts = new Array(bins).fill(0);
+      var labels = [];
+      for (var i = 0; i < bins; i++) {
+        var lo = mn + i * step;
+        var hi = lo + step;
+        labels.push(lo.toFixed(1) + "–" + hi.toFixed(1));
+      }
+      values.forEach(function (v) {
+        var idx = Math.min(Math.floor((v - mn) / step), bins - 1);
+        counts[idx]++;
+      });
+      return {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{ label: "Frequency", data: counts, backgroundColor: CHART_COLORS[0] + "cc" }],
+        },
+        options: chartOptions(p.title, "bar"),
+      };
+    });
+  }
+
+  function doughnutChartEl(node, p) {
+    var data = p.data || {};
+    var names = Object.keys(data);
+    return makeChartJS("doughnut", p, function () {
+      return {
+        type: "doughnut",
+        data: {
+          labels: names,
+          datasets: [{
+            data: names.map(function (n) { return data[n]; }),
+            backgroundColor: names.map(function (_, i) { return CHART_COLORS[i % CHART_COLORS.length]; }),
+          }],
+        },
+        options: chartOptions(p.title, "doughnut"),
+      };
+    });
+  }
+
+  function radarChartEl(node, p) {
+    var series = p.series || {};
+    var names = Object.keys(series);
+    var labels = p.labels || [];
+    return makeChartJS("radar", p, function () {
+      var datasets = names.map(function (name, si) {
+        var color = CHART_COLORS[si % CHART_COLORS.length];
+        return {
+          label: name,
+          data: series[name],
+          borderColor: color,
+          backgroundColor: color + "33",
+          pointRadius: 3,
+        };
+      });
+      return {
+        type: "radar",
+        data: { labels: labels, datasets: datasets },
+        options: chartOptions(p.title, "radar"),
+      };
+    });
   }
 
   // --- Graphviz Chart (viz.js CDN) ----------------------------------------

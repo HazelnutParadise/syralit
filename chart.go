@@ -74,6 +74,37 @@ func AreaChart(data map[string][]float64, opts ...Option) {
 	current().add(&Node{Type: "area_chart", Props: chartProps(o, data)})
 }
 
+// HistogramChart renders a histogram from raw data values. The bins parameter
+// sets the number of bins (defaults to 10 if zero).
+func HistogramChart(data []float64, bins int, opts ...Option) {
+	if bins <= 0 {
+		bins = 10
+	}
+	o := applyOpts(opts)
+	props := chartProps(o, nil)
+	props["data"] = data
+	props["bins"] = bins
+	delete(props, "series")
+	current().add(&Node{Type: "histogram_chart", Props: props})
+}
+
+// DoughnutChart renders a doughnut chart (pie with hole). Labels map to values.
+func DoughnutChart(data map[string]float64, opts ...Option) {
+	o := applyOpts(opts)
+	props := chartProps(o, nil)
+	props["data"] = data
+	delete(props, "series")
+	current().add(&Node{Type: "doughnut_chart", Props: props})
+}
+
+// RadarChart renders a radar/spider chart from named series.
+func RadarChart(labels []string, data map[string][]float64, opts ...Option) {
+	o := applyOpts(opts)
+	props := chartProps(o, data)
+	props["labels"] = labels
+	current().add(&Node{Type: "radar_chart", Props: props})
+}
+
 // GraphvizChart renders a Graphviz DOT graph using viz.js (CDN).
 //
 //	sy.GraphvizChart(`digraph { A -> B -> C; B -> D; }`)

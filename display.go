@@ -286,10 +286,14 @@ func Echo(code string, fn func()) {
 }
 
 // ColumnConfig defines the type and options for a DataEditor column.
+// Supported types: "text", "number", "checkbox", "select", "date",
+// "time", "datetime", "link", "image", "progress", "list".
 type ColumnConfig struct {
-	Type    string   // "text" (default), "number", "checkbox", "select"
+	Type    string   // column type (see above)
 	Options []string // for "select" type: dropdown options
 	Width   int      // optional column width in pixels
+	Min     float64  // for "number" or "progress": minimum value
+	Max     float64  // for "number" or "progress": maximum value
 }
 
 // ColConfig is an Option that sets column configurations for DataEditor.
@@ -334,6 +338,12 @@ func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
 			}
 			if cfg.Width > 0 {
 				entry["width"] = cfg.Width
+			}
+			if cfg.Min != 0 {
+				entry["min"] = cfg.Min
+			}
+			if cfg.Max != 0 {
+				entry["max"] = cfg.Max
 			}
 			cc[col] = entry
 		}

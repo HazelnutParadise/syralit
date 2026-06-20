@@ -65,6 +65,7 @@ func LabelCollapsed() Option       { return func(o *widgetOpts) { o.labelVisibil
 func ChartTitle(t string) Option   { return func(o *widgetOpts) { o.title = t } }
 func Color(c string) Option        { return func(o *widgetOpts) { o.color = c } }
 func XLabels(l []string) Option    { return func(o *widgetOpts) { o.xLabels = l } }
+func Expanded() Option             { return DefaultValue(true) }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

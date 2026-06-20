@@ -182,6 +182,25 @@ func Status(label, state string, fn func()) {
 	rc.stack = rc.stack[:len(rc.stack)-1]
 }
 
+// Empty renders nothing by default but occupies a slot in the layout. Call
+// the returned function with a callback to populate it. Useful for replacing
+// content across reruns.
+//
+//	placeholder := sy.Empty()
+//	if ready {
+//	    placeholder(func() { sy.Text("Data loaded") })
+//	}
+func Empty() func(func()) {
+	rc := current()
+	node := &Node{Type: "container"}
+	rc.add(node)
+	return func(fn func()) {
+		rc.stack = append(rc.stack, node)
+		fn()
+		rc.stack = rc.stack[:len(rc.stack)-1]
+	}
+}
+
 // Divider renders a horizontal rule.
 func Divider() {
 	current().add(&Node{Type: "divider"})

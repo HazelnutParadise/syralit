@@ -65,6 +65,16 @@ type stopSentinel struct{}
 //	if !loggedIn { sy.Warning("Please log in"); sy.Stop() }
 func Stop() { panic(stopSentinel{}) }
 
+// Rerun triggers an immediate re-execution of the app function. The current
+// execution is halted (like Stop) and the session is flagged for re-rendering.
+func Rerun() {
+	rc := current()
+	rc.sess.mu.Lock()
+	rc.sess.needsRerun = true
+	rc.sess.mu.Unlock()
+	panic(stopSentinel{})
+}
+
 // runRerun executes the user's App function once and returns the produced UI
 // tree. A panic in user code is caught and rendered as an error node so a single
 // rerun cannot crash the server (SPEC §14).

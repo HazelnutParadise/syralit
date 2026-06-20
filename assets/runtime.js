@@ -338,6 +338,7 @@
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
       case "camera_input": return cameraInputEl(node, p);
+      case "map":          return mapEl(node, p);
       case "spinner":      return spinnerEl(node, p);
       case "popover":      return popoverEl(node, p);
       // --- Charts ---
@@ -1134,6 +1135,55 @@
       catch (e) { div.textContent = p.formula || ""; }
     });
     return div;
+  }
+
+  // --- Map (Leaflet) -----------------------------------------------------
+
+  var leafletState = "idle";
+  var leafletQueue = [];
+
+  function loadLeaflet(cb) {
+    if (window.L) { cb(); return; }
+    leafletQueue.push(cb);
+    if (leafletState !== "idle") return;
+    leafletState = "loading";
+    var css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(css);
+    var js = document.createElement("script");
+    js.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    js.onload = function () {
+      leafletState = "ready";
+      var q = leafletQueue; leafletQueue = [];
+      q.forEach(function (f) { f(); });
+    };
+    document.head.appendChild(js);
+  }
+
+  function mapEl(node, p) {
+    var wrap = el("div", "sy-map");
+    var h = (p.height || 400);
+    wrap.style.height = h + "px";
+    loadLeaflet(function () {
+      var pts = p.points || [];
+      var center = pts.length > 0 ? [pts[0].lat, pts[0].lon] : [25.033, 121.565];
+      var map = window.L.map(wrap).setView(center, 12);
+      window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(map);
+      var bounds = [];
+      pts.forEach(function (pt) {
+        var m = window.L.marker([pt.lat, pt.lon]).addTo(map);
+        if (pt.text) m.bindPopup(pt.text);
+        bounds.push([pt.lat, pt.lon]);
+      });
+      if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [30, 30] });
+      }
+      setTimeout(function () { map.invalidateSize(); }, 100);
+    });
+    return wrap;
   }
 
   // --- Raw HTML ----------------------------------------------------------

@@ -171,6 +171,37 @@ func LaTeX(formula string) {
 	current().add(&Node{Type: "latex", Props: map[string]any{"formula": formula}})
 }
 
+// MapPoint represents a single marker on a Map widget.
+type MapPoint struct {
+	Lat  float64
+	Lon  float64
+	Text string // optional popup text
+}
+
+// Map renders an interactive map with markers using Leaflet.js (CDN).
+// Points are displayed as markers with optional popup text.
+//
+//	sy.Map([]sy.MapPoint{
+//	    {Lat: 25.033, Lon: 121.565, Text: "Taipei 101"},
+//	    {Lat: 25.047, Lon: 121.517, Text: "Taipei Main Station"},
+//	}, sy.Height(400))
+func Map(points []MapPoint, opts ...Option) {
+	o := applyOpts(opts)
+	ps := make([]map[string]any, len(points))
+	for i, p := range points {
+		m := map[string]any{"lat": p.Lat, "lon": p.Lon}
+		if p.Text != "" {
+			m["text"] = p.Text
+		}
+		ps[i] = m
+	}
+	props := map[string]any{"points": ps}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	current().add(&Node{Type: "map", Props: props})
+}
+
 // Audio renders an HTML audio player. src can be a URL or data URI.
 func Audio(src string, opts ...Option) {
 	current().add(&Node{Type: "audio", Props: map[string]any{"src": src}})

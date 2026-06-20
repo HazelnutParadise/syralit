@@ -163,6 +163,15 @@ body {
   padding: .4rem .75rem;
 }
 
+/* --- Map --------------------------------------------------------------- */
+
+.sy-map {
+  width: 100%;
+  border-radius: var(--sy-radius);
+  border: 1px solid var(--sy-border);
+  z-index: 0;
+}
+
 /* --- Camera Input ------------------------------------------------------ */
 
 .sy-camera-video,

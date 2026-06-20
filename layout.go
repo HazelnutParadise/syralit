@@ -1,5 +1,10 @@
 package syralit
 
+import (
+	"strconv"
+	"strings"
+)
+
 // Column renders children into one column of a Columns layout.
 type Column func(fn func())
 
@@ -110,6 +115,32 @@ func FormSubmitButton(label string, opts ...Option) bool {
 	pressed := rc.sess.buttonPressed(id)
 	rc.add(&Node{ID: id, Type: "form_submit", Props: map[string]any{"label": label}})
 	return pressed
+}
+
+// WeightedColumns creates columns with custom widths specified as fractions.
+// Example: WeightedColumns(2, 1) creates a 2:1 split (66%/33%).
+func WeightedColumns(weights ...float64) []Column {
+	rc := current()
+	parts := make([]string, len(weights))
+	for i, w := range weights {
+		parts[i] = strconv.FormatFloat(w, 'f', -1, 64) + "fr"
+	}
+	colsNode := &Node{Type: "columns", Props: map[string]any{
+		"template": strings.Join(parts, " "),
+	}}
+	rc.add(colsNode)
+
+	cols := make([]Column, len(weights))
+	for i := range weights {
+		colNode := &Node{Type: "column"}
+		colsNode.Children = append(colsNode.Children, colNode)
+		cols[i] = func(fn func()) {
+			rc.stack = append(rc.stack, colNode)
+			fn()
+			rc.stack = rc.stack[:len(rc.stack)-1]
+		}
+	}
+	return cols
 }
 
 // Divider renders a horizontal rule.

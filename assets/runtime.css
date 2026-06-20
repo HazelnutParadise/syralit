@@ -891,6 +891,124 @@ body {
   100% { transform: translateY(110vh) translateX(30px); }
 }
 
+/* --- Chat Interface ---------------------------------------------------- */
+
+.sy-chat-message {
+  display: flex;
+  gap: .75rem;
+  padding: .75rem 0;
+}
+
+.sy-chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  background: var(--sy-hover);
+}
+
+.sy-chat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.sy-chat-user .sy-chat-avatar { background: color-mix(in srgb, var(--sy-accent) 15%, transparent); }
+.sy-chat-assistant .sy-chat-avatar { background: color-mix(in srgb, var(--sy-success) 15%, transparent); }
+
+.sy-chat-input-wrap {
+  display: flex;
+  gap: .5rem;
+  padding: .75rem 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--sy-bg);
+  border-top: 1px solid var(--sy-border);
+  margin-top: auto;
+}
+
+.sy-chat-input {
+  flex: 1;
+  padding: .6rem .85rem;
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  background: var(--sy-bg);
+  color: var(--sy-fg);
+  font: inherit;
+  font-size: .93rem;
+}
+.sy-chat-input:focus {
+  outline: none;
+  border-color: var(--sy-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sy-accent) 18%, transparent);
+}
+
+.sy-chat-send {
+  padding: .55rem .85rem;
+  border: none;
+  border-radius: var(--sy-radius);
+  background: var(--sy-accent);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: filter .15s;
+}
+.sy-chat-send:hover { filter: brightness(1.1); }
+
+/* --- Spinner ----------------------------------------------------------- */
+
+.sy-spinner-wrap {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .5rem 0;
+  color: var(--sy-muted);
+}
+
+.sy-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--sy-border);
+  border-top-color: var(--sy-accent);
+  border-radius: 50%;
+  animation: sy-spin .8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes sy-spin {
+  to { transform: rotate(360deg); }
+}
+
+.sy-spinner-text {
+  font-size: .88rem;
+}
+
+/* --- Popover ----------------------------------------------------------- */
+
+.sy-popover-wrap {
+  position: relative;
+  display: inline-block;
+  margin: .5rem 0;
+}
+
+.sy-popover-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 500;
+  min-width: 240px;
+  max-width: 400px;
+  padding: 1rem;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 8px 30px rgba(0,0,0,.16);
+  animation: sy-fade-in .15s ease;
+}
+
 /* --- Mobile Sidebar ---------------------------------------------------- */
 
 .sy-sidebar-toggle {

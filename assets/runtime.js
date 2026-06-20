@@ -295,6 +295,10 @@
       case "file_uploader":   return fileUploader(node, p);
       case "audio":   return audioEl(node, p);
       case "video":   return videoEl(node, p);
+      case "chat_message": return chatMessageEl(node, p);
+      case "chat_input":   return chatInputEl(node, p);
+      case "spinner":      return spinnerEl(node, p);
+      case "popover":      return popoverEl(node, p);
       // --- Charts ---
       case "line_chart":  return lineChartEl(node, p);
       case "bar_chart":   return barChartEl(node, p);
@@ -582,8 +586,12 @@
 
   function columns(node, p) {
     var div = el("div", "sy-columns");
-    var n = p.count || 2;
-    div.style.gridTemplateColumns = "repeat(" + n + ", 1fr)";
+    if (p.template) {
+      div.style.gridTemplateColumns = p.template;
+    } else {
+      var n = p.count || 2;
+      div.style.gridTemplateColumns = "repeat(" + n + ", 1fr)";
+    }
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
   }
@@ -885,6 +893,77 @@
       var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">' + icon + '</text></svg>';
       link.href = "data:image/svg+xml," + encodeURIComponent(svg);
     }
+  }
+
+  // --- Chat Interface ----------------------------------------------------
+
+  function chatMessageEl(node, p) {
+    var wrap = el("div", "sy-chat-message sy-chat-" + (p.role || "user"));
+    var avatar = el("div", "sy-chat-avatar");
+    avatar.textContent = p.role === "assistant" ? "🤖" : "👤";
+    var content = el("div", "sy-chat-content");
+    childNodes(node).forEach(function (c) { content.appendChild(c); });
+    wrap.appendChild(avatar);
+    wrap.appendChild(content);
+    return wrap;
+  }
+
+  function chatInputEl(node, p) {
+    var wrap = el("div", "sy-chat-input-wrap");
+    var input = document.createElement("input");
+    input.type = "text";
+    input.className = "sy-chat-input";
+    input.dataset.id = node.id;
+    input.placeholder = p.placeholder || "Type a message…";
+    if (p.disabled) input.disabled = true;
+    var btn = el("button", "sy-chat-send", "➤");
+    function doSubmit() {
+      var val = input.value.trim();
+      if (!val) return;
+      send(node.id, val, false);
+      input.value = "";
+    }
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); doSubmit(); }
+    });
+    btn.onclick = doSubmit;
+    wrap.appendChild(input);
+    wrap.appendChild(btn);
+    return wrap;
+  }
+
+  // --- Spinner -----------------------------------------------------------
+
+  function spinnerEl(node, p) {
+    var wrap = el("div", "sy-spinner-wrap");
+    var dot = el("div", "sy-spinner");
+    wrap.appendChild(dot);
+    wrap.appendChild(el("span", "sy-spinner-text", p.text || "Loading…"));
+    return wrap;
+  }
+
+  // --- Popover -----------------------------------------------------------
+
+  function popoverEl(node, p) {
+    var wrap = el("div", "sy-popover-wrap");
+    var btn = el("button", "sy-button sy-popover-trigger", p.label);
+    btn.dataset.id = node.id;
+    btn.onclick = function () { send(node.id, !p.open, false); };
+    wrap.appendChild(btn);
+    if (p.open) {
+      var panel = el("div", "sy-popover-panel");
+      childNodes(node).forEach(function (c) { panel.appendChild(c); });
+      wrap.appendChild(panel);
+      setTimeout(function () {
+        document.addEventListener("click", function close(e) {
+          if (!wrap.contains(e.target)) {
+            send(node.id, false, false);
+            document.removeEventListener("click", close);
+          }
+        });
+      }, 0);
+    }
+    return wrap;
   }
 
   // --- File Uploader ----------------------------------------------------

@@ -3,6 +3,7 @@ package syralit
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 )
 
 // Option configures a widget. See Key, Min, Max, Step, Placeholder, etc.
@@ -404,6 +405,82 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 	}
 	rc.add(&Node{ID: id, Type: "file_uploader", Props: props})
 	return file
+}
+
+// Write renders any value: strings are treated as Markdown, errors as Error
+// blocks, and everything else is formatted as JSON.
+func Write(args ...any) {
+	for _, arg := range args {
+		switch v := arg.(type) {
+		case string:
+			Markdown(v)
+		case error:
+			Error(v.Error())
+		case nil:
+			Text("None")
+		case fmt.Stringer:
+			Text(v.String())
+		default:
+			JSON(v)
+		}
+	}
+}
+
+// ChatMessage renders a chat bubble with avatar and role styling.
+// Use inside a loop over your message history:
+//
+//	sy.ChatMessage("user", func() { sy.Text(msg.Content) })
+//	sy.ChatMessage("assistant", func() { sy.Markdown(msg.Content) })
+func ChatMessage(role string, fn func()) {
+	rc := current()
+	msg := &Node{Type: "chat_message", Props: map[string]any{"role": role}}
+	rc.add(msg)
+	rc.stack = append(rc.stack, msg)
+	fn()
+	rc.stack = rc.stack[:len(rc.stack)-1]
+}
+
+// ChatInput renders a chat text input pinned to the bottom of the content area.
+// Returns the submitted text (non-empty only on the rerun triggered by Enter).
+func ChatInput(placeholder string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("chat_input", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	props := map[string]any{"placeholder": placeholder}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	rc.add(&Node{ID: id, Type: "chat_input", Props: props})
+	return strings.TrimSpace(s)
+}
+
+// Spinner renders a loading indicator with optional text.
+func Spinner(text ...string) {
+	label := "Loading..."
+	if len(text) > 0 && text[0] != "" {
+		label = text[0]
+	}
+	current().add(&Node{Type: "spinner", Props: map[string]any{"text": label}})
+}
+
+// Popover renders a button that shows a floating panel with the content
+// produced by fn.
+func Popover(label string, fn func(), opts ...Option) {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("popover", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	open, _ := val.(bool)
+	pop := &Node{ID: id, Type: "popover", Props: map[string]any{
+		"label": label,
+		"open":  open,
+	}}
+	rc.add(pop)
+	rc.stack = append(rc.stack, pop)
+	fn()
+	rc.stack = rc.stack[:len(rc.stack)-1]
 }
 
 func toFloat64(v any) float64 {

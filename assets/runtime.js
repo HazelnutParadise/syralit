@@ -341,6 +341,7 @@
       case "bar_chart":   return barChartEl(node, p);
       case "area_chart":    return areaChartEl(node, p);
       case "scatter_chart": return scatterChartEl(node, p);
+      case "pie_chart":     return pieChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -686,7 +687,10 @@
   }
 
   function container(node) {
+    var p = node.props || {};
     var div = el("div", "sy-container");
+    if (p.border) div.classList.add("sy-container-bordered");
+    if (p.height) { div.style.maxHeight = p.height + "px"; div.style.overflowY = "auto"; }
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
   }
@@ -1415,6 +1419,48 @@
       }));
     });
     return wrapChart(svg, c);
+  }
+
+  function pieChartEl(node, p) {
+    var data = p.data || {};
+    var names = Object.keys(data);
+    if (!names.length) return el("div", "sy-chart-empty", "No data");
+    var total = 0;
+    names.forEach(function (n) { total += data[n]; });
+    if (total === 0) return el("div", "sy-chart-empty", "No data");
+
+    var w = p.width || 400, h = p.height || 300;
+    var cx = w / 2, cy = h / 2, r = Math.min(cx, cy) - 20;
+    var svg = svgNS("svg", { viewBox: "0 0 " + w + " " + h, class: "sy-chart" });
+    svg.style.width = "100%";
+    svg.style.maxWidth = w + "px";
+
+    var angle = -Math.PI / 2;
+    names.forEach(function (name, si) {
+      var frac = data[name] / total;
+      var endAngle = angle + frac * 2 * Math.PI;
+      var large = frac > 0.5 ? 1 : 0;
+      var x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+      var x2 = cx + r * Math.cos(endAngle), y2 = cy + r * Math.sin(endAngle);
+      var d = "M " + cx + " " + cy +
+              " L " + x1 + " " + y1 +
+              " A " + r + " " + r + " 0 " + large + " 1 " + x2 + " " + y2 + " Z";
+      var path = svgNS("path", { d: d, fill: CHART_COLORS[si % CHART_COLORS.length] });
+      svg.appendChild(path);
+
+      var midAngle = angle + frac * Math.PI;
+      var labelR = r * 0.65;
+      var lx = cx + labelR * Math.cos(midAngle);
+      var ly = cy + labelR * Math.sin(midAngle);
+      if (frac >= 0.05) {
+        var t = svgNS("text", { x: lx, y: ly, fill: "#fff", "font-size": "12", "text-anchor": "middle", "dominant-baseline": "central" });
+        t.textContent = Math.round(frac * 100) + "%";
+        svg.appendChild(t);
+      }
+      angle = endAngle;
+    });
+
+    return wrapChart(svg, { names: names });
   }
 
   function scatterChartEl(node, p) {

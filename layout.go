@@ -85,9 +85,18 @@ func Sidebar(fn func()) {
 }
 
 // Container groups widgets into a plain wrapper (useful for conditional blocks).
-func Container(fn func()) {
+// Use Border() to render a visible border and Height(px) for a scrollable area.
+func Container(fn func(), opts ...Option) {
 	rc := current()
-	node := &Node{Type: "container"}
+	o := applyOpts(opts)
+	props := map[string]any{}
+	if o.border {
+		props["border"] = true
+	}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	node := &Node{Type: "container", Props: props}
 	rc.add(node)
 	rc.stack = append(rc.stack, node)
 	fn()

@@ -57,6 +57,25 @@ func ScatterChart(data map[string][][2]float64, opts ...Option) {
 	current().add(&Node{Type: "scatter_chart", Props: props})
 }
 
+// PieChart renders a pie chart from labelled values.
+//
+//	sy.PieChart(map[string]float64{
+//	    "Go": 45,
+//	    "Python": 35,
+//	    "Rust": 20,
+//	})
+func PieChart(data map[string]float64, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"data": data}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "pie_chart", Props: props})
+}
+
 // AreaChart renders an area chart (filled line chart) from named series.
 func AreaChart(data map[string][]float64, opts ...Option) {
 	o := applyOpts(opts)

@@ -163,6 +163,15 @@ body {
   padding: .4rem .75rem;
 }
 
+/* --- Container --------------------------------------------------------- */
+
+.sy-container-bordered {
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  padding: 1rem;
+  margin: .75rem 0;
+}
+
 /* --- Typography -------------------------------------------------------- */
 
 .sy-title {

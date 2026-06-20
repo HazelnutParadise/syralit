@@ -30,6 +30,7 @@ type widgetOpts struct {
 	mime        string
 	helpText    string
 	defaultVal  any
+	border      bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -49,6 +50,7 @@ func ImageCaption(v string) Option { return func(o *widgetOpts) { o.caption = v 
 func MimeType(v string) Option     { return func(o *widgetOpts) { o.mime = v } }
 func Help(v string) Option         { return func(o *widgetOpts) { o.helpText = v } }
 func DefaultValue(v any) Option    { return func(o *widgetOpts) { o.defaultVal = v } }
+func Border() Option               { return func(o *widgetOpts) { o.border = true } }
 
 func applyOpts(opts []Option) widgetOpts {
 	var o widgetOpts

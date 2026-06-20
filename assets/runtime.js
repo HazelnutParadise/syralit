@@ -21,7 +21,8 @@
 
   function connect() {
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(proto + "//" + location.host + "/_syralit/ws");
+    var qs = location.search || "";
+    ws = new WebSocket(proto + "//" + location.host + "/_syralit/ws" + qs);
     ws.onmessage = function (ev) {
       var msg = JSON.parse(ev.data);
       switch (msg.type) {

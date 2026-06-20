@@ -331,6 +331,10 @@ sy.Language("go")           // code language
 sy.Icon("🚀")               // prefix a button label with an icon
 sy.ButtonType("secondary")  // "primary" (default), "secondary", "tertiary"
 sy.UseContainerWidth()      // make a button span its container
+
+sy.Border()                 // also: bordered Metric card
+sy.MinDate("2026-01-01")    // DateInput / DateRangeInput lower bound
+sy.MaxDate("2026-12-31")    // DateInput / DateRangeInput upper bound
 ```
 
 ## Insyra Integration

@@ -1216,6 +1216,11 @@ body {
   padding: .75rem 0;
   margin: .5rem 0;
 }
+.sy-metric-bordered {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+}
 
 .sy-metric-label {
   font-size: .82rem;

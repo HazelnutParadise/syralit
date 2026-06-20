@@ -25,6 +25,9 @@ func Metric(label, value string, opts ...Option) {
 	if o.deltaColor != "" {
 		props["delta_color"] = o.deltaColor
 	}
+	if o.border {
+		props["border"] = true
+	}
 	current().add(&Node{Type: "metric", Props: props})
 }
 

@@ -160,10 +160,11 @@ func pageWidgets() {
 	tab("Date/Time", func() {
 		sy.Subheader("Date & Time")
 
-		date := sy.DateInput("Start Date", sy.Key("w_date"))
+		date := sy.DateInput("Start Date", sy.MinDate("2026-01-01"), sy.MaxDate("2026-12-31"), sy.Key("w_date"))
 		if date != "" {
 			sy.Text("Date: " + date)
 		}
+		sy.Caption("Bounded to 2026 via MinDate/MaxDate.")
 
 		start, end := sy.DateRangeInput("Booking period", sy.Key("w_daterange"))
 		if start != "" || end != "" {
@@ -689,6 +690,24 @@ func pageForms() {
 
 	sy.Divider()
 
+	sy.Header("Form Batching: Range + Date Range")
+	sy.Caption("RangeSlider and DateRangeInput are batched here — values only commit on submit.")
+	applied := sy.State("mega_filter", "")
+	sy.Form("filter_form", func() {
+		lo, hi := sy.RangeSlider("Budget range", 0, 5000, sy.DefaultValue([2]float64{1000, 4000}), sy.Step(100), sy.Key("ff_budget"))
+		start, end := sy.DateRangeInput("Travel dates", sy.Key("ff_dates"))
+		if sy.FormSubmitButton("Apply filters") {
+			applied.Set(fmt.Sprintf("Budget $%.0f–$%.0f · Dates %s→%s", lo, hi, dash(start), dash(end)))
+		}
+	})
+	if applied.Get() != "" {
+		mcols := sy.Columns(2)
+		mcols[0](func() { sy.Metric("Applied filter", "✓", sy.Border()) })
+		mcols[1](func() { sy.Metric("Summary", applied.Get(), sy.Border()) })
+	}
+
+	sy.Divider()
+
 	sy.Header("Dialog (Modal)")
 	sy.Dialog("settings_dialog", func() {
 		sy.Subheader("App Settings")
@@ -899,6 +918,13 @@ func pageChat() {
 			}
 		}, sy.Key("mega_stream_para"))
 	}
+}
+
+func dash(s string) string {
+	if s == "" {
+		return "—"
+	}
+	return s
 }
 
 func chatReply(prompt string) string {

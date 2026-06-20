@@ -43,6 +43,8 @@ type widgetOpts struct {
 	icon              string
 	buttonType        string // "primary" (default), "secondary", "tertiary"
 	useContainerWidth bool
+	minDate           string
+	maxDate           string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -83,6 +85,10 @@ func ButtonType(v string) Option { return func(o *widgetOpts) { o.buttonType = v
 
 // UseContainerWidth makes a button span the full width of its container.
 func UseContainerWidth() Option { return func(o *widgetOpts) { o.useContainerWidth = true } }
+
+// MinDate / MaxDate bound a DateInput or DateRangeInput to a "YYYY-MM-DD" range.
+func MinDate(d string) Option { return func(o *widgetOpts) { o.minDate = d } }
+func MaxDate(d string) Option { return func(o *widgetOpts) { o.maxDate = d } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {
@@ -337,8 +343,7 @@ func toFloatPair(val any) (float64, float64, bool) {
 // RangeSlider is a two-handle slider returning the selected (low, high) range —
 // the equivalent of Streamlit's st.slider called with a tuple value. The initial
 // range defaults to [min, max]; override with sy.DefaultValue([2]float64{lo, hi}).
-//
-// Note: RangeSlider sends changes immediately and is not batched inside a Form.
+// Inside a Form it is batched and commits on submit like any other input.
 func RangeSlider(label string, min, max float64, opts ...Option) (float64, float64) {
 	rc := current()
 	o := applyOpts(opts)
@@ -472,15 +477,25 @@ func DateInput(label string, opts ...Option) string {
 	if o.helpText != "" {
 		props["help"] = o.helpText
 	}
+	applyDateBounds(props, o)
 	rc.add(&Node{ID: id, Type: "date_input", Props: props})
 	return s
+}
+
+// applyDateBounds copies min/max date bounds onto a date widget's props.
+func applyDateBounds(props map[string]any, o widgetOpts) {
+	if o.minDate != "" {
+		props["min"] = o.minDate
+	}
+	if o.maxDate != "" {
+		props["max"] = o.maxDate
+	}
 }
 
 // DateRangeInput is a pair of date pickers returning the selected (start, end)
 // dates as "YYYY-MM-DD" strings (empty until picked) — the equivalent of
 // Streamlit's st.date_input called with a (start, end) tuple.
-//
-// Note: DateRangeInput sends changes immediately and is not batched inside a Form.
+// Inside a Form it is batched and commits on submit like any other input.
 func DateRangeInput(label string, opts ...Option) (string, string) {
 	rc := current()
 	o := applyOpts(opts)
@@ -504,6 +519,7 @@ func DateRangeInput(label string, opts ...Option) (string, string) {
 	if o.helpText != "" {
 		props["help"] = o.helpText
 	}
+	applyDateBounds(props, o)
 	rc.add(&Node{ID: id, Type: "date_range_input", Props: props})
 	return start, end
 }

@@ -236,6 +236,19 @@
     formEl.querySelectorAll("[data-id]").forEach(function (inp) {
       var id = inp.dataset.id;
       if (id === submitId) return;
+      // Dual-input widgets carry both values under one id; collect the pair.
+      if (inp.dataset.multi === "range") {
+        var rs = inp.closest(".sy-range-slider").querySelectorAll("input[type=range]");
+        var a = parseFloat(rs[0].value), b = parseFloat(rs[1].value);
+        if (a > b) { var t = a; a = b; b = t; }
+        changes.push({ widget_id: id, value: [a, b] });
+        return;
+      }
+      if (inp.dataset.multi === "daterange") {
+        var ds = inp.closest(".sy-date-range").querySelectorAll("input[type=date]");
+        changes.push({ widget_id: id, value: [ds[0].value, ds[1].value] });
+        return;
+      }
       if (inp.type === "checkbox") {
         changes.push({ widget_id: id, value: inp.checked });
       } else if (inp.tagName === "SELECT") {
@@ -600,6 +613,7 @@
     var inLo = mkInput("sy-range-low", p.low);
     var inHi = mkInput("sy-range-high", p.high);
     inLo.dataset.id = node.id;
+    inLo.dataset.multi = "range"; // tells submitForm to collect both handles
 
     var display = el("span", "sy-slider-value");
     function pct(v) { return max === min ? 0 : ((v - min) / (max - min)) * 100; }
@@ -616,6 +630,7 @@
     inLo.oninput = paint;
     inHi.oninput = paint;
     function commit() {
+      if (inForm(slider)) return; // batched on form submit
       var r = ordered();
       send(node.id, [r[0], r[1]], false);
     }
@@ -640,13 +655,19 @@
       i.type = "date";
       i.className = "sy-input";
       i.value = value || "";
+      if (p.min) i.min = p.min;
+      if (p.max) i.max = p.max;
       if (p.disabled) i.disabled = true;
       return i;
     }
     var start = mkDate(p.start);
     var end = mkDate(p.end);
     start.dataset.id = node.id;
-    function commit() { send(node.id, [start.value, end.value], false); }
+    start.dataset.multi = "daterange"; // tells submitForm to collect both dates
+    function commit() {
+      if (inForm(row)) return; // batched on form submit
+      send(node.id, [start.value, end.value], false);
+    }
     start.onchange = commit;
     end.onchange = commit;
     row.appendChild(start);
@@ -746,6 +767,8 @@
     input.className = "sy-input";
     input.dataset.id = node.id;
     input.value = p.value || "";
+    if (p.min) input.min = p.min;
+    if (p.max) input.max = p.max;
     if (p.disabled) input.disabled = true;
     input.onchange = function () {
       if (!inForm(input)) send(node.id, input.value, false);
@@ -1047,7 +1070,7 @@
   }
 
   function metric(node, p) {
-    var wrap = el("div", "sy-metric");
+    var wrap = el("div", "sy-metric" + (p.border ? " sy-metric-bordered" : ""));
     wrap.appendChild(el("div", "sy-metric-label", p.label));
     wrap.appendChild(el("div", "sy-metric-value", p.value));
     if (p.delta) {

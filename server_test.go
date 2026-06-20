@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1513,5 +1514,84 @@ func TestButtonFamilyStyling(t *testing.T) {
 	}
 	if dl == nil || dl["containerWidth"] != true {
 		t.Fatalf("download_button width: %v", dl)
+	}
+}
+
+func TestMetricBorderAndDateBounds(t *testing.T) {
+	app := func() {
+		Metric("Score", "92", Border())
+		DateInput("When", Key("d"), MinDate("2026-01-01"), MaxDate("2026-12-31"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	var metric, date map[string]any
+	for _, n := range nodes {
+		switch n["type"] {
+		case "metric":
+			metric = n["props"].(map[string]any)
+		case "date_input":
+			date = n["props"].(map[string]any)
+		}
+	}
+	if metric == nil || metric["border"] != true {
+		t.Fatalf("metric border: %v", metric)
+	}
+	if date == nil || date["min"] != "2026-01-01" || date["max"] != "2026-12-31" {
+		t.Fatalf("date bounds: %v", date)
+	}
+}
+
+func TestRangeSliderFormBatch(t *testing.T) {
+	app := func() {
+		Form("f", func() {
+			lo, hi := RangeSlider("R", 0, 100, DefaultValue([2]float64{10, 90}), Key("rng"))
+			start, end := DateRangeInput("D", Key("dr"))
+			if FormSubmitButton("Go", Key("sub")) {
+				Text(fmt.Sprintf("got %v-%v %s..%s", lo, hi, start, end))
+			}
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	_ = readPatch(t, ctx, c) // initial
+
+	// Submit the form with batched array values for both dual widgets.
+	b, _ := json.Marshal(map[string]any{
+		"type":      "form_submit",
+		"widget_id": "sub",
+		"changes": []map[string]any{
+			{"widget_id": "rng", "value": []any{25, 75}},
+			{"widget_id": "dr", "value": []any{"2026-03-01", "2026-03-31"}},
+		},
+	})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes := readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "got 25-75 2026-03-01..2026-03-31"); !ok {
+		t.Fatal("expected batched range+daterange form submission to apply")
 	}
 }

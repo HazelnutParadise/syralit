@@ -39,8 +39,13 @@ func Expander(label string, fn func(), opts ...Option) {
 	rc := current()
 	o := applyOpts(opts)
 	id := rc.widgetID("expander", o.key)
-	val, _ := rc.sess.widgetValue(id)
+	val, hasVal := rc.sess.widgetValue(id)
 	expanded, _ := val.(bool)
+	if !hasVal {
+		if dv, ok := o.defaultVal.(bool); ok {
+			expanded = dv
+		}
+	}
 	node := &Node{ID: id, Type: "expander", Props: map[string]any{
 		"label":    label,
 		"expanded": expanded,

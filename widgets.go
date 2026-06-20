@@ -28,11 +28,12 @@ type widgetOpts struct {
 	alt         string
 	caption     string
 	mime        string
-	helpText      string
-	defaultVal    any
-	border        bool
-	maxSelections int
-	gap           int
+	helpText        string
+	defaultVal      any
+	border          bool
+	maxSelections   int
+	gap             int
+	labelVisibility string // "visible" (default), "hidden", "collapsed"
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -55,6 +56,20 @@ func DefaultValue(v any) Option    { return func(o *widgetOpts) { o.defaultVal =
 func Border() Option               { return func(o *widgetOpts) { o.border = true } }
 func MaxSelections(n int) Option   { return func(o *widgetOpts) { o.maxSelections = n } }
 func Gap(px int) Option            { return func(o *widgetOpts) { o.gap = px } }
+func LabelHidden() Option          { return func(o *widgetOpts) { o.labelVisibility = "hidden" } }
+func LabelCollapsed() Option       { return func(o *widgetOpts) { o.labelVisibility = "collapsed" } }
+
+func applyCommonProps(props map[string]any, o widgetOpts) {
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	if o.labelVisibility != "" {
+		props["label_visibility"] = o.labelVisibility
+	}
+}
 
 func applyOpts(opts []Option) widgetOpts {
 	var o widgetOpts
@@ -110,15 +125,10 @@ func TextInput(label string, opts ...Option) string {
 	if o.placeholder != "" {
 		props["placeholder"] = o.placeholder
 	}
-	if o.disabled {
-		props["disabled"] = true
-	}
 	if o.maxChars > 0 {
 		props["max_chars"] = o.maxChars
 	}
-	if o.helpText != "" {
-		props["help"] = o.helpText
-	}
+	applyCommonProps(props, o)
 	rc.add(&Node{ID: id, Type: "text_input", Props: props})
 	return s
 }

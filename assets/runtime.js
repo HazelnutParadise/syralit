@@ -357,9 +357,14 @@
     return e;
   }
 
-  function field(labelText, control, helpText) {
+  function field(labelText, control, helpText, labelVis) {
     var wrap = el("div", "sy-field");
-    if (labelText) wrap.appendChild(el("label", "sy-label", labelText));
+    if (labelText) {
+      var lbl = el("label", "sy-label", labelText);
+      if (labelVis === "hidden") lbl.style.visibility = "hidden";
+      else if (labelVis === "collapsed") lbl.style.display = "none";
+      wrap.appendChild(lbl);
+    }
     wrap.appendChild(control);
     if (helpText) wrap.appendChild(el("div", "sy-help", helpText));
     return wrap;
@@ -387,7 +392,7 @@
     input.oninput = function () {
       if (!inForm(input)) send(node.id, input.value, false);
     };
-    return field(p.label, input, p.help);
+    return field(p.label, input, p.help, p.label_visibility);
   }
 
   function checkbox(node, p) {

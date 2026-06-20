@@ -1358,7 +1358,9 @@
     var series = p.series || {};
     var names = Object.keys(series);
     var w = p.width || 600, h = p.height || 300;
-    var pad = { top: 20, right: 20, bottom: 30, left: 55 };
+    var hasTitle = !!p.title;
+    var hasXLabels = p.x_labels && p.x_labels.length > 0;
+    var pad = { top: hasTitle ? 40 : 20, right: 20, bottom: hasXLabels ? 50 : 30, left: 55 };
     var plotW = w - pad.left - pad.right;
     var plotH = h - pad.top - pad.bottom;
     var allVals = [], maxLen = 0;
@@ -1369,13 +1371,18 @@
     var minV = allVals.length ? Math.min.apply(null, allVals) : 0;
     var maxV = allVals.length ? Math.max.apply(null, allVals) : 1;
     if (minV === maxV) { minV -= 1; maxV += 1; }
-    return { series: series, names: names, w: w, h: h, pad: pad, plotW: plotW, plotH: plotH, minV: minV, maxV: maxV, range: maxV - minV, maxLen: maxLen };
+    return { series: series, names: names, w: w, h: h, pad: pad, plotW: plotW, plotH: plotH, minV: minV, maxV: maxV, range: maxV - minV, maxLen: maxLen, title: p.title, xLabels: p.x_labels };
   }
 
   function chartAxes(svg, c) {
     var cs = getComputedStyle(document.documentElement);
     var borderC = cs.getPropertyValue("--sy-border").trim() || "#e5e7eb";
     var mutedC = cs.getPropertyValue("--sy-muted").trim() || "#6b7280";
+    if (c.title) {
+      var titleTxt = svgNS("text", { x: c.w / 2, y: 20, fill: mutedC, "font-size": "14", "text-anchor": "middle", "font-weight": "600", "font-family": "inherit" });
+      titleTxt.textContent = c.title;
+      svg.appendChild(titleTxt);
+    }
     var ticks = 5;
     for (var i = 0; i <= ticks; i++) {
       var y = c.pad.top + c.plotH - (i / ticks) * c.plotH;
@@ -1386,6 +1393,15 @@
       svg.appendChild(txt);
     }
     svg.appendChild(svgNS("line", { x1: c.pad.left, y1: c.h - c.pad.bottom, x2: c.w - c.pad.right, y2: c.h - c.pad.bottom, stroke: borderC, "stroke-width": "1" }));
+    if (c.xLabels && c.xLabels.length > 0) {
+      var n = c.xLabels.length;
+      for (var j = 0; j < n; j++) {
+        var xPos = c.pad.left + (j / (n - 1 || 1)) * c.plotW;
+        var lbl = svgNS("text", { x: xPos, y: c.h - c.pad.bottom + 18, fill: mutedC, "font-size": "10", "text-anchor": "middle", "font-family": "inherit" });
+        lbl.textContent = c.xLabels[j];
+        svg.appendChild(lbl);
+      }
+    }
   }
 
   function chartLegend(names) {

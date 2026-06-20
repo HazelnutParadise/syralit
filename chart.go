@@ -1,5 +1,22 @@
 package syralit
 
+func chartProps(o widgetOpts, data any) map[string]any {
+	props := map[string]any{"series": data}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	if o.title != "" {
+		props["title"] = o.title
+	}
+	if len(o.xLabels) > 0 {
+		props["x_labels"] = o.xLabels
+	}
+	return props
+}
+
 // LineChart renders a line chart from named series.
 //
 //	sy.LineChart(map[string][]float64{
@@ -8,27 +25,13 @@ package syralit
 //	})
 func LineChart(data map[string][]float64, opts ...Option) {
 	o := applyOpts(opts)
-	props := map[string]any{"series": data}
-	if o.height > 0 {
-		props["height"] = o.height
-	}
-	if o.width > 0 {
-		props["width"] = o.width
-	}
-	current().add(&Node{Type: "line_chart", Props: props})
+	current().add(&Node{Type: "line_chart", Props: chartProps(o, data)})
 }
 
 // BarChart renders a bar chart from named series.
 func BarChart(data map[string][]float64, opts ...Option) {
 	o := applyOpts(opts)
-	props := map[string]any{"series": data}
-	if o.height > 0 {
-		props["height"] = o.height
-	}
-	if o.width > 0 {
-		props["width"] = o.width
-	}
-	current().add(&Node{Type: "bar_chart", Props: props})
+	current().add(&Node{Type: "bar_chart", Props: chartProps(o, data)})
 }
 
 // ScatterChart renders a scatter plot. Each series maps to a slice of [x, y]
@@ -47,14 +50,7 @@ func ScatterChart(data map[string][][2]float64, opts ...Option) {
 		}
 		series[name] = ps
 	}
-	props := map[string]any{"series": series}
-	if o.height > 0 {
-		props["height"] = o.height
-	}
-	if o.width > 0 {
-		props["width"] = o.width
-	}
-	current().add(&Node{Type: "scatter_chart", Props: props})
+	current().add(&Node{Type: "scatter_chart", Props: chartProps(o, series)})
 }
 
 // PieChart renders a pie chart from labelled values.
@@ -66,25 +62,14 @@ func ScatterChart(data map[string][][2]float64, opts ...Option) {
 //	})
 func PieChart(data map[string]float64, opts ...Option) {
 	o := applyOpts(opts)
-	props := map[string]any{"data": data}
-	if o.height > 0 {
-		props["height"] = o.height
-	}
-	if o.width > 0 {
-		props["width"] = o.width
-	}
+	props := chartProps(o, nil)
+	props["data"] = data
+	delete(props, "series")
 	current().add(&Node{Type: "pie_chart", Props: props})
 }
 
 // AreaChart renders an area chart (filled line chart) from named series.
 func AreaChart(data map[string][]float64, opts ...Option) {
 	o := applyOpts(opts)
-	props := map[string]any{"series": data}
-	if o.height > 0 {
-		props["height"] = o.height
-	}
-	if o.width > 0 {
-		props["width"] = o.width
-	}
-	current().add(&Node{Type: "area_chart", Props: props})
+	current().add(&Node{Type: "area_chart", Props: chartProps(o, data)})
 }

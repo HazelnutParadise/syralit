@@ -34,6 +34,8 @@ type widgetOpts struct {
 	maxSelections   int
 	gap             int
 	labelVisibility string // "visible" (default), "hidden", "collapsed"
+	title           string
+	xLabels         []string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -58,6 +60,8 @@ func MaxSelections(n int) Option   { return func(o *widgetOpts) { o.maxSelection
 func Gap(px int) Option            { return func(o *widgetOpts) { o.gap = px } }
 func LabelHidden() Option          { return func(o *widgetOpts) { o.labelVisibility = "hidden" } }
 func LabelCollapsed() Option       { return func(o *widgetOpts) { o.labelVisibility = "collapsed" } }
+func ChartTitle(t string) Option   { return func(o *widgetOpts) { o.title = t } }
+func XLabels(l []string) Option    { return func(o *widgetOpts) { o.xLabels = l } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

@@ -54,6 +54,18 @@ func Image(src string, opts ...Option) {
 	current().add(&Node{Type: "image", Props: props})
 }
 
+// ImageFromBytes renders an image from raw bytes. The MIME type should be
+// specified via MimeType("image/png") or similar; defaults to image/png.
+func ImageFromBytes(data []byte, opts ...Option) {
+	o := applyOpts(opts)
+	mime := o.mime
+	if mime == "" {
+		mime = "image/png"
+	}
+	src := "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+	Image(src, opts...)
+}
+
 // JSON renders a formatted JSON viewer for any serializable value.
 func JSON(data any) {
 	b, err := json.MarshalIndent(data, "", "  ")

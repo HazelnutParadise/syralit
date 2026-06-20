@@ -28,7 +28,7 @@ TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox,
 
 ### Display
 
-Title, Header, Subheader, Text, Markdown, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables), Link, LinkButton, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output)
+Title, Header, Subheader, Text, Markdown, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables with column config), Link, LinkButton, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output), Component (custom HTML/JS widgets), IFrame
 
 ### Layout
 
@@ -42,9 +42,12 @@ LineChart, BarChart, AreaChart, ScatterChart, PieChart — all with title and x-
 
 - Session state: `sy.State("key", defaultVal)` with `.Get()` / `.Set()`
 - Multi-page apps: `sy.AddPage(title, fn, PageIcon(), PageOrder())`
+- Declarative navigation: `sy.Navigation([]sy.Page{...})`
 - Page switching: `sy.SwitchPage(title)`
 - Query parameters: `sy.QueryParam("key")`, `sy.QueryParams()`
 - Flow control: `sy.Stop()`, `sy.Rerun()`
+- Database: `sy.Connection("name")` + `sy.SQLQuery(db, query)`
+- Auth: `sy.LoginGate(checkFn)`, `sy.User()`, `sy.Login()`, `sy.Logout()`
 
 ### Feedback
 

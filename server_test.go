@@ -18,10 +18,19 @@ func findText(nodes []map[string]any, want string) (map[string]any, bool) {
 	for _, n := range nodes {
 		props, _ := n["props"].(map[string]any)
 		if props != nil {
-			if txt, _ := props["text"].(string); want == "" || strings.Contains(txt, want) {
-				if want != "" && strings.Contains(txt, want) {
-					return n, true
+			if txt, _ := props["text"].(string); want != "" && strings.Contains(txt, want) {
+				return n, true
+			}
+		}
+		if children, ok := n["children"].([]any); ok {
+			var childNodes []map[string]any
+			for _, c := range children {
+				if cm, ok := c.(map[string]any); ok {
+					childNodes = append(childNodes, cm)
 				}
+			}
+			if found, ok := findText(childNodes, want); ok {
+				return found, true
 			}
 		}
 	}
@@ -32,6 +41,17 @@ func nodeByID(nodes []map[string]any, id string) (map[string]any, bool) {
 	for _, n := range nodes {
 		if n["id"] == id {
 			return n, true
+		}
+		if children, ok := n["children"].([]any); ok {
+			var childNodes []map[string]any
+			for _, c := range children {
+				if cm, ok := c.(map[string]any); ok {
+					childNodes = append(childNodes, cm)
+				}
+			}
+			if found, ok := nodeByID(childNodes, id); ok {
+				return found, true
+			}
 		}
 	}
 	return nil, false
@@ -387,6 +407,209 @@ func TestFragment(t *testing.T) {
 	// For this test, verifying that fragment is in the initial render is sufficient.
 	if _, ok := findText(nodes, "Outside fragment"); !ok {
 		t.Fatal("expected 'Outside fragment' text")
+	}
+}
+
+// TestCameraInput verifies the camera_input widget renders.
+func TestCameraInput(t *testing.T) {
+	app := func() {
+		CameraInput("Take a photo", Key("cam"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := nodeByID(nodes, "cam"); !ok {
+		t.Fatal("camera_input widget not found")
+	}
+}
+
+// TestMap verifies the Map widget renders with points.
+func TestMap(t *testing.T) {
+	app := func() {
+		Map([]MapPoint{
+			{Lat: 25.033, Lon: 121.565, Text: "Taipei 101"},
+		}, Height(300))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "map" {
+			props, _ := n["props"].(map[string]any)
+			if pts, ok := props["points"].([]any); ok && len(pts) == 1 {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("map widget with 1 point not found")
+	}
+}
+
+// TestRerun verifies that Rerun() triggers re-execution.
+func TestRerun(t *testing.T) {
+	app := func() {
+		count := State("rerun_count", 0)
+		if count.Get() == 0 {
+			count.Set(1)
+			Rerun()
+		}
+		Textf("Count: %d", count.Get())
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Count: 1"); !ok {
+		t.Fatal("expected Rerun to cause re-execution with count=1")
+	}
+}
+
+// TestEmpty verifies the Empty placeholder can be populated.
+func TestEmpty(t *testing.T) {
+	app := func() {
+		placeholder := Empty()
+		placeholder(func() {
+			Text("Filled content")
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Filled content"); !ok {
+		t.Fatal("expected Empty placeholder to contain 'Filled content'")
+	}
+}
+
+// TestFormSubmit verifies form submission batches widget changes.
+func TestFormSubmit(t *testing.T) {
+	app := func() {
+		Form("myform", func() {
+			name := TextInput("Name", Key("fname"))
+			if FormSubmitButton("Submit", Key("fsub")) {
+				Text("Submitted: " + name)
+			}
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	_ = readPatch(t, ctx, c) // initial render
+
+	// Submit form with batched changes.
+	b, _ := json.Marshal(map[string]any{
+		"type":      "form_submit",
+		"widget_id": "fsub",
+		"changes": []map[string]any{
+			{"widget_id": "fname", "value": "Alice"},
+		},
+	})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	nodes := readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Submitted: Alice"); !ok {
+		t.Fatal("expected form submission to produce 'Submitted: Alice'")
+	}
+}
+
+// TestToast verifies that Toast produces toasts in the response.
+func TestToast(t *testing.T) {
+	first := true
+	app := func() {
+		if first {
+			Toast("Hello!", "info")
+			first = false
+		}
+		Text("Done")
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+	c, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer c.CloseNow()
+
+	// Read the raw message to check for toasts field.
+	_, data, err := c.Read(ctx)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	var msg map[string]any
+	json.Unmarshal(data, &msg)
+	toasts, ok := msg["toasts"].([]any)
+	if !ok || len(toasts) == 0 {
+		t.Fatal("expected toasts in initial render")
+	}
+	toast0, _ := toasts[0].(map[string]any)
+	if toast0["text"] != "Hello!" {
+		t.Fatalf("expected toast text 'Hello!', got %v", toast0["text"])
 	}
 }
 

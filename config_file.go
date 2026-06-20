@@ -22,10 +22,11 @@ type Theme struct {
 
 // fileConfig mirrors syralit.toml.
 type fileConfig struct {
-	Title string `toml:"title"`
-	Host  string `toml:"host"`
-	Port  int    `toml:"port"`
-	Theme struct {
+	Title   string            `toml:"title"`
+	Host    string            `toml:"host"`
+	Port    int               `toml:"port"`
+	Secrets map[string]string `toml:"secrets"`
+	Theme   struct {
 		Mode   string `toml:"mode"`
 		Accent string `toml:"accent"`
 		Radius string `toml:"radius"`
@@ -47,7 +48,12 @@ func loadFileConfig(dir string) *fileConfig {
 	return &fc
 }
 
+var loadedSecrets map[string]string
+
 func (fc *fileConfig) applyToConfig(cfg *Config) {
+	if fc != nil && fc.Secrets != nil {
+		loadedSecrets = fc.Secrets
+	}
 	if fc == nil {
 		return
 	}

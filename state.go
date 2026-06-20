@@ -1,6 +1,9 @@
 package syralit
 
-import "reflect"
+import (
+	"os"
+	"reflect"
+)
 
 // coerceNumeric converts a JSON-decoded number (float64) back to the declared
 // type T when both are numeric kinds. Used to repair typed State after a hot
@@ -103,4 +106,18 @@ func (s *SessionStore) Get(key string) (any, bool) {
 	defer s.sess.mu.Unlock()
 	v, ok := s.sess.store[key]
 	return v, ok
+}
+
+// Secrets returns a secret value from the [secrets] section of syralit.toml,
+// falling back to an environment variable of the same name. This lets apps
+// keep API keys out of source code.
+//
+//	apiKey := sy.Secrets("OPENAI_API_KEY")
+func Secrets(key string) string {
+	if loadedSecrets != nil {
+		if v, ok := loadedSecrets[key]; ok {
+			return v
+		}
+	}
+	return os.Getenv(key)
 }

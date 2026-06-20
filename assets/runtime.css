@@ -151,6 +151,18 @@ body {
   border-top: 1px solid var(--sy-border);
 }
 
+.sy-sidebar-footer {
+  margin-top: auto;
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--sy-border);
+}
+
+.sy-theme-toggle {
+  width: 100%;
+  font-size: 1.1rem;
+  padding: .4rem .75rem;
+}
+
 /* --- Typography -------------------------------------------------------- */
 
 .sy-title {

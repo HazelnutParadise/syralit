@@ -102,8 +102,35 @@
       section.remove();
     }
 
+    ensureThemeToggle();
     ensureMobileToggle();
     ensureBackdrop();
+  }
+
+  function ensureThemeToggle() {
+    if (sidebar.querySelector(".sy-theme-toggle")) return;
+    var footer = el("div", "sy-sidebar-footer");
+    var btn = document.createElement("button");
+    btn.className = "sy-theme-toggle sy-btn";
+    var html = document.documentElement;
+    function icon() { return html.getAttribute("data-theme") === "dark" ? "☀️" : "🌙"; }
+    btn.textContent = icon();
+    btn.onclick = function () {
+      var cur = html.getAttribute("data-theme");
+      var next = cur === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      btn.textContent = icon();
+      try { localStorage.setItem("sy-theme", next); } catch (e) {}
+    };
+    footer.appendChild(btn);
+    sidebar.appendChild(footer);
+    try {
+      var saved = localStorage.getItem("sy-theme");
+      if (saved && !html.getAttribute("data-theme")) {
+        html.setAttribute("data-theme", saved);
+        btn.textContent = icon();
+      }
+    } catch (e) {}
   }
 
   function ensureMobileToggle() {

@@ -986,3 +986,143 @@ func TestPageLink(t *testing.T) {
 		t.Fatal("page_link not found")
 	}
 }
+
+func TestHistogramChart(t *testing.T) {
+	app := func() {
+		HistogramChart([]float64{1, 2, 2, 3, 3, 3, 4, 5}, 5, ChartTitle("Distribution"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "histogram_chart" {
+			props := n["props"].(map[string]any)
+			if props["title"] == "Distribution" {
+				bins, _ := props["bins"].(float64)
+				if bins == 5 {
+					found = true
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("histogram_chart not found with correct props")
+	}
+}
+
+func TestDoughnutChart(t *testing.T) {
+	app := func() {
+		DoughnutChart(map[string]float64{"A": 30, "B": 70})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "doughnut_chart" {
+			props := n["props"].(map[string]any)
+			data, _ := props["data"].(map[string]any)
+			if data != nil {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("doughnut_chart not found")
+	}
+}
+
+func TestRadarChart(t *testing.T) {
+	app := func() {
+		RadarChart(
+			[]string{"Speed", "Power", "Skill"},
+			map[string][]float64{"Player": {80, 90, 70}},
+		)
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "radar_chart" {
+			props := n["props"].(map[string]any)
+			labels, _ := props["labels"].([]any)
+			if len(labels) == 3 {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("radar_chart not found")
+	}
+}
+
+func TestDataEditorDynamicRows(t *testing.T) {
+	app := func() {
+		DataEditor(
+			[]string{"Name", "Age"},
+			[][]any{{"Alice", 30}},
+			DynamicRows(),
+		)
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "data_editor" {
+			props := n["props"].(map[string]any)
+			if dr, ok := props["dynamic_rows"].(bool); ok && dr {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("data_editor with dynamic_rows not found")
+	}
+}

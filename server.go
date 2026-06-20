@@ -180,7 +180,19 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 // Sidebar user content (nodes of type "sidebar_content") is separated from the
 // main tree and sent in a dedicated "sidebar" field.
 func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
-	root := runRerun(sess)
+	var root *Node
+	for range 5 {
+		sess.mu.Lock()
+		sess.needsRerun = false
+		sess.mu.Unlock()
+		root = runRerun(sess)
+		sess.mu.Lock()
+		stable := !sess.needsRerun
+		sess.mu.Unlock()
+		if stable {
+			break
+		}
+	}
 
 	var mainNodes, sidebarNodes []*Node
 	for _, n := range root.Children {

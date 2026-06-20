@@ -20,6 +20,7 @@ type session struct {
 	currentPage   string          // multi-page: active page title (empty = default)
 	pendingToasts []map[string]any
 	pageConfig    *pageConfig
+	needsRerun    bool // set by SwitchPage to re-render after stop
 }
 
 type pageConfig struct {
@@ -97,7 +98,10 @@ func (s *session) activePage() string {
 
 func (s *session) setCurrentPage(page string) {
 	s.mu.Lock()
-	s.currentPage = page
+	if s.currentPage != page {
+		s.currentPage = page
+		s.needsRerun = true
+	}
 	s.mu.Unlock()
 }
 

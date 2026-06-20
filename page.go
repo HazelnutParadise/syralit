@@ -89,6 +89,14 @@ func pageInfos() []map[string]any {
 	return infos
 }
 
+// SwitchPage programmatically navigates to a different page. The current
+// rerun is stopped and the next render will show the target page.
+func SwitchPage(title string) {
+	rc := current()
+	rc.sess.setCurrentPage(title)
+	Stop()
+}
+
 // resetPages clears the registry (for tests only).
 func resetPages() {
 	pageRegistry = nil

@@ -2,6 +2,7 @@ package syralit
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 )
 
@@ -84,7 +85,12 @@ func runRerun(sess *session) *Node {
 		defer func() {
 			if r := recover(); r != nil {
 				if _, ok := r.(stopSentinel); !ok {
-					rc.add(&Node{Type: "error", Props: map[string]any{"text": fmt.Sprintf("App panic: %v", r)}})
+					stack := string(debug.Stack())
+					rc.add(&Node{Type: "status", Props: map[string]any{
+						"level": "error",
+						"text":  fmt.Sprintf("App panic: %v", r),
+					}})
+					rc.add(&Node{Type: "code", Props: map[string]any{"code": stack}})
 				}
 			}
 		}()

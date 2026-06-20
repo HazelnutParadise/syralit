@@ -4,6 +4,10 @@
   --sy-muted: #6b7280;
   --sy-border: #e5e7eb;
   --sy-accent: #7c3aed;
+  /* Alias kept for widgets that reference --sy-primary; tracks --sy-accent
+     so a custom accent (set via theme override) flows through everywhere. */
+  --sy-primary: var(--sy-accent);
+  --sy-primary-alpha: color-mix(in srgb, var(--sy-accent) 12%, transparent);
   --sy-radius: 12px;
   --sy-info: #2563eb;
   --sy-success: #16a34a;
@@ -191,8 +195,24 @@ body {
 
 .sy-theme-toggle {
   width: 100%;
-  font-size: 1.1rem;
-  padding: .4rem .75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: .5rem .75rem;
+  background: var(--sy-bg);
+  color: var(--sy-fg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.sy-theme-toggle:hover {
+  background: var(--sy-hover);
+  border-color: var(--sy-accent);
 }
 
 /* --- Segmented Control ------------------------------------------------- */
@@ -704,7 +724,9 @@ body {
   font-size: .93rem;
   font-weight: 600;
   cursor: pointer;
-  margin: .5rem 0;
+  /* Right margin so adjacent inline buttons keep a gap instead of touching;
+     no left margin keeps wrapped buttons aligned to the container edge. */
+  margin: .5rem .55rem .5rem 0;
   transition: filter .15s, transform .1s, box-shadow .15s;
   box-shadow: 0 1px 3px rgba(0,0,0,.12);
   text-decoration: none;

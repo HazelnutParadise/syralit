@@ -121,11 +121,19 @@
     var btn = document.createElement("button");
     btn.className = "sy-theme-toggle sy-btn";
     var html = document.documentElement;
-    function icon() { return html.getAttribute("data-theme") === "dark" ? "☀️" : "🌙"; }
+    // The effective theme is the explicit data-theme if set, otherwise the OS
+    // preference. Flipping from the effective theme makes the first click always
+    // produce a visible change (a plain toggle of data-theme would no-op when the
+    // attribute is unset but the OS is already in the target mode).
+    function effectiveTheme() {
+      var attr = html.getAttribute("data-theme");
+      if (attr === "dark" || attr === "light") return attr;
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function icon() { return effectiveTheme() === "dark" ? "☀️" : "🌙"; }
     btn.textContent = icon();
     btn.onclick = function () {
-      var cur = html.getAttribute("data-theme");
-      var next = cur === "dark" ? "light" : "dark";
+      var next = effectiveTheme() === "dark" ? "light" : "dark";
       html.setAttribute("data-theme", next);
       btn.textContent = icon();
       try { localStorage.setItem("sy-theme", next); } catch (e) {}

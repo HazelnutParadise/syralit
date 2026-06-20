@@ -30,7 +30,9 @@
           if (msg.pages || msg.sidebar) {
             renderSidebar(msg.pages || [], msg.active_page || "", msg.sidebar || []);
           }
+          if (msg.page_config) applyPageConfig(msg.page_config);
           render(msg.nodes || []);
+          if (msg.toasts) msg.toasts.forEach(handleToast);
           break;
         case "__dev_status":
           setBadge(msg.state === "building" ? "Reloading…" : "");
@@ -291,6 +293,8 @@
       case "link":      return linkEl(node, p);
       case "download_button": return downloadBtn(node, p);
       case "file_uploader":   return fileUploader(node, p);
+      case "audio":   return audioEl(node, p);
+      case "video":   return videoEl(node, p);
       // --- Charts ---
       case "line_chart":  return lineChartEl(node, p);
       case "bar_chart":   return barChartEl(node, p);
@@ -773,6 +777,114 @@
     a.href = "data:" + (p.mime || "application/octet-stream") + ";base64," + p.data;
     a.download = p.filename || "download";
     return a;
+  }
+
+  // --- Audio / Video -----------------------------------------------------
+
+  function audioEl(node, p) {
+    var audio = document.createElement("audio");
+    audio.className = "sy-audio";
+    audio.src = p.src;
+    audio.controls = true;
+    return audio;
+  }
+
+  function videoEl(node, p) {
+    var wrap = el("div", "sy-video-wrap");
+    var video = document.createElement("video");
+    video.className = "sy-video";
+    video.src = p.src;
+    video.controls = true;
+    if (p.width) video.style.maxWidth = p.width + "px";
+    wrap.appendChild(video);
+    return wrap;
+  }
+
+  // --- Toast / Celebrations -----------------------------------------------
+
+  function handleToast(t) {
+    if (t.type === "balloons") { showBalloons(); return; }
+    if (t.type === "snow")     { showSnow(); return; }
+    var toast = el("div", "sy-toast sy-toast-" + (t.level || "info"), t.text);
+    var container = document.getElementById("syralit-toasts");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "syralit-toasts";
+      container.className = "sy-toast-container";
+      document.body.appendChild(container);
+    }
+    container.appendChild(toast);
+    requestAnimationFrame(function () { toast.classList.add("sy-toast-show"); });
+    setTimeout(function () {
+      toast.classList.remove("sy-toast-show");
+      toast.classList.add("sy-toast-hide");
+      setTimeout(function () { toast.remove(); }, 300);
+    }, 3000);
+  }
+
+  function showBalloons() {
+    var count = 30;
+    var colors = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#f472b6", "#facc15"];
+    for (var i = 0; i < count; i++) {
+      (function (idx) {
+        setTimeout(function () {
+          var b = document.createElement("div");
+          b.className = "sy-balloon";
+          b.style.left = (Math.random() * 100) + "vw";
+          b.style.background = colors[idx % colors.length];
+          b.style.animationDuration = (2 + Math.random() * 2) + "s";
+          b.style.width = b.style.height = (20 + Math.random() * 20) + "px";
+          document.body.appendChild(b);
+          setTimeout(function () { b.remove(); }, 4500);
+        }, idx * 80);
+      })(i);
+    }
+  }
+
+  function showSnow() {
+    var count = 50;
+    for (var i = 0; i < count; i++) {
+      (function (idx) {
+        setTimeout(function () {
+          var s = document.createElement("div");
+          s.className = "sy-snowflake";
+          s.textContent = "❄";
+          s.style.left = (Math.random() * 100) + "vw";
+          s.style.fontSize = (10 + Math.random() * 14) + "px";
+          s.style.animationDuration = (3 + Math.random() * 3) + "s";
+          s.style.opacity = String(0.4 + Math.random() * 0.6);
+          document.body.appendChild(s);
+          setTimeout(function () { s.remove(); }, 6500);
+        }, idx * 60);
+      })(i);
+    }
+  }
+
+  // --- Page Config -------------------------------------------------------
+
+  function applyPageConfig(cfg) {
+    if (cfg.title) document.title = cfg.title;
+    if (cfg.icon) setFavicon(cfg.icon);
+    if (cfg.layout === "wide") {
+      root.style.maxWidth = "100%";
+    } else if (cfg.layout === "centered") {
+      root.style.maxWidth = "";
+    }
+  }
+
+  function setFavicon(icon) {
+    var link = document.querySelector("link[rel='icon']");
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    if (icon.startsWith("http") || icon.startsWith("/") || icon.startsWith("data:")) {
+      link.href = icon;
+    } else {
+      var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">' + icon + '</text></svg>';
+      link.href = "data:image/svg+xml," + encodeURIComponent(svg);
+    }
   }
 
   // --- File Uploader ----------------------------------------------------

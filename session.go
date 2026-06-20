@@ -13,11 +13,19 @@ type session struct {
 	id    string
 	appFn func() // the user's App function (nil in multi-page mode)
 
-	mu          sync.Mutex
-	widgets     map[string]any  // widget id -> persisted value (text, checkbox, select...)
-	transient   map[string]bool // button id -> pressed during the current cycle
-	store       map[string]any  // sy.State / sy.Session() user store
-	currentPage string          // multi-page: active page title (empty = default)
+	mu            sync.Mutex
+	widgets       map[string]any  // widget id -> persisted value (text, checkbox, select...)
+	transient     map[string]bool // button id -> pressed during the current cycle
+	store         map[string]any  // sy.State / sy.Session() user store
+	currentPage   string          // multi-page: active page title (empty = default)
+	pendingToasts []map[string]any
+	pageConfig    *pageConfig
+}
+
+type pageConfig struct {
+	title  string
+	icon   string
+	layout string // "centered" or "wide"
 }
 
 func newSession(appFn func()) *session {

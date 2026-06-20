@@ -794,6 +794,103 @@ body {
   flex-shrink: 0;
 }
 
+/* --- Audio / Video ----------------------------------------------------- */
+
+.sy-audio {
+  width: 100%;
+  margin: .5rem 0;
+}
+
+.sy-video-wrap {
+  margin: .75rem 0;
+}
+
+.sy-video {
+  max-width: 100%;
+  height: auto;
+  border-radius: calc(var(--sy-radius) * 0.6);
+}
+
+/* --- Toast Notifications ----------------------------------------------- */
+
+.sy-toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: .5rem;
+  pointer-events: none;
+}
+
+.sy-toast {
+  padding: .65rem 1rem;
+  border-radius: var(--sy-radius);
+  font-size: .88rem;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  transform: translateX(100%);
+  opacity: 0;
+  transition: transform .3s ease, opacity .3s ease;
+  pointer-events: auto;
+  max-width: 380px;
+}
+.sy-toast-show {
+  transform: translateX(0);
+  opacity: 1;
+}
+.sy-toast-hide {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.sy-toast-info {
+  background: var(--sy-info);
+  color: #fff;
+}
+.sy-toast-success {
+  background: var(--sy-success);
+  color: #fff;
+}
+.sy-toast-warning {
+  background: var(--sy-warning);
+  color: #fff;
+}
+.sy-toast-error {
+  background: var(--sy-error);
+  color: #fff;
+}
+
+/* --- Balloons & Snow --------------------------------------------------- */
+
+.sy-balloon {
+  position: fixed;
+  bottom: -40px;
+  border-radius: 50%;
+  z-index: 9500;
+  pointer-events: none;
+  animation: sy-balloon-rise linear forwards;
+}
+
+@keyframes sy-balloon-rise {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+}
+
+.sy-snowflake {
+  position: fixed;
+  top: -30px;
+  z-index: 9500;
+  pointer-events: none;
+  animation: sy-snow-fall linear forwards;
+}
+
+@keyframes sy-snow-fall {
+  0%   { transform: translateY(0) translateX(0); }
+  100% { transform: translateY(110vh) translateX(30px); }
+}
+
 /* --- Mobile Sidebar ---------------------------------------------------- */
 
 .sy-sidebar-toggle {

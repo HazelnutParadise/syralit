@@ -202,6 +202,29 @@ func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
 		msg["pages"] = pageInfos()
 		msg["active_page"] = sess.activePage()
 	}
+
+	sess.mu.Lock()
+	if len(sess.pendingToasts) > 0 {
+		msg["toasts"] = sess.pendingToasts
+		sess.pendingToasts = nil
+	}
+	if sess.pageConfig != nil {
+		pc := map[string]any{}
+		if sess.pageConfig.title != "" {
+			pc["title"] = sess.pageConfig.title
+		}
+		if sess.pageConfig.icon != "" {
+			pc["icon"] = sess.pageConfig.icon
+		}
+		if sess.pageConfig.layout != "" {
+			pc["layout"] = sess.pageConfig.layout
+		}
+		if len(pc) > 0 {
+			msg["page_config"] = pc
+		}
+	}
+	sess.mu.Unlock()
+
 	out, err := json.Marshal(msg)
 	if err != nil {
 		return err

@@ -276,7 +276,8 @@
       case "date_input":    return dateInput(node, p);
       case "time_input":    return timeInput(node, p);
       case "color_picker":  return colorPicker(node, p);
-      case "toggle":        return toggle(node, p);
+      case "toggle":          return toggle(node, p);
+      case "select_slider":   return selectSlider(node, p);
       // --- Layout ---
       case "columns":   return columns(node, p);
       case "column":    return column(node);
@@ -294,7 +295,8 @@
       case "image":     return imageEl(node, p);
       case "json":      return jsonView(node, p);
       case "progress":  return progressBar(node, p);
-      case "link":      return linkEl(node, p);
+      case "link":        return linkEl(node, p);
+      case "link_button": return linkBtnEl(node, p);
       case "download_button": return downloadBtn(node, p);
       case "file_uploader":   return fileUploader(node, p);
       case "audio":      return audioEl(node, p);
@@ -785,6 +787,45 @@
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     return a;
+  }
+
+  function linkBtnEl(node, p) {
+    var a = document.createElement("a");
+    a.className = "sy-btn sy-link-btn";
+    a.href = p.url;
+    a.textContent = p.label;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    if (p.disabled) { a.classList.add("sy-disabled"); a.removeAttribute("href"); }
+    return a;
+  }
+
+  function selectSlider(node, p) {
+    var wrap = el("div", "sy-input-group");
+    wrap.appendChild(el("label", "sy-label", p.label));
+    var opts = p.options || [];
+    var idx = opts.indexOf(p.value);
+    if (idx < 0) idx = 0;
+    var track = el("div", "sy-select-slider");
+    var input = document.createElement("input");
+    input.type = "range";
+    input.min = "0";
+    input.max = String(opts.length - 1);
+    input.value = String(idx);
+    input.className = "sy-slider-input";
+    if (p.disabled) input.disabled = true;
+    var display = el("span", "sy-select-slider-value", opts[idx] || "");
+    input.oninput = function () {
+      display.textContent = opts[+input.value] || "";
+    };
+    input.onchange = function () {
+      send(node.id, opts[+input.value] || "", false);
+    };
+    track.appendChild(input);
+    track.appendChild(display);
+    wrap.appendChild(track);
+    if (p.help) wrap.appendChild(el("div", "sy-help", p.help));
+    return wrap;
   }
 
   function downloadBtn(node, p) {

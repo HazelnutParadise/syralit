@@ -747,6 +747,28 @@ body {
   text-decoration: underline;
 }
 
+.sy-link-btn {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none !important;
+}
+
+/* --- Select Slider ----------------------------------------------------- */
+
+.sy-select-slider {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.sy-select-slider .sy-slider-input {
+  flex: 1;
+}
+.sy-select-slider-value {
+  font-weight: 600;
+  min-width: 3rem;
+  text-align: right;
+}
+
 /* --- Display: Divider -------------------------------------------------- */
 
 .sy-divider {

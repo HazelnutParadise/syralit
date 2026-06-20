@@ -417,6 +417,42 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 	return file
 }
 
+// LinkButton renders a button-styled hyperlink that opens in a new tab.
+func LinkButton(label, url string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"label": label, "url": url}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	current().add(&Node{Type: "link_button", Props: props})
+}
+
+// SelectSlider renders a slider that snaps to labelled options, returning
+// the selected label string. options must have at least 2 elements.
+func SelectSlider(label string, options []string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("select_slider", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	if s == "" {
+		if dv, ok := o.defaultVal.(string); ok {
+			s = dv
+		} else if len(options) > 0 {
+			s = options[0]
+		}
+	}
+	props := map[string]any{"label": label, "options": options, "value": s}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "select_slider", Props: props})
+	return s
+}
+
 // Write renders any value: strings are treated as Markdown, errors as Error
 // blocks, and everything else is formatted as JSON.
 func Write(args ...any) {

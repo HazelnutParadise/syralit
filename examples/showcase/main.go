@@ -319,6 +319,26 @@ func main() {
 		},
 	)
 
+	sy.Header("Editable Table")
+	edited := sy.DataEditor(
+		[]string{"Name", "Score", "Grade"},
+		[][]any{
+			{"Alice", 95, "A"},
+			{"Bob", 82, "B"},
+			{"Carol", 78, "C+"},
+		},
+		sy.Key("grade_editor"),
+	)
+	if len(edited) > 0 {
+		sy.Caption(fmt.Sprintf("First row: %v", edited[0]))
+	}
+
+	sy.Header("Status Container")
+	sy.Status("Processing data", "complete", func() {
+		sy.Text("All 3 datasets loaded successfully.")
+		sy.Progress(1.0)
+	})
+
 	sy.Header("LaTeX")
 	sy.LaTeX(`E = mc^2`)
 	sy.LaTeX(`\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}`)

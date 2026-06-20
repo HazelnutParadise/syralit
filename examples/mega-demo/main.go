@@ -150,6 +150,9 @@ func pageWidgets() {
 		rating := sy.Slider("Rating", 1, 5, sy.DefaultValue(3.0), sy.Step(0.5), sy.Key("w_rating"))
 		sy.Textf("Rating: %.1f / 5.0", rating)
 
+		lo, hi := sy.RangeSlider("Price range", 0, 1000, sy.DefaultValue([2]float64{200, 800}), sy.Step(10), sy.Key("w_price"))
+		sy.Textf("Price: $%.0f – $%.0f", lo, hi)
+
 		page := sy.Pagination(20, sy.Key("w_page"))
 		sy.Textf("Page: %d / 20", page)
 	})
@@ -160,6 +163,11 @@ func pageWidgets() {
 		date := sy.DateInput("Start Date", sy.Key("w_date"))
 		if date != "" {
 			sy.Text("Date: " + date)
+		}
+
+		start, end := sy.DateRangeInput("Booking period", sy.Key("w_daterange"))
+		if start != "" || end != "" {
+			sy.Textf("From %s to %s", start, end)
 		}
 
 		t := sy.TimeInput("Meeting Time", sy.Key("w_time"))
@@ -184,11 +192,12 @@ func pageWidgets() {
 			sy.Textf("Count: %d", count.Get())
 		})
 		bcols[1](func() {
-			sy.LinkButton("GitHub", "https://github.com/HazelnutParadise/syralit", sy.Key("w_link"))
+			sy.LinkButton("GitHub", "https://github.com/HazelnutParadise/syralit", sy.Icon("🔗"), sy.ButtonType("secondary"), sy.Key("w_link"))
 			sy.DownloadButton("Download CSV",
 				[]byte("name,score\nAlice,95\nBob,82\nCarol,78"),
 				"scores.csv",
 				sy.MimeType("text/csv"),
+				sy.Icon("⬇️"),
 				sy.Key("w_dl"),
 			)
 		})

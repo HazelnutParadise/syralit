@@ -101,12 +101,14 @@ func DownloadButton(label string, data []byte, filename string, opts ...Option) 
 	if mime == "" {
 		mime = "application/octet-stream"
 	}
-	current().add(&Node{Type: "download_button", Props: map[string]any{
+	props := map[string]any{
 		"label":    label,
 		"data":     base64.StdEncoding.EncodeToString(data),
 		"filename": filename,
 		"mime":     mime,
-	}})
+	}
+	applyButtonProps(props, o)
+	current().add(&Node{Type: "download_button", Props: props})
 }
 
 // DataFrame renders a sortable, interactive data table. Sorting is handled

@@ -829,6 +829,95 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Range Slider (dual handle) ---------------------------------------- */
+
+.sy-range-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.sy-range-slider {
+  position: relative;
+  flex: 1;
+  height: 24px;
+}
+
+.sy-range-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 6px;
+  transform: translateY(-50%);
+  background: var(--sy-border);
+  border-radius: 3px;
+}
+
+.sy-range-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--sy-accent);
+  border-radius: 3px;
+}
+
+/* Two range inputs are stacked on top of the track; only their thumbs accept
+   pointer events, so each handle is independently draggable. */
+.sy-range-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 24px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.sy-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sy-accent);
+  border: 2px solid var(--sy-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+.sy-range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--sy-bg);
+  border-radius: 50%;
+  background: var(--sy-accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  cursor: pointer;
+}
+.sy-range-input::-moz-range-track {
+  background: transparent;
+}
+.sy-range-input:disabled::-webkit-slider-thumb { cursor: not-allowed; opacity: .5; }
+
+/* --- Date Range -------------------------------------------------------- */
+
+.sy-date-range {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.sy-date-range .sy-input {
+  flex: 1;
+  width: auto;
+}
+.sy-date-range-sep {
+  color: var(--sy-muted);
+}
+
 /* --- Radio ------------------------------------------------------------- */
 
 .sy-radio-group {

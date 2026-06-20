@@ -314,10 +314,12 @@
       case "button":        return button(node, p);
       case "number_input":  return numberInput(node, p);
       case "slider":        return slider(node, p);
+      case "range_slider":  return rangeSlider(node, p);
       case "textarea":      return textarea(node, p);
       case "radio":         return radio(node, p);
       case "multi_select":  return multiSelect(node, p);
       case "date_input":    return dateInput(node, p);
+      case "date_range_input": return dateRangeInput(node, p);
       case "time_input":    return timeInput(node, p);
       case "color_picker":  return colorPicker(node, p);
       case "toggle":          return toggle(node, p);
@@ -506,13 +508,19 @@
     return field(p.label, wrap, p.help, p.label_visibility);
   }
 
-  function button(node, p) {
-    var cls = "sy-button";
+  // btnClass / btnLabel apply the shared button styling props (type, width,
+  // icon) so Button, LinkButton and DownloadButton render consistently.
+  function btnClass(base, p) {
+    var cls = base;
     if (p.buttonType === "secondary") cls += " sy-button-outline";
     else if (p.buttonType === "tertiary") cls += " sy-button-tertiary";
     if (p.containerWidth) cls += " sy-button-block";
-    var label = p.icon ? (p.icon + " " + p.label) : p.label;
-    var b = el("button", cls, label);
+    return cls;
+  }
+  function btnLabel(p) { return p.icon ? (p.icon + " " + p.label) : p.label; }
+
+  function button(node, p) {
+    var b = el("button", btnClass("sy-button", p), btnLabel(p));
     b.dataset.id = node.id;
     if (p.disabled) b.disabled = true;
     b.onclick = function () { send(node.id, true, true); };
@@ -564,6 +572,87 @@
     wrap.appendChild(input);
     wrap.appendChild(display);
     return field(p.label, wrap, p.help);
+  }
+
+  // rangeSlider renders two overlaid range inputs (low/high) sharing a track,
+  // with a filled band between the handles. The handles are individually
+  // draggable via pointer-events on the thumbs (see .sy-range-input CSS). It
+  // sends [low, high] on change and is not form-batched.
+  function rangeSlider(node, p) {
+    var min = p.min != null ? p.min : 0;
+    var max = p.max != null ? p.max : 100;
+    var step = p.step || 1;
+
+    var row = el("div", "sy-range-row");
+    var slider = el("div", "sy-range-slider");
+    var track = el("div", "sy-range-track");
+    var fill = el("div", "sy-range-fill");
+    track.appendChild(fill);
+
+    function mkInput(cls, value) {
+      var i = document.createElement("input");
+      i.type = "range";
+      i.className = "sy-range-input " + cls;
+      i.min = min; i.max = max; i.step = step; i.value = value;
+      if (p.disabled) i.disabled = true;
+      return i;
+    }
+    var inLo = mkInput("sy-range-low", p.low);
+    var inHi = mkInput("sy-range-high", p.high);
+    inLo.dataset.id = node.id;
+
+    var display = el("span", "sy-slider-value");
+    function pct(v) { return max === min ? 0 : ((v - min) / (max - min)) * 100; }
+    function ordered() {
+      var a = parseFloat(inLo.value), b = parseFloat(inHi.value);
+      return a <= b ? [a, b] : [b, a];
+    }
+    function paint() {
+      var r = ordered();
+      fill.style.left = pct(r[0]) + "%";
+      fill.style.right = (100 - pct(r[1])) + "%";
+      display.textContent = r[0] + " – " + r[1];
+    }
+    inLo.oninput = paint;
+    inHi.oninput = paint;
+    function commit() {
+      var r = ordered();
+      send(node.id, [r[0], r[1]], false);
+    }
+    inLo.onchange = commit;
+    inHi.onchange = commit;
+
+    slider.appendChild(track);
+    slider.appendChild(inLo);
+    slider.appendChild(inHi);
+    row.appendChild(slider);
+    row.appendChild(display);
+    paint();
+    return field(p.label, row, p.help);
+  }
+
+  // dateRangeInput renders a start/end pair of native date pickers, sending
+  // [start, end] on change. Not form-batched.
+  function dateRangeInput(node, p) {
+    var row = el("div", "sy-date-range");
+    function mkDate(value) {
+      var i = document.createElement("input");
+      i.type = "date";
+      i.className = "sy-input";
+      i.value = value || "";
+      if (p.disabled) i.disabled = true;
+      return i;
+    }
+    var start = mkDate(p.start);
+    var end = mkDate(p.end);
+    start.dataset.id = node.id;
+    function commit() { send(node.id, [start.value, end.value], false); }
+    start.onchange = commit;
+    end.onchange = commit;
+    row.appendChild(start);
+    row.appendChild(el("span", "sy-date-range-sep", "→"));
+    row.appendChild(end);
+    return field(p.label, row, p.help);
   }
 
   function textarea(node, p) {
@@ -1077,9 +1166,9 @@
 
   function linkBtnEl(node, p) {
     var a = document.createElement("a");
-    a.className = "sy-button sy-link-btn";
+    a.className = btnClass("sy-button sy-link-btn", p);
     a.href = p.url;
-    a.textContent = p.label;
+    a.textContent = btnLabel(p);
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     if (p.disabled) { a.classList.add("sy-disabled"); a.removeAttribute("href"); }
@@ -1116,8 +1205,8 @@
 
   function downloadBtn(node, p) {
     var a = document.createElement("a");
-    a.className = "sy-button sy-download-button";
-    a.textContent = p.label;
+    a.className = btnClass("sy-button sy-download-button", p);
+    a.textContent = btnLabel(p);
     a.href = "data:" + (p.mime || "application/octet-stream") + ";base64," + p.data;
     a.download = p.filename || "download";
     return a;

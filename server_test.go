@@ -1404,3 +1404,114 @@ func TestButtonVariants(t *testing.T) {
 		t.Fatal("plain button should not have buttonType prop")
 	}
 }
+
+func TestRangeSlider(t *testing.T) {
+	app := func() {
+		RangeSlider("Range", 0, 1000, DefaultValue([2]float64{200, 800}), Key("rng"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	n, ok := nodeByID(nodes, "rng")
+	if !ok || n["type"] != "range_slider" {
+		t.Fatal("range_slider not found")
+	}
+	props := n["props"].(map[string]any)
+	if props["low"] != float64(200) || props["high"] != float64(800) {
+		t.Fatalf("initial range: got low=%v high=%v", props["low"], props["high"])
+	}
+
+	// Send a new range as a JSON array and confirm it round-trips.
+	b, _ := json.Marshal(map[string]any{"type": "widget_change", "widget_id": "rng", "value": []any{100, 300}})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes = readPatch(t, ctx, c)
+	n, _ = nodeByID(nodes, "rng")
+	props = n["props"].(map[string]any)
+	if props["low"] != float64(100) || props["high"] != float64(300) {
+		t.Fatalf("after change: got low=%v high=%v", props["low"], props["high"])
+	}
+}
+
+func TestDateRangeInput(t *testing.T) {
+	app := func() {
+		DateRangeInput("Period", Key("dr"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	n, ok := nodeByID(nodes, "dr")
+	if !ok || n["type"] != "date_range_input" {
+		t.Fatal("date_range_input not found")
+	}
+
+	b, _ := json.Marshal(map[string]any{"type": "widget_change", "widget_id": "dr", "value": []any{"2026-01-01", "2026-02-01"}})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes = readPatch(t, ctx, c)
+	n, _ = nodeByID(nodes, "dr")
+	props := n["props"].(map[string]any)
+	if props["start"] != "2026-01-01" || props["end"] != "2026-02-01" {
+		t.Fatalf("after change: got start=%v end=%v", props["start"], props["end"])
+	}
+}
+
+func TestButtonFamilyStyling(t *testing.T) {
+	app := func() {
+		LinkButton("GH", "https://example.com", Icon("🔗"), ButtonType("secondary"))
+		DownloadButton("CSV", []byte("a"), "a.csv", UseContainerWidth())
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	var link, dl map[string]any
+	for _, n := range nodes {
+		switch n["type"] {
+		case "link_button":
+			link = n["props"].(map[string]any)
+		case "download_button":
+			dl = n["props"].(map[string]any)
+		}
+	}
+	if link == nil || link["icon"] != "🔗" || link["buttonType"] != "secondary" {
+		t.Fatalf("link_button styling: %v", link)
+	}
+	if dl == nil || dl["containerWidth"] != true {
+		t.Fatalf("download_button width: %v", dl)
+	}
+}

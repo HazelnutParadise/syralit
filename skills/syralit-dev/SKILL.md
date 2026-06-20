@@ -55,6 +55,7 @@ func main() { sy.App(nil) }
 | `TextArea(label, opts...)` | `string` | Multi-line text |
 | `NumberInput(label, opts...)` | `float64` | Number with min/max/step |
 | `Slider(label, min, max, opts...)` | `float64` | Range slider |
+| `RangeSlider(label, min, max, opts...)` | `(float64, float64)` | Two-handle (low, high) range; not form-batched |
 | `SelectSlider(label, options, opts...)` | `string` | Discrete slider |
 | `Checkbox(label, opts...)` | `bool` | Checkbox |
 | `Toggle(label, opts...)` | `bool` | Toggle switch |
@@ -62,6 +63,7 @@ func main() { sy.App(nil) }
 | `SelectBox(label, options, opts...)` | `string` | Dropdown (auto-searchable at 20+ items) |
 | `MultiSelect(label, options, opts...)` | `[]string` | Multi-select |
 | `DateInput(label, opts...)` | `string` | Date picker (YYYY-MM-DD) |
+| `DateRangeInput(label, opts...)` | `(string, string)` | Start/end date pickers; not form-batched |
 | `TimeInput(label, opts...)` | `string` | Time picker (HH:MM) |
 | `ColorPicker(label, opts...)` | `string` | Color hex |
 | `FileUploader(label, opts...)` | `*UploadedFile` | File upload (nil if empty) |

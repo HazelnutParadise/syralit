@@ -243,15 +243,7 @@ func Button(label string, opts ...Option) bool {
 	if o.disabled {
 		props["disabled"] = true
 	}
-	if o.icon != "" {
-		props["icon"] = o.icon
-	}
-	if o.buttonType != "" {
-		props["buttonType"] = o.buttonType
-	}
-	if o.useContainerWidth {
-		props["containerWidth"] = true
-	}
+	applyButtonProps(props, o)
 	rc.add(&Node{ID: id, Type: "button", Props: props})
 	return pressed
 }
@@ -316,6 +308,76 @@ func Slider(label string, min, max float64, opts ...Option) float64 {
 	}
 	rc.add(&Node{ID: id, Type: "slider", Props: props})
 	return f
+}
+
+// toFloatPair coerces a two-element value (sent as a JSON array, or supplied to
+// DefaultValue as []float64 / [2]float64 / []int / [2]int) into an ordered pair.
+func toFloatPair(val any) (float64, float64, bool) {
+	switch v := val.(type) {
+	case []any:
+		if len(v) >= 2 {
+			return toFloat64(v[0]), toFloat64(v[1]), true
+		}
+	case []float64:
+		if len(v) >= 2 {
+			return v[0], v[1], true
+		}
+	case [2]float64:
+		return v[0], v[1], true
+	case []int:
+		if len(v) >= 2 {
+			return float64(v[0]), float64(v[1]), true
+		}
+	case [2]int:
+		return float64(v[0]), float64(v[1]), true
+	}
+	return 0, 0, false
+}
+
+// RangeSlider is a two-handle slider returning the selected (low, high) range —
+// the equivalent of Streamlit's st.slider called with a tuple value. The initial
+// range defaults to [min, max]; override with sy.DefaultValue([2]float64{lo, hi}).
+//
+// Note: RangeSlider sends changes immediately and is not batched inside a Form.
+func RangeSlider(label string, min, max float64, opts ...Option) (float64, float64) {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("range_slider", o.key)
+
+	lo, hi := min, max
+	if val, exists := rc.sess.widgetValue(id); exists {
+		if a, b, ok := toFloatPair(val); ok {
+			lo, hi = a, b
+		}
+	} else if o.defaultVal != nil {
+		if a, b, ok := toFloatPair(o.defaultVal); ok {
+			lo, hi = a, b
+		}
+	}
+	// Keep the pair ordered and within [min, max].
+	if lo > hi {
+		lo, hi = hi, lo
+	}
+	if lo < min {
+		lo = min
+	}
+	if hi > max {
+		hi = max
+	}
+
+	step := 1.0
+	if o.step != nil {
+		step = *o.step
+	}
+	props := map[string]any{"label": label, "low": lo, "high": hi, "min": min, "max": max, "step": step}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "range_slider", Props: props})
+	return lo, hi
 }
 
 func TextArea(label string, opts ...Option) string {
@@ -412,6 +474,38 @@ func DateInput(label string, opts ...Option) string {
 	}
 	rc.add(&Node{ID: id, Type: "date_input", Props: props})
 	return s
+}
+
+// DateRangeInput is a pair of date pickers returning the selected (start, end)
+// dates as "YYYY-MM-DD" strings (empty until picked) — the equivalent of
+// Streamlit's st.date_input called with a (start, end) tuple.
+//
+// Note: DateRangeInput sends changes immediately and is not batched inside a Form.
+func DateRangeInput(label string, opts ...Option) (string, string) {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("date_range_input", o.key)
+
+	var start, end string
+	if val, exists := rc.sess.widgetValue(id); exists {
+		if a, ok := val.([]any); ok && len(a) >= 2 {
+			start, _ = a[0].(string)
+			end, _ = a[1].(string)
+		}
+	} else if o.defaultVal != nil {
+		if a, ok := o.defaultVal.([]string); ok && len(a) >= 2 {
+			start, end = a[0], a[1]
+		}
+	}
+	props := map[string]any{"label": label, "start": start, "end": end}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "date_range_input", Props: props})
+	return start, end
 }
 
 func TimeInput(label string, opts ...Option) string {
@@ -516,7 +610,22 @@ func LinkButton(label, url string, opts ...Option) {
 	if o.disabled {
 		props["disabled"] = true
 	}
+	applyButtonProps(props, o)
 	current().add(&Node{Type: "link_button", Props: props})
+}
+
+// applyButtonProps copies the shared button styling options (icon, type, width)
+// onto a node's props, so Button, LinkButton and DownloadButton style alike.
+func applyButtonProps(props map[string]any, o widgetOpts) {
+	if o.icon != "" {
+		props["icon"] = o.icon
+	}
+	if o.buttonType != "" {
+		props["buttonType"] = o.buttonType
+	}
+	if o.useContainerWidth {
+		props["containerWidth"] = true
+	}
 }
 
 // PageLink renders a navigation link to another page in the app (or an

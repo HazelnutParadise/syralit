@@ -76,6 +76,7 @@ go run .
 | `TextArea` | `string` | Multi-line text |
 | `NumberInput` | `float64` | Number with min/max/step |
 | `Slider` | `float64` | Range slider |
+| `RangeSlider` | `(float64, float64)` | Two-handle slider returning a (low, high) range |
 | `SelectSlider` | `string` | Discrete slider with labels |
 | `Checkbox` | `bool` | Checkbox |
 | `Toggle` | `bool` | Toggle switch |
@@ -83,6 +84,7 @@ go run .
 | `SelectBox` | `string` | Dropdown (auto-searchable at 20+ items) |
 | `MultiSelect` | `[]string` | Multi-select dropdown |
 | `DateInput` | `string` | Date picker (YYYY-MM-DD) |
+| `DateRangeInput` | `(string, string)` | Start/end date pickers |
 | `TimeInput` | `string` | Time picker (HH:MM) |
 | `ColorPicker` | `string` | Color hex picker |
 | `FileUploader` | `*UploadedFile` | File upload |
@@ -325,7 +327,7 @@ sy.Border()                 // container border
 sy.Color("green")           // element color
 sy.Language("go")           // code language
 
-// Button styling
+// Button styling (Button, LinkButton, DownloadButton)
 sy.Icon("🚀")               // prefix a button label with an icon
 sy.ButtonType("secondary")  // "primary" (default), "secondary", "tertiary"
 sy.UseContainerWidth()      // make a button span its container

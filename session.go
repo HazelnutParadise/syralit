@@ -22,6 +22,9 @@ type session struct {
 	pageConfig    *pageConfig
 	needsRerun    bool // set by SwitchPage to re-render after stop
 	queryParams   map[string]string
+
+	fragmentFns     map[string]func() // fragment key -> registered function
+	widgetFragments map[string]string // widget id -> fragment key (for partial reruns)
 }
 
 type pageConfig struct {
@@ -137,6 +140,35 @@ func (s *session) restoreState(st *sessionState) {
 	if st.CurrentPage != "" {
 		s.currentPage = st.CurrentPage
 	}
+}
+
+func (s *session) registerFragment(key string, fn func()) {
+	s.mu.Lock()
+	if s.fragmentFns == nil {
+		s.fragmentFns = map[string]func(){}
+	}
+	s.fragmentFns[key] = fn
+	s.mu.Unlock()
+}
+
+func (s *session) registerWidgetFragment(widgetID, fragmentKey string) {
+	s.mu.Lock()
+	if s.widgetFragments == nil {
+		s.widgetFragments = map[string]string{}
+	}
+	s.widgetFragments[widgetID] = fragmentKey
+	s.mu.Unlock()
+}
+
+func (s *session) fragmentForWidget(widgetID string) (string, func(), bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	key, ok := s.widgetFragments[widgetID]
+	if !ok {
+		return "", nil, false
+	}
+	fn, ok := s.fragmentFns[key]
+	return key, fn, ok
 }
 
 func cloneAnyMap(m map[string]any) map[string]any {

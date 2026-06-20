@@ -35,6 +35,10 @@
           render(msg.nodes || []);
           if (msg.toasts) msg.toasts.forEach(handleToast);
           break;
+        case "fragment_patch":
+          patchFragment(msg.fragment_key, msg.nodes || []);
+          if (msg.toasts) msg.toasts.forEach(handleToast);
+          break;
         case "__dev_status":
           setBadge(msg.state === "building" ? "Reloading…" : "");
           break;
@@ -313,6 +317,7 @@
       case "tabs":      return tabs(node, p);
       case "tab_panel": return tabPanel(node, p);
       case "container": return container(node);
+      case "fragment":  return fragmentEl(node);
       case "form":      return formContainer(node);
       case "form_submit": return formSubmitBtn(node, p);
       case "divider":   return el("hr", "sy-divider");
@@ -732,6 +737,20 @@
 
   function tabPanel(node, p) {
     var div = el("div", "sy-tab-panel");
+    childNodes(node).forEach(function (c) { div.appendChild(c); });
+    return div;
+  }
+
+  function patchFragment(key, nodes) {
+    var target = content.querySelector('[data-fragment-key="' + key + '"]');
+    if (!target) return;
+    target.replaceChildren();
+    nodes.forEach(function (n) { target.appendChild(renderNode(n)); });
+  }
+
+  function fragmentEl(node) {
+    var div = el("div", "sy-fragment");
+    div.setAttribute("data-fragment-key", (node.props || {}).key || "");
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
   }

@@ -10,10 +10,11 @@ import (
 // (Title, TextInput, Button, ...) read it through current() to know which
 // session they belong to and where to append their Node.
 type renderContext struct {
-	sess    *session
-	root    *Node
-	stack   []*Node        // container stack; root sits at the bottom
-	autoSeq map[string]int // widget type -> counter, for auto-generated IDs
+	sess        *session
+	root        *Node
+	stack       []*Node        // container stack; root sits at the bottom
+	autoSeq     map[string]int // widget type -> counter, for auto-generated IDs
+	fragmentKey string         // non-empty when rendering inside a Fragment
 }
 
 // The rerun model lets users write `sy.App(func(){ sy.TextInput("Name") })` with
@@ -47,14 +48,21 @@ func (rc *renderContext) add(n *Node) {
 // otherwise we fall back to call-order numbering, which is unstable under
 // conditional UI — see SPEC §6.10, hence Key is encouraged everywhere.
 func (rc *renderContext) widgetID(typ, key string) string {
+	var id string
 	if key != "" {
-		return key
+		id = key
+	} else {
+		rc.autoSeq[typ]++
+		if hasPages() {
+			id = fmt.Sprintf("__%s:%s_%d", rc.sess.activePage(), typ, rc.autoSeq[typ])
+		} else {
+			id = fmt.Sprintf("__%s_%d", typ, rc.autoSeq[typ])
+		}
 	}
-	rc.autoSeq[typ]++
-	if hasPages() {
-		return fmt.Sprintf("__%s:%s_%d", rc.sess.activePage(), typ, rc.autoSeq[typ])
+	if rc.fragmentKey != "" {
+		rc.sess.registerWidgetFragment(id, rc.fragmentKey)
 	}
-	return fmt.Sprintf("__%s_%d", typ, rc.autoSeq[typ])
+	return id
 }
 
 type stopSentinel struct{}
@@ -116,6 +124,39 @@ func runRerun(sess *session) *Node {
 	}()
 
 	// Buttons are transient: a click is true for exactly one rerun, then reset.
+	sess.resetTransient()
+	return rc.root
+}
+
+// runFragment executes only a single fragment function and returns the subtree.
+func runFragment(sess *session, fragmentKey string, fn func()) *Node {
+	rerunMu.Lock()
+	defer rerunMu.Unlock()
+
+	rc := &renderContext{
+		sess:        sess,
+		root:        &Node{Type: "fragment"},
+		autoSeq:     map[string]int{},
+		fragmentKey: fragmentKey,
+	}
+	rc.stack = []*Node{rc.root}
+	cur = rc
+	defer func() { cur = nil }()
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				if _, ok := r.(stopSentinel); !ok {
+					rc.add(&Node{Type: "status", Props: map[string]any{
+						"level": "error",
+						"text":  fmt.Sprintf("Fragment panic: %v", r),
+					}})
+				}
+			}
+		}()
+		fn()
+	}()
+
 	sess.resetTransient()
 	return rc.root
 }

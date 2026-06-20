@@ -201,6 +201,29 @@ func Empty() func(func()) {
 	}
 }
 
+// Fragment wraps a function so that widget changes inside it only re-run this
+// function, not the entire app. This improves performance for complex apps with
+// independent sections.
+//
+//	sy.Fragment("chart-section", func() {
+//	    x := sy.Slider("X", sy.Min(0), sy.Max(100), sy.Key("x"))
+//	    sy.LineChart([]float64{float64(x), float64(x*2)})
+//	})
+func Fragment(key string, fn func()) {
+	rc := current()
+	id := "fragment:" + key
+	node := &Node{ID: id, Type: "fragment", Props: map[string]any{"key": key}}
+	rc.add(node)
+
+	prevFrag := rc.fragmentKey
+	rc.fragmentKey = key
+	rc.stack = append(rc.stack, node)
+	rc.sess.registerFragment(key, fn)
+	fn()
+	rc.stack = rc.stack[:len(rc.stack)-1]
+	rc.fragmentKey = prevFrag
+}
+
 // Divider renders a horizontal rule.
 func Divider() {
 	current().add(&Node{Type: "divider"})

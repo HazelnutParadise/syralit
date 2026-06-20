@@ -155,8 +155,14 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		switch msg.Type {
 		case "widget_change":
 			sess.applyChange(msg.WidgetID, msg.Value, msg.IsButton)
-			if err := pushUI(ctx, c, sess); err != nil {
-				return
+			if fragKey, fragFn, ok := sess.fragmentForWidget(msg.WidgetID); ok && !msg.IsButton {
+				if err := pushFragmentUI(ctx, c, sess, fragKey, fragFn); err != nil {
+					return
+				}
+			} else {
+				if err := pushUI(ctx, c, sess); err != nil {
+					return
+				}
 			}
 		case "page_change":
 			sess.setCurrentPage(msg.Page)
@@ -256,6 +262,30 @@ func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
 		if len(pc) > 0 {
 			msg["page_config"] = pc
 		}
+	}
+	sess.mu.Unlock()
+
+	out, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return c.Write(ctx, websocket.MessageText, out)
+}
+
+// pushFragmentUI runs only a fragment's function and sends a partial update.
+func pushFragmentUI(ctx context.Context, c *websocket.Conn, sess *session, key string, fn func()) error {
+	root := runFragment(sess, key, fn)
+
+	msg := map[string]any{
+		"type":         "fragment_patch",
+		"fragment_key": key,
+		"nodes":        root.Children,
+	}
+
+	sess.mu.Lock()
+	if len(sess.pendingToasts) > 0 {
+		msg["toasts"] = sess.pendingToasts
+		sess.pendingToasts = nil
 	}
 	sess.mu.Unlock()
 

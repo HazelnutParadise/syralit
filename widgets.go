@@ -137,6 +137,25 @@ func TextInput(label string, opts ...Option) string {
 	return s
 }
 
+// PasswordInput renders a password text input (masked characters).
+func PasswordInput(label string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("password_input", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	props := map[string]any{"label": label, "value": s, "input_type": "password"}
+	if o.placeholder != "" {
+		props["placeholder"] = o.placeholder
+	}
+	if o.maxChars > 0 {
+		props["max_chars"] = o.maxChars
+	}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "text_input", Props: props})
+	return s
+}
+
 func Checkbox(label string, opts ...Option) bool {
 	rc := current()
 	o := applyOpts(opts)

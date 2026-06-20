@@ -383,7 +383,7 @@
 
   function textInput(node, p) {
     var input = document.createElement("input");
-    input.type = "text";
+    input.type = p.input_type || "text";
     input.className = "sy-input";
     input.dataset.id = node.id;
     input.value = p.value || "";

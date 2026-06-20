@@ -36,9 +36,16 @@ Columns, WeightedColumns, Tabs, Sidebar, Expander, Container, Form, Status, Popo
 
 ### Charts
 
-All charts are powered by **Chart.js** with interactive tooltips, hover highlights, and responsive sizing:
+Built-in charts powered by **Chart.js** with interactive tooltips, hover highlights, and responsive sizing:
 
 LineChart, BarChart, AreaChart, ScatterChart, PieChart, DoughnutChart, HistogramChart, RadarChart, GraphvizChart (Graphviz DOT via viz.js)
+
+Charting library integrations (CDN-loaded, accepting JSON specs):
+
+- **VegaLiteChart** — Vega-Lite specs (Go equivalent of `st.altair_chart`)
+- **PlotlyChart** — Plotly figure specs via Plotly.js (Go equivalent of `st.plotly_chart`)
+- **PyplotChart** — SVG or base64 PNG chart images (Go equivalent of `st.pyplot`)
+- **BokehChart** — Bokeh JSON docs via BokehJS (Go equivalent of `st.bokeh_chart`)
 
 ### State & Navigation
 

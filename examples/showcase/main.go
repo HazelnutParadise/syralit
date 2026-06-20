@@ -169,7 +169,7 @@ func charts() {
 		"Expenses": {80, 90, 100, 95, 110, 105},
 	}
 
-	tab := sy.Tabs([]string{"Line", "Bar", "Area", "Scatter", "Pie", "Doughnut", "Histogram", "Radar", "Graphviz"})
+	tab := sy.Tabs([]string{"Line", "Bar", "Area", "Scatter", "Pie", "Doughnut", "Histogram", "Radar", "Graphviz", "Vega-Lite", "Plotly"})
 
 	tab("Line", func() {
 		sy.Subheader("Line Chart")
@@ -247,6 +247,52 @@ func charts() {
   "App Server" -> Cache;
   Cache -> "App Server" [style=dashed];
 }`, sy.Height(300))
+	})
+
+	tab("Vega-Lite", func() {
+		sy.Subheader("Vega-Lite Chart (Altair equivalent)")
+		sy.VegaLiteChart(map[string]any{
+			"mark": "bar",
+			"encoding": map[string]any{
+				"x": map[string]any{"field": "category", "type": "nominal",
+					"axis": map[string]any{"labelAngle": 0}},
+				"y": map[string]any{"field": "value", "type": "quantitative"},
+				"color": map[string]any{"field": "category", "type": "nominal"},
+			},
+			"data": map[string]any{
+				"values": []map[string]any{
+					{"category": "Go", "value": 45},
+					{"category": "Python", "value": 35},
+					{"category": "Rust", "value": 25},
+					{"category": "TypeScript", "value": 30},
+				},
+			},
+		}, sy.Height(350))
+	})
+
+	tab("Plotly", func() {
+		sy.Subheader("Plotly Chart")
+		sy.PlotlyChart(map[string]any{
+			"data": []map[string]any{
+				{
+					"x":    []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
+					"y":    []float64{120, 150, 180, 140, 200, 230},
+					"type": "scatter",
+					"mode": "lines+markers",
+					"name": "Sales",
+				},
+				{
+					"x":    []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
+					"y":    []float64{80, 90, 100, 95, 110, 105},
+					"type": "scatter",
+					"mode": "lines+markers",
+					"name": "Expenses",
+				},
+			},
+			"layout": map[string]any{
+				"title": "Sales vs Expenses (Plotly)",
+			},
+		}, sy.Height(400))
 	})
 }
 

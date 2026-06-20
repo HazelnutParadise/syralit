@@ -77,6 +77,7 @@ go run .
 | `NumberInput` | `float64` | Number with min/max/step |
 | `Slider` | `float64` | Range slider |
 | `RangeSlider` | `(float64, float64)` | Two-handle slider returning a (low, high) range |
+| `DateSlider` | `string` | Slider over a date range, returns "YYYY-MM-DD" |
 | `SelectSlider` | `string` | Discrete slider with labels |
 | `Checkbox` | `bool` | Checkbox |
 | `Toggle` | `bool` | Toggle switch |
@@ -107,7 +108,7 @@ Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlight
 | Widget | Description |
 |--------|-------------|
 | `Table` | Static string table |
-| `DataFrame` | Sortable data table with mixed types |
+| `DataFrame` | Sortable table; optional row selection (`sy.Selectable()` → returns selected indices) and typed display via `sy.ColConfig` |
 | `DataEditor` | Editable table with 11 column types |
 
 DataEditor supports column configuration with types: `text`, `number`, `checkbox`, `select`, `date`, `time`, `datetime`, `link`, `image`, `progress`, `list`. Dynamic row add/delete with `sy.DynamicRows()`.
@@ -359,6 +360,7 @@ syi.List(dl)                            // single-column table
 syi.ListPreview(dl, 5)                  // first N values
 syi.EditableList(dl, sy.Key("edl"))     // editable single column → []any
 syi.ListMetrics(dl)                     // count, mean, min, max
+syi.ListDescribe(dl)                    // count/mean/std/min/25%/50%/75%/max
 syi.ListBarChart(dl)                    // value over index
 syi.ListLineChart(dl)
 syi.ListAreaChart(dl)

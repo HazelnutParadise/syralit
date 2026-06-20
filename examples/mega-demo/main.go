@@ -153,6 +153,9 @@ func pageWidgets() {
 		lo, hi := sy.RangeSlider("Price range", 0, 1000, sy.DefaultValue([2]float64{200, 800}), sy.Step(10), sy.Key("w_price"))
 		sy.Textf("Price: $%.0f – $%.0f", lo, hi)
 
+		d := sy.DateSlider("Release date", "2026-01-01", "2026-12-31", sy.DefaultValue("2026-06-15"), sy.Key("w_dslider"))
+		sy.Text("Release: " + d)
+
 		page := sy.Pagination(20, sy.Key("w_page"))
 		sy.Textf("Page: %d / 20", page)
 	})
@@ -814,6 +817,38 @@ func pageData() {
 		},
 		sy.Height(300),
 	)
+
+	sy.Divider()
+
+	sy.Header("DataFrame — Selectable + Column Config")
+	sy.Caption("Click rows to select; columns render by type via ColConfig.")
+	tasks := [][]any{
+		{"Ship v3.1", "Done", 100, "https://example.com/1"},
+		{"Write docs", "In Progress", 60, "https://example.com/2"},
+		{"Fix flaky test", "Todo", 0, "https://example.com/3"},
+		{"Plan Q3", "In Progress", 35, "https://example.com/4"},
+	}
+	sel := sy.DataFrame(
+		[]string{"Task", "Status", "Progress", "Link"},
+		tasks,
+		sy.Selectable(),
+		sy.ColConfig(map[string]sy.ColumnConfig{
+			"Progress": {Type: "progress", Max: 100},
+			"Link":     {Type: "link"},
+		}),
+		sy.Key("task_df"),
+	)
+	if len(sel) > 0 {
+		names := make([]string, 0, len(sel))
+		for _, i := range sel {
+			if i < len(tasks) {
+				names = append(names, fmt.Sprint(tasks[i][0]))
+			}
+		}
+		sy.Success("Selected: " + strings.Join(names, ", "))
+	} else {
+		sy.Caption("No rows selected.")
+	}
 
 	sy.Divider()
 

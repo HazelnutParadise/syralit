@@ -50,8 +50,9 @@ func main() {
 
 		syi.ListMetrics(scores)
 
-		ltab := sy.Tabs([]string{"List", "Histogram", "Bar", "Line"})
+		ltab := sy.Tabs([]string{"List", "Describe", "Histogram", "Bar", "Line"})
 		ltab("List", func() { syi.List(scores, sy.Height(240)) })
+		ltab("Describe", func() { syi.ListDescribe(scores) })
 		ltab("Histogram", func() { syi.Histogram(scores, 6) })
 		ltab("Bar", func() { syi.ListBarChart(scores) })
 		ltab("Line", func() { syi.ListLineChart(scores) })

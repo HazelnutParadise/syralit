@@ -191,6 +191,27 @@ func ListMetrics(dl *insyra.DataList) {
 	cols[3](func() { sy.Metric("Max", numStr(dl.Max())) })
 }
 
+// ListDescribe renders a pandas-style summary table for a numeric DataList:
+// count, mean, std, min, 25%, 50% (median), 75%, max.
+func ListDescribe(dl *insyra.DataList, opts ...sy.Option) {
+	if dl == nil {
+		sy.Warning("nil DataList")
+		return
+	}
+	f := func(v float64) string { return fmt.Sprintf("%.2f", v) }
+	rows := [][]string{
+		{"count", fmt.Sprintf("%d", dl.Len())},
+		{"mean", f(dl.Mean())},
+		{"std", f(dl.Stdev())},
+		{"min", f(dl.Min())},
+		{"25%", f(dl.Quartile(1))},
+		{"50%", f(dl.Median())},
+		{"75%", f(dl.Quartile(3))},
+		{"max", f(dl.Max())},
+	}
+	sy.Table([]string{"Statistic", listName(dl)}, rows)
+}
+
 // ListLineChart renders a DataList's numeric values as a line chart over their
 // index. The series is named after the list.
 func ListLineChart(dl *insyra.DataList, opts ...sy.Option) {

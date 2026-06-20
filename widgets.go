@@ -45,6 +45,7 @@ type widgetOpts struct {
 	useContainerWidth bool
 	minDate           string
 	maxDate           string
+	selectable        bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -89,6 +90,10 @@ func UseContainerWidth() Option { return func(o *widgetOpts) { o.useContainerWid
 // MinDate / MaxDate bound a DateInput or DateRangeInput to a "YYYY-MM-DD" range.
 func MinDate(d string) Option { return func(o *widgetOpts) { o.minDate = d } }
 func MaxDate(d string) Option { return func(o *widgetOpts) { o.maxDate = d } }
+
+// Selectable enables row selection on a DataFrame; the call then returns the
+// selected row indices.
+func Selectable() Option { return func(o *widgetOpts) { o.selectable = true } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {
@@ -383,6 +388,34 @@ func RangeSlider(label string, min, max float64, opts ...Option) (float64, float
 	}
 	rc.add(&Node{ID: id, Type: "range_slider", Props: props})
 	return lo, hi
+}
+
+// DateSlider is a slider over a date range, returning the picked date as a
+// "YYYY-MM-DD" string — the equivalent of Streamlit's st.slider with date
+// values. minDate/maxDate are "YYYY-MM-DD"; the initial value defaults to
+// minDate (override with sy.DefaultValue("YYYY-MM-DD")). It is form-batched.
+func DateSlider(label, minDate, maxDate string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("date_slider", o.key)
+	val, exists := rc.sess.widgetValue(id)
+	cur, _ := val.(string)
+	if !exists || cur == "" {
+		if dv, ok := o.defaultVal.(string); ok && dv != "" {
+			cur = dv
+		} else {
+			cur = minDate
+		}
+	}
+	props := map[string]any{"label": label, "value": cur, "min": minDate, "max": maxDate}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "date_slider", Props: props})
+	return cur
 }
 
 func TextArea(label string, opts ...Option) string {

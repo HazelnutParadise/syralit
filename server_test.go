@@ -1595,3 +1595,89 @@ func TestRangeSliderFormBatch(t *testing.T) {
 		t.Fatal("expected batched range+daterange form submission to apply")
 	}
 }
+
+func TestDataFrameSelectAndColConfig(t *testing.T) {
+	app := func() {
+		sel := DataFrame(
+			[]string{"Task", "Progress"},
+			[][]any{{"A", 100}, {"B", 50}, {"C", 0}},
+			Selectable(),
+			ColConfig(map[string]ColumnConfig{"Progress": {Type: "progress", Max: 100}}),
+			Key("tdf"),
+		)
+		Text(fmt.Sprintf("selected=%v", sel))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	df, ok := nodeByID(nodes, "tdf")
+	if !ok {
+		t.Fatal("dataframe not found")
+	}
+	props := df["props"].(map[string]any)
+	if props["selectable"] != true {
+		t.Fatalf("expected selectable, got %v", props["selectable"])
+	}
+	if _, ok := props["column_config"].(map[string]any)["Progress"]; !ok {
+		t.Fatalf("expected Progress column_config, got %v", props["column_config"])
+	}
+
+	// Select rows 0 and 2.
+	b, _ := json.Marshal(map[string]any{"type": "widget_change", "widget_id": "tdf", "value": []any{0, 2}})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes = readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "selected=[0 2]"); !ok {
+		t.Fatal("expected DataFrame selection to round-trip as [0 2]")
+	}
+}
+
+func TestDateSlider(t *testing.T) {
+	app := func() {
+		d := DateSlider("D", "2026-01-01", "2026-12-31", DefaultValue("2026-06-15"), Key("ds"))
+		Text("date=" + d)
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "date=2026-06-15"); !ok {
+		t.Fatal("expected default date 2026-06-15")
+	}
+	n, _ := nodeByID(nodes, "ds")
+	props := n["props"].(map[string]any)
+	if props["min"] != "2026-01-01" || props["max"] != "2026-12-31" {
+		t.Fatalf("date slider bounds: %v", props)
+	}
+
+	b, _ := json.Marshal(map[string]any{"type": "widget_change", "widget_id": "ds", "value": "2026-09-01"})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes = readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "date=2026-09-01"); !ok {
+		t.Fatal("expected date slider change to round-trip")
+	}
+}

@@ -249,6 +249,11 @@
         changes.push({ widget_id: id, value: [ds[0].value, ds[1].value] });
         return;
       }
+      if (inp.dataset.multi === "dateslider") {
+        var dayMs = parseInt(inp.value, 10) * 86400000;
+        changes.push({ widget_id: id, value: new Date(dayMs).toISOString().slice(0, 10) });
+        return;
+      }
       if (inp.type === "checkbox") {
         changes.push({ widget_id: id, value: inp.checked });
       } else if (inp.tagName === "SELECT") {
@@ -328,6 +333,7 @@
       case "number_input":  return numberInput(node, p);
       case "slider":        return slider(node, p);
       case "range_slider":  return rangeSlider(node, p);
+      case "date_slider":   return dateSlider(node, p);
       case "textarea":      return textarea(node, p);
       case "radio":         return radio(node, p);
       case "multi_select":  return multiSelect(node, p);
@@ -1237,34 +1243,72 @@
 
   // --- DataFrame (sortable table) ----------------------------------------
 
+  // renderReadonlyCell formats a non-editable cell by its column type. Shared by
+  // DataFrame (column_config display) and DataEditor's disabled mode.
+  function renderReadonlyCell(td, cell, colType, cfg) {
+    if (colType === "checkbox") {
+      td.textContent = cell ? "✓" : "✗";
+    } else if (colType === "link") {
+      var a = document.createElement("a");
+      a.href = cell || "#";
+      a.textContent = cell || "";
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      td.appendChild(a);
+    } else if (colType === "image") {
+      var img = document.createElement("img");
+      img.src = cell || "";
+      img.style.maxHeight = "40px";
+      td.appendChild(img);
+    } else if (colType === "progress") {
+      var bar = el("div", "sy-progress-bar sy-progress-cell");
+      var fill = el("div", "sy-progress-fill");
+      var pctMax = (cfg && cfg.max) || 100;
+      fill.style.width = Math.min(Math.max((parseFloat(cell) || 0) / pctMax, 0), 1) * 100 + "%";
+      bar.appendChild(fill);
+      td.appendChild(bar);
+    } else if (colType === "list") {
+      td.textContent = Array.isArray(cell) ? cell.join(", ") : String(cell == null ? "" : cell);
+    } else {
+      td.textContent = cell == null ? "" : String(cell);
+    }
+  }
+
   function dataframeEl(node, p) {
     var headers = p.headers || [];
-    var rows = (p.rows || []).slice();
+    var colCfg = p.column_config || {};
+    var selectable = !!p.selectable;
+    var selected = {};
+    (p.selected || []).forEach(function (i) { selected[i] = true; });
+    // Pair each row with its original index so selection is stable across sorts.
+    var indexed = (p.rows || []).map(function (r, i) { return { r: r, i: i }; });
     var sortCol = -1, sortAsc = true;
 
     var wrap = el("div", "sy-dataframe-wrap");
     if (p.height) wrap.style.maxHeight = p.height + "px";
     wrap.style.overflowY = "auto";
 
+    function sendSelection() {
+      var ids = Object.keys(selected).filter(function (k) { return selected[k]; })
+        .map(Number).sort(function (a, b) { return a - b; });
+      send(node.id, ids, false);
+    }
+
     function rebuild() {
       var t = document.createElement("table");
       t.className = "sy-table sy-dataframe";
       var thead = document.createElement("thead");
       var tr = document.createElement("tr");
+      if (selectable) tr.appendChild(el("th", "sy-df-header sy-df-select"));
       headers.forEach(function (h, ci) {
-        var th = document.createElement("th");
-        th.className = "sy-df-header";
-        th.textContent = h;
-        if (ci === sortCol) th.textContent += sortAsc ? " ▲" : " ▼";
+        var th = el("th", "sy-df-header", h + (ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
         th.onclick = function () {
-          if (sortCol === ci) { sortAsc = !sortAsc; }
-          else { sortCol = ci; sortAsc = true; }
-          rows.sort(function (a, b) {
-            var va = a[ci], vb = b[ci];
+          if (sortCol === ci) { sortAsc = !sortAsc; } else { sortCol = ci; sortAsc = true; }
+          indexed.sort(function (a, b) {
+            var va = a.r[ci], vb = b.r[ci];
             var na = parseFloat(va), nb = parseFloat(vb);
             if (!isNaN(na) && !isNaN(nb)) return sortAsc ? na - nb : nb - na;
-            va = String(va); vb = String(vb);
-            return sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
           });
           wrap.replaceChildren();
           rebuild();
@@ -1273,12 +1317,33 @@
       });
       thead.appendChild(tr);
       t.appendChild(thead);
+
       var tbody = document.createElement("tbody");
-      rows.forEach(function (row) {
+      indexed.forEach(function (item) {
+        var row = item.r, oi = item.i;
         var tr2 = document.createElement("tr");
-        (row || []).forEach(function (cell) {
+        if (selectable) {
+          if (selected[oi]) tr2.className = "sy-df-row-selected";
+          var selTd = el("td", "sy-df-select");
+          var cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = !!selected[oi];
+          function toggle(checked) {
+            selected[oi] = checked;
+            cb.checked = checked;
+            tr2.classList.toggle("sy-df-row-selected", checked);
+            sendSelection();
+          }
+          cb.onclick = function (e) { e.stopPropagation(); };
+          cb.onchange = function () { toggle(cb.checked); };
+          selTd.appendChild(cb);
+          tr2.appendChild(selTd);
+          tr2.onclick = function () { toggle(!cb.checked); };
+        }
+        (row || []).forEach(function (cell, ci) {
           var td = document.createElement("td");
-          td.textContent = cell == null ? "" : String(cell);
+          var cfg = colCfg[headers[ci]] || {};
+          renderReadonlyCell(td, cell, cfg.type || "text", cfg);
           tr2.appendChild(td);
         });
         tbody.appendChild(tr2);
@@ -1288,6 +1353,30 @@
     }
     rebuild();
     return wrap;
+  }
+
+  function dateSlider(node, p) {
+    function toDays(s) { return Math.round(new Date(s + "T00:00:00Z").getTime() / 86400000); }
+    function fromDays(n) { return new Date(n * 86400000).toISOString().slice(0, 10); }
+    var minN = toDays(p.min), maxN = toDays(p.max);
+    var curN = toDays(p.value || p.min);
+
+    var wrap = el("div", "sy-slider-wrap");
+    var input = document.createElement("input");
+    input.type = "range";
+    input.className = "sy-slider";
+    input.dataset.id = node.id;
+    input.dataset.multi = "dateslider"; // submitForm converts day-offset -> date
+    input.min = minN; input.max = maxN; input.step = 1; input.value = curN;
+    if (p.disabled) input.disabled = true;
+    var display = el("span", "sy-slider-value", fromDays(curN));
+    input.oninput = function () { display.textContent = fromDays(parseInt(input.value, 10)); };
+    input.onchange = function () {
+      if (!inForm(input)) send(node.id, fromDays(parseInt(input.value, 10)), false);
+    };
+    wrap.appendChild(input);
+    wrap.appendChild(display);
+    return field(p.label, wrap, p.help);
   }
 
   // --- Dialog (modal) ---------------------------------------------------
@@ -1326,34 +1415,7 @@
         var colType = cfg.type || "text";
 
         if (disabled) {
-          if (colType === "checkbox") {
-            td.textContent = cell ? "✓" : "✗";
-          } else if (colType === "link") {
-            var a = document.createElement("a");
-            a.href = cell || "#";
-            a.textContent = cell || "";
-            a.target = "_blank";
-            td.appendChild(a);
-          } else if (colType === "image") {
-            var img = document.createElement("img");
-            img.src = cell || "";
-            img.style.maxHeight = "40px";
-            td.appendChild(img);
-          } else if (colType === "progress") {
-            var bar = document.createElement("div");
-            bar.className = "sy-progress";
-            var fill = document.createElement("div");
-            fill.className = "sy-progress-fill";
-            var pctMax = cfg.max || 100;
-            var pctVal = Math.min(Math.max((parseFloat(cell) || 0) / pctMax, 0), 1) * 100;
-            fill.style.width = pctVal + "%";
-            bar.appendChild(fill);
-            td.appendChild(bar);
-          } else if (colType === "list") {
-            td.textContent = Array.isArray(cell) ? cell.join(", ") : String(cell || "");
-          } else {
-            td.textContent = cell == null ? "" : String(cell);
-          }
+          renderReadonlyCell(td, cell, colType, cfg);
         } else if (colType === "checkbox") {
           var cb = document.createElement("input");
           cb.type = "checkbox";

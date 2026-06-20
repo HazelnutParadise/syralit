@@ -116,13 +116,73 @@ func DownloadButton(label string, data []byte, filename string, opts ...Option) 
 
 // DataFrame renders a sortable, interactive data table. Sorting is handled
 // client-side. Rows can contain any printable values.
-func DataFrame(headers []string, rows [][]any, opts ...Option) {
+// When made selectable with sy.Selectable(), DataFrame renders a row-selection
+// checkbox column and returns the indices (into the original rows) the user has
+// selected; otherwise it returns nil. Selection survives client-side sorting.
+func DataFrame(headers []string, rows [][]any, opts ...Option) []int {
+	rc := current()
 	o := applyOpts(opts)
 	props := map[string]any{"headers": headers, "rows": rows}
 	if o.height > 0 {
 		props["height"] = o.height
 	}
-	current().add(&Node{Type: "dataframe", Props: props})
+	if o.colConfig != nil {
+		props["column_config"] = colConfigProps(o.colConfig)
+	}
+	if !o.selectable {
+		rc.add(&Node{Type: "dataframe", Props: props})
+		return nil
+	}
+	id := rc.widgetID("dataframe", o.key)
+	var selected []int
+	if val, ok := rc.sess.widgetValue(id); ok {
+		selected = toIntSlice(val)
+	}
+	props["selectable"] = true
+	props["selected"] = selected
+	rc.add(&Node{ID: id, Type: "dataframe", Props: props})
+	return selected
+}
+
+// colConfigProps serializes a column-config map into node props, shared by
+// DataFrame (read-only formatting) and DataEditor (editing).
+func colConfigProps(cc map[string]ColumnConfig) map[string]any {
+	out := map[string]any{}
+	for col, cfg := range cc {
+		entry := map[string]any{"type": cfg.Type}
+		if len(cfg.Options) > 0 {
+			entry["options"] = cfg.Options
+		}
+		if cfg.Width > 0 {
+			entry["width"] = cfg.Width
+		}
+		if cfg.Min != 0 {
+			entry["min"] = cfg.Min
+		}
+		if cfg.Max != 0 {
+			entry["max"] = cfg.Max
+		}
+		out[col] = entry
+	}
+	return out
+}
+
+// toIntSlice coerces a JSON array value (stored as []any of float64) into []int.
+func toIntSlice(val any) []int {
+	arr, ok := val.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]int, 0, len(arr))
+	for _, v := range arr {
+		switch n := v.(type) {
+		case float64:
+			out = append(out, int(n))
+		case int:
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 // HTML renders raw HTML content directly. Use with care — user-supplied
@@ -339,24 +399,7 @@ func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
 		props["dynamic_rows"] = true
 	}
 	if o.colConfig != nil {
-		cc := map[string]any{}
-		for col, cfg := range o.colConfig {
-			entry := map[string]any{"type": cfg.Type}
-			if len(cfg.Options) > 0 {
-				entry["options"] = cfg.Options
-			}
-			if cfg.Width > 0 {
-				entry["width"] = cfg.Width
-			}
-			if cfg.Min != 0 {
-				entry["min"] = cfg.Min
-			}
-			if cfg.Max != 0 {
-				entry["max"] = cfg.Max
-			}
-			cc[col] = entry
-		}
-		props["column_config"] = cc
+		props["column_config"] = colConfigProps(o.colConfig)
 	}
 	rc.add(&Node{ID: id, Type: "data_editor", Props: props})
 	return rows

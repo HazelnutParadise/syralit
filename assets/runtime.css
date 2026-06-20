@@ -1317,6 +1317,10 @@ body {
   border-radius: 999px;
   transition: width .3s ease;
 }
+/* progress bar rendered inside a table cell (DataFrame/DataEditor) */
+.sy-progress-cell {
+  min-width: 80px;
+}
 
 /* --- Display: Link ----------------------------------------------------- */
 
@@ -1581,6 +1585,20 @@ body {
 }
 .sy-df-header:hover {
   background: color-mix(in srgb, var(--sy-accent) 8%, transparent);
+}
+
+/* Row selection */
+.sy-df-select {
+  width: 1px;
+  text-align: center;
+  cursor: pointer;
+  padding-right: .5rem;
+}
+.sy-dataframe tbody tr.sy-df-row-selected {
+  background: color-mix(in srgb, var(--sy-accent) 12%, transparent);
+}
+.sy-dataframe tbody tr:hover {
+  background: color-mix(in srgb, var(--sy-accent) 6%, transparent);
 }
 
 /* --- Dialog (Modal) ---------------------------------------------------- */

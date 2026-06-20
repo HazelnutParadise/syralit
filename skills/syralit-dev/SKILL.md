@@ -56,6 +56,7 @@ func main() { sy.App(nil) }
 | `NumberInput(label, opts...)` | `float64` | Number with min/max/step |
 | `Slider(label, min, max, opts...)` | `float64` | Range slider |
 | `RangeSlider(label, min, max, opts...)` | `(float64, float64)` | Two-handle (low, high) range |
+| `DateSlider(label, minDate, maxDate, opts...)` | `string` | Slider over a date range → "YYYY-MM-DD" |
 | `SelectSlider(label, options, opts...)` | `string` | Discrete slider |
 | `Checkbox(label, opts...)` | `bool` | Checkbox |
 | `Toggle(label, opts...)` | `bool` | Toggle switch |
@@ -141,13 +142,15 @@ sy.IFrame(url, opts...)
 // Static table
 sy.Table(headers []string, rows [][]string)
 
-// Sortable data frame
+// Sortable data frame. Add sy.Selectable() to get row selection (returns
+// selected indices into the original rows); sy.ColConfig renders cells by type.
 sy.DataFrame(headers []string, rows [][]any, opts...)
+selected := sy.DataFrame(headers, rows, sy.Selectable(), sy.Key("df")) // []int
 
 // Editable data editor — returns current rows
 edited := sy.DataEditor(headers, rows, opts...)
 
-// Column configuration for DataEditor
+// Column configuration for DataEditor and DataFrame
 sy.ColConfig(map[string]sy.ColumnConfig{
     "Score":  {Type: "number", Min: 0, Max: 100},
     "Pass":   {Type: "checkbox"},
@@ -434,6 +437,7 @@ syi.List(dl)                            // single-column table
 syi.ListPreview(dl, 5)                  // first N values
 syi.EditableList(dl, sy.Key("edl"))     // editable → []any
 syi.ListMetrics(dl)                     // count, mean, min, max
+syi.ListDescribe(dl)                    // count/mean/std/min/25%/50%/75%/max
 syi.ListBarChart(dl)                    // also ListLineChart / ListAreaChart
 syi.Histogram(dl, 20)                   // distribution (list-only)
 ```

@@ -1,0 +1,816 @@
+:root {
+  --sy-bg: #ffffff;
+  --sy-fg: #1f2329;
+  --sy-muted: #6b7280;
+  --sy-border: #e5e7eb;
+  --sy-accent: #7c3aed;
+  --sy-radius: 12px;
+  --sy-info: #2563eb;
+  --sy-success: #16a34a;
+  --sy-warning: #d97706;
+  --sy-error: #dc2626;
+  --sy-sidebar-bg: #f8f9fb;
+  --sy-hover: rgba(0,0,0,.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sy-bg: #0f1115;
+    --sy-fg: #e6e8eb;
+    --sy-muted: #9ca3af;
+    --sy-border: #2a2f3a;
+    --sy-sidebar-bg: #161920;
+    --sy-hover: rgba(255,255,255,.06);
+  }
+}
+
+html[data-theme="dark"] {
+  --sy-bg: #0f1115;
+  --sy-fg: #e6e8eb;
+  --sy-muted: #9ca3af;
+  --sy-border: #2a2f3a;
+  --sy-sidebar-bg: #161920;
+  --sy-hover: rgba(255,255,255,.06);
+}
+html[data-theme="light"] {
+  --sy-bg: #ffffff;
+  --sy-fg: #1f2329;
+  --sy-muted: #6b7280;
+  --sy-border: #e5e7eb;
+  --sy-sidebar-bg: #f8f9fb;
+  --sy-hover: rgba(0,0,0,.04);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--sy-bg);
+  color: var(--sy-fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Layout ------------------------------------------------------------ */
+
+#syralit-root {
+  display: flex;
+  min-height: 100vh;
+}
+
+#syralit-sidebar {
+  display: none;
+}
+
+#syralit-root.has-sidebar #syralit-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  min-width: 260px;
+  background: var(--sy-sidebar-bg);
+  border-right: 1px solid var(--sy-border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+#syralit-app {
+  flex: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+  width: 100%;
+}
+
+#syralit-root.has-sidebar #syralit-app {
+  max-width: 820px;
+  padding: 2.5rem 2.5rem 4rem;
+}
+
+/* --- Sidebar ----------------------------------------------------------- */
+
+.sy-sidebar-header {
+  padding: 1.5rem 1.25rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--sy-accent);
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--sy-border);
+}
+
+.sy-sidebar-pages {
+  list-style: none;
+  margin: 0;
+  padding: .5rem;
+  flex: 1;
+}
+
+.sy-sidebar-pages li {
+  margin: 2px 0;
+}
+
+.sy-sidebar-pages a {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .5rem .75rem;
+  border-radius: calc(var(--sy-radius) * 0.65);
+  color: var(--sy-muted);
+  text-decoration: none;
+  font-size: .88rem;
+  font-weight: 500;
+  transition: background .15s, color .15s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sy-sidebar-pages a:hover {
+  background: var(--sy-hover);
+  color: var(--sy-fg);
+}
+
+.sy-sidebar-pages a.active {
+  background: color-mix(in srgb, var(--sy-accent) 12%, transparent);
+  color: var(--sy-accent);
+  font-weight: 600;
+}
+
+.sy-sidebar-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  width: 1.4rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sy-sidebar-content {
+  padding: .75rem 1rem;
+  border-top: 1px solid var(--sy-border);
+}
+
+/* --- Typography -------------------------------------------------------- */
+
+.sy-title {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+.sy-header {
+  font-size: 1.35rem;
+  font-weight: 650;
+  margin: 1.5rem 0 .75rem;
+  letter-spacing: -0.01em;
+}
+.sy-subheader {
+  font-size: 1.08rem;
+  font-weight: 600;
+  margin: 1.25rem 0 .5rem;
+}
+.sy-text, .sy-markdown { margin: .5rem 0; }
+.sy-caption {
+  color: var(--sy-muted);
+  font-size: .85rem;
+  margin: .25rem 0;
+}
+
+/* --- Status ------------------------------------------------------------ */
+
+.sy-status {
+  padding: .65rem .9rem;
+  border-radius: var(--sy-radius);
+  margin: .6rem 0;
+  font-size: .88rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.sy-status-info {
+  background: color-mix(in srgb, var(--sy-info) 10%, var(--sy-bg));
+  border-color: color-mix(in srgb, var(--sy-info) 22%, transparent);
+  color: var(--sy-info);
+}
+.sy-status-success {
+  background: color-mix(in srgb, var(--sy-success) 10%, var(--sy-bg));
+  border-color: color-mix(in srgb, var(--sy-success) 22%, transparent);
+  color: var(--sy-success);
+}
+.sy-status-warning {
+  background: color-mix(in srgb, var(--sy-warning) 10%, var(--sy-bg));
+  border-color: color-mix(in srgb, var(--sy-warning) 22%, transparent);
+  color: var(--sy-warning);
+}
+.sy-status-error {
+  background: color-mix(in srgb, var(--sy-error) 10%, var(--sy-bg));
+  border-color: color-mix(in srgb, var(--sy-error) 22%, transparent);
+  color: var(--sy-error);
+}
+
+/* --- Form Controls ----------------------------------------------------- */
+
+.sy-field { margin: .75rem 0; }
+.sy-field-inline { display: flex; align-items: center; gap: .6rem; cursor: pointer; }
+.sy-label {
+  display: block;
+  font-size: .82rem;
+  color: var(--sy-muted);
+  margin-bottom: .3rem;
+  font-weight: 500;
+}
+.sy-field-inline .sy-label {
+  display: inline;
+  margin: 0;
+  color: var(--sy-fg);
+  font-size: .9rem;
+}
+
+.sy-help {
+  font-size: .78rem;
+  color: var(--sy-muted);
+  margin-top: .25rem;
+}
+
+.sy-input, .sy-select {
+  width: 100%;
+  padding: .55rem .75rem;
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  background: var(--sy-bg);
+  color: var(--sy-fg);
+  font: inherit;
+  font-size: .93rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+.sy-input:focus, .sy-select:focus {
+  outline: none;
+  border-color: var(--sy-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sy-accent) 18%, transparent);
+}
+.sy-input::placeholder {
+  color: var(--sy-muted);
+  opacity: .55;
+}
+.sy-input:disabled, .sy-select:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.sy-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.sy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .55rem 1.15rem;
+  border: none;
+  border-radius: var(--sy-radius);
+  background: var(--sy-accent);
+  color: #fff;
+  font: inherit;
+  font-size: .93rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: .5rem 0;
+  transition: filter .15s, transform .1s, box-shadow .15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+  text-decoration: none;
+}
+.sy-button:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--sy-accent) 28%, transparent);
+}
+.sy-button:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.sy-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  filter: none;
+  box-shadow: none;
+}
+
+.sy-checkbox {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--sy-accent);
+  cursor: pointer;
+}
+
+/* --- Number Input / Slider --------------------------------------------- */
+
+.sy-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.sy-slider {
+  flex: 1;
+  height: 6px;
+  accent-color: var(--sy-accent);
+  cursor: pointer;
+}
+
+.sy-slider-value {
+  min-width: 3rem;
+  text-align: right;
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--sy-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Radio ------------------------------------------------------------- */
+
+.sy-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.sy-radio-label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .9rem;
+  cursor: pointer;
+  padding: .2rem 0;
+}
+
+.sy-radio {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--sy-accent);
+  cursor: pointer;
+}
+
+/* --- MultiSelect ------------------------------------------------------- */
+
+.sy-multi-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+}
+
+.sy-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+}
+
+.sy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sy-accent) 12%, transparent);
+  color: var(--sy-accent);
+  font-size: .82rem;
+  font-weight: 500;
+}
+
+.sy-chip-x {
+  cursor: pointer;
+  font-size: .9rem;
+  line-height: 1;
+  opacity: .6;
+  transition: opacity .15s;
+}
+.sy-chip-x:hover { opacity: 1; }
+
+.sy-multi-add {
+  width: auto;
+  max-width: 200px;
+}
+
+/* --- Color Picker ------------------------------------------------------ */
+
+.sy-color-wrap {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.sy-color-picker {
+  width: 44px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--sy-border);
+  border-radius: calc(var(--sy-radius) * 0.6);
+  background: var(--sy-bg);
+  cursor: pointer;
+}
+
+.sy-color-hex {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: .85rem;
+  color: var(--sy-muted);
+}
+
+/* --- Toggle (Switch) --------------------------------------------------- */
+
+.sy-toggle-wrap {
+  flex-wrap: wrap;
+}
+
+.sy-toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.sy-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.sy-toggle-knob {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: var(--sy-border);
+  border-radius: 999px;
+  transition: background .2s;
+}
+.sy-toggle-knob::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+
+.sy-toggle-input:checked + .sy-toggle-knob {
+  background: var(--sy-accent);
+}
+.sy-toggle-input:checked + .sy-toggle-knob::before {
+  transform: translateX(18px);
+}
+.sy-toggle-input:disabled + .sy-toggle-knob {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* --- Layout: Columns --------------------------------------------------- */
+
+.sy-columns {
+  display: grid;
+  gap: 1.25rem;
+  margin: .75rem 0;
+}
+
+.sy-column {
+  min-width: 0;
+}
+
+/* --- Layout: Expander -------------------------------------------------- */
+
+.sy-expander {
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  margin: .75rem 0;
+  overflow: hidden;
+}
+
+.sy-expander-summary {
+  padding: .65rem .9rem;
+  font-weight: 600;
+  font-size: .93rem;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  transition: background .15s;
+}
+.sy-expander-summary:hover {
+  background: var(--sy-hover);
+}
+.sy-expander-summary::before {
+  content: "▸";
+  font-size: .75rem;
+  transition: transform .2s;
+  color: var(--sy-muted);
+}
+.sy-expander[open] > .sy-expander-summary::before {
+  transform: rotate(90deg);
+}
+.sy-expander-summary::-webkit-details-marker { display: none; }
+
+.sy-expander-content {
+  padding: .5rem .9rem .9rem;
+  border-top: 1px solid var(--sy-border);
+}
+
+/* --- Layout: Tabs ------------------------------------------------------ */
+
+.sy-tabs {
+  margin: .75rem 0;
+}
+
+.sy-tabs-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--sy-border);
+  overflow-x: auto;
+}
+
+.sy-tab-button {
+  padding: .55rem 1rem;
+  border: none;
+  background: none;
+  color: var(--sy-muted);
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.sy-tab-button:hover {
+  color: var(--sy-fg);
+}
+.sy-tab-button.active {
+  color: var(--sy-accent);
+  border-bottom-color: var(--sy-accent);
+  font-weight: 600;
+}
+
+.sy-tabs-panels {
+  padding: .75rem 0;
+}
+
+.sy-tab-panel {
+  animation: sy-fade-in .15s ease;
+}
+
+@keyframes sy-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* --- Layout: Form ------------------------------------------------------ */
+
+.sy-form {
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  padding: 1rem;
+  margin: .75rem 0;
+}
+
+.sy-form-submit {
+  margin-top: .5rem;
+}
+
+/* --- Display: Table ---------------------------------------------------- */
+
+.sy-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: .75rem 0;
+  font-size: .9rem;
+}
+
+.sy-table th, .sy-table td {
+  padding: .5rem .75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--sy-border);
+}
+
+.sy-table th {
+  font-weight: 600;
+  font-size: .82rem;
+  color: var(--sy-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--sy-hover);
+}
+
+.sy-table tbody tr:hover {
+  background: var(--sy-hover);
+}
+
+/* --- Display: Metric --------------------------------------------------- */
+
+.sy-metric {
+  padding: .75rem 0;
+  margin: .5rem 0;
+}
+
+.sy-metric-label {
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--sy-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: .15rem;
+}
+
+.sy-metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.sy-metric-delta {
+  font-size: .88rem;
+  font-weight: 500;
+  margin-top: .2rem;
+  color: var(--sy-muted);
+}
+.sy-delta-positive { color: var(--sy-success); }
+.sy-delta-negative { color: var(--sy-error); }
+
+/* --- Display: Code ----------------------------------------------------- */
+
+.sy-code {
+  background: var(--sy-hover);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  padding: .85rem 1rem;
+  margin: .75rem 0;
+  overflow-x: auto;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.sy-code code {
+  font: inherit;
+}
+
+/* --- Display: Image ---------------------------------------------------- */
+
+.sy-image-wrap {
+  margin: .75rem 0;
+}
+
+.sy-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: calc(var(--sy-radius) * 0.6);
+}
+
+/* --- Display: Progress ------------------------------------------------- */
+
+.sy-progress-wrap {
+  margin: .75rem 0;
+}
+
+.sy-progress-bar {
+  height: 8px;
+  background: var(--sy-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.sy-progress-fill {
+  height: 100%;
+  background: var(--sy-accent);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+
+/* --- Display: Link ----------------------------------------------------- */
+
+.sy-link {
+  color: var(--sy-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.sy-link:hover {
+  text-decoration: underline;
+}
+
+/* --- Display: Divider -------------------------------------------------- */
+
+.sy-divider {
+  border: none;
+  border-top: 1px solid var(--sy-border);
+  margin: 1.25rem 0;
+}
+
+/* --- Download Button --------------------------------------------------- */
+
+.sy-download-button {
+  text-decoration: none;
+}
+
+/* --- Mobile Sidebar ---------------------------------------------------- */
+
+.sy-sidebar-toggle {
+  display: none;
+  position: fixed;
+  bottom: 1.2rem;
+  left: 1.2rem;
+  z-index: 200;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--sy-accent);
+  color: #fff;
+  font-size: 1.25rem;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,.22);
+  transition: transform .2s;
+  align-items: center;
+  justify-content: center;
+}
+.sy-sidebar-toggle:active { transform: scale(.92); }
+
+.sy-sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  z-index: 99;
+}
+#syralit-root.has-sidebar.sidebar-open .sy-sidebar-backdrop {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  #syralit-root.has-sidebar #syralit-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: 4px 0 20px rgba(0,0,0,.12);
+  }
+  #syralit-root.has-sidebar.sidebar-open #syralit-sidebar {
+    transform: translateX(0);
+  }
+  #syralit-root.has-sidebar .sy-sidebar-toggle {
+    display: flex;
+  }
+  #syralit-root.has-sidebar #syralit-app {
+    padding: 2rem 1.25rem 5rem;
+  }
+  .sy-columns {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* --- Dev hot reload UI ------------------------------------------------- */
+
+.sy-dev-badge {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9998;
+  padding: .4rem .8rem;
+  border-radius: 999px;
+  background: var(--sy-accent);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+.sy-dev-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 12, 16, .93);
+  color: #f5f5f5;
+  padding: 2.5rem;
+  overflow: auto;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+}
+.sy-dev-overlay-title {
+  color: #ff6b6b;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.sy-dev-overlay-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: .85rem;
+  line-height: 1.5;
+  margin: 0;
+}

@@ -373,6 +373,7 @@
       case "plotly_chart":    return plotlyChartEl(node, p);
       case "pyplot_chart":    return pyplotChartEl(node, p);
       case "bokeh_chart":     return bokehChartEl(node, p);
+      case "pydeck_chart":    return pydeckChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -2283,7 +2284,83 @@
     return wrap;
   }
 
+  // --- PyDeck Chart (st.pydeck_chart equivalent, using deck.gl) --------------
+
+  var deckState = "idle";
+  var deckQueue = [];
+
+  function loadDeckGL(cb) {
+    if (window.deck) { cb(); return; }
+    deckQueue.push(cb);
+    if (deckState !== "idle") return;
+    deckState = "loading";
+    var scripts = [
+      "https://unpkg.com/deck.gl@latest/dist.min.js",
+      "https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"
+    ];
+    var css = document.createElement("link");
+    css.rel = "stylesheet";
+    css.href = "https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css";
+    document.head.appendChild(css);
+    var idx = 0;
+    function next() {
+      if (idx >= scripts.length) {
+        deckState = "ready";
+        var q = deckQueue; deckQueue = [];
+        q.forEach(function (f) { f(); });
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = scripts[idx++];
+      s.onload = next;
+      s.onerror = function () {
+        deckState = "idle";
+        deckQueue.forEach(function (f) { f(); });
+        deckQueue = [];
+      };
+      document.head.appendChild(s);
+    }
+    next();
+  }
+
+  function pydeckChartEl(node, p) {
+    var wrap = el("div", "sy-pydeck-chart");
+    var h = (p.height || 500);
+    wrap.style.height = h + "px";
+    if (p.width) wrap.style.width = p.width + "px";
+    wrap.textContent = "Loading deck.gl…";
+
+    loadDeckGL(function () {
+      if (window.deck) {
+        wrap.textContent = "";
+        var spec = p.spec || {};
+        var vs = spec.initialViewState || { latitude: 0, longitude: 0, zoom: 1 };
+
+        try {
+          new window.deck.DeckGL({
+            container: wrap,
+            initialViewState: vs,
+            controller: true,
+            layers: (spec.layers || []).map(function (l) {
+              var typeName = l["@@type"] || "ScatterplotLayer";
+              var LayerClass = window.deck[typeName];
+              if (!LayerClass) return null;
+              var layerProps = {};
+              Object.keys(l).forEach(function (k) {
+                if (k !== "@@type") layerProps[k] = l[k];
+              });
+              return new LayerClass(layerProps);
+            }).filter(Boolean)
+          });
+        } catch (e) {
+          wrap.textContent = "deck.gl error: " + e.message;
+        }
+      } else {
+        wrap.textContent = "Failed to load deck.gl library.";
+      }
+    });
+    return wrap;
+  }
+
   connect();
 })();
-
-

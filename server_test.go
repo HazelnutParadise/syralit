@@ -1276,3 +1276,48 @@ func TestBokehChart(t *testing.T) {
 		t.Fatal("bokeh_chart not found")
 	}
 }
+
+func TestPydeckChart(t *testing.T) {
+	app := func() {
+		PydeckChart(map[string]any{
+			"initialViewState": map[string]any{
+				"latitude": 37.76, "longitude": -122.4,
+				"zoom": 11,
+			},
+			"layers": []map[string]any{{
+				"@@type": "ScatterplotLayer",
+				"data":   []map[string]any{},
+			}},
+		}, Height(500))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "pydeck_chart" {
+			props := n["props"].(map[string]any)
+			if spec, ok := props["spec"].(map[string]any); ok {
+				if vs, ok := spec["initialViewState"].(map[string]any); ok {
+					if vs["latitude"] != nil {
+						found = true
+					}
+				}
+			}
+		}
+	}
+	if !found {
+		t.Fatal("pydeck_chart not found")
+	}
+}

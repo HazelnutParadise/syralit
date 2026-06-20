@@ -227,3 +227,36 @@ func BokehChart(spec map[string]any, opts ...Option) {
 	}
 	current().add(&Node{Type: "bokeh_chart", Props: props})
 }
+
+// PydeckChart renders a deck.gl 3D map visualization from a JSON spec.
+// The spec is a map[string]any matching deck.gl's JSON schema. Rendered
+// client-side using deck.gl (CDN).
+//
+// This is the Go equivalent of Streamlit's st.pydeck_chart — PyDeck is a
+// Python API that generates deck.gl JSON specs.
+//
+//	sy.PydeckChart(map[string]any{
+//	    "initialViewState": map[string]any{
+//	        "latitude": 37.76, "longitude": -122.4,
+//	        "zoom": 11, "pitch": 50,
+//	    },
+//	    "layers": []map[string]any{{
+//	        "@@type": "HexagonLayer",
+//	        "data": "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/sf-bike-parking.json",
+//	        "getPosition": "@@=[lng, lat]",
+//	        "radius": 200,
+//	        "elevationScale": 4,
+//	        "extruded": true,
+//	    }},
+//	})
+func PydeckChart(spec map[string]any, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"spec": spec}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "pydeck_chart", Props: props})
+}

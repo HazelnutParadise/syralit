@@ -349,6 +349,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`form-app`](examples/form-app/) | Conference registration form with validation |
 | [`data-explorer`](examples/data-explorer/) | 3-page sales dashboard with charts, filters, and data editing |
 | [`auth-demo`](examples/auth-demo/) | Authentication with LoginGate and role-based access control |
+| [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
 | [`insyra-demo`](examples/insyra-demo/) | Insyra DataTable integration demo |
 
 Run any example:

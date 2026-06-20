@@ -391,7 +391,7 @@ go run .
 
 The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](skills/syralit-dev/SKILL.md) skill provides a complete API reference.
 
-Install it into your project with the [`skills`](https://github.com/obra/skills) CLI:
+Install it into your project with the [`skills`](https://github.com/vercel-labs/skills) CLI:
 
 ```bash
 npx skills add HazelnutParadise/syralit/skills

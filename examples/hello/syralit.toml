@@ -1,0 +1,8 @@
+# Syralit project settings. Run "syralit dev" in this dir with no flags.
+title = "Hello, Syralit"
+port = 8600
+
+[theme]
+mode = "system"
+accent = "#7C3AED"
+radius = "12px"

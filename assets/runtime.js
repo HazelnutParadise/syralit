@@ -306,6 +306,7 @@
       // --- Status ---
       case "status":    return el("div", "sy-status sy-status-" + p.level, p.text);
       case "error":     return el("div", "sy-status sy-status-error", p.text);
+      case "exception": return exceptionEl(node, p);
       // --- Input widgets ---
       case "text_input":    return textInput(node, p);
       case "checkbox":      return checkbox(node, p);
@@ -506,11 +507,23 @@
   }
 
   function button(node, p) {
-    var b = el("button", "sy-button", p.label);
+    var cls = "sy-button";
+    if (p.buttonType === "secondary") cls += " sy-button-outline";
+    else if (p.buttonType === "tertiary") cls += " sy-button-tertiary";
+    if (p.containerWidth) cls += " sy-button-block";
+    var label = p.icon ? (p.icon + " " + p.label) : p.label;
+    var b = el("button", cls, label);
     b.dataset.id = node.id;
     if (p.disabled) b.disabled = true;
     b.onclick = function () { send(node.id, true, true); };
     return b;
+  }
+
+  function exceptionEl(node, p) {
+    var box = el("div", "sy-exception");
+    box.appendChild(el("div", "sy-exception-head", "⚠ Exception"));
+    box.appendChild(el("pre", "sy-exception-body", p.text));
+    return box;
   }
 
   function numberInput(node, p) {
@@ -1064,7 +1077,7 @@
 
   function linkBtnEl(node, p) {
     var a = document.createElement("a");
-    a.className = "sy-btn sy-link-btn";
+    a.className = "sy-button sy-link-btn";
     a.href = p.url;
     a.textContent = p.label;
     a.target = "_blank";

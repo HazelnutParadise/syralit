@@ -203,6 +203,14 @@ func pageWidgets() {
 
 		sy.Divider()
 
+		sy.Subheader("Button Variants")
+		sy.Button("Primary", sy.Key("w_bt_pri"), sy.Icon("🚀"))
+		sy.Button("Secondary", sy.Key("w_bt_sec"), sy.ButtonType("secondary"))
+		sy.Button("Tertiary", sy.Key("w_bt_ter"), sy.ButtonType("tertiary"))
+		sy.Button("Full-width Action", sy.Key("w_bt_full"), sy.Icon("✅"), sy.UseContainerWidth())
+
+		sy.Divider()
+
 		sy.Subheader("Toggles & Checks")
 		dark := sy.Toggle("Dark mode preference", sy.Key("w_dark"))
 		if dark {
@@ -710,6 +718,10 @@ func pageForms() {
 		sy.Warning("Careful! This action cannot be undone.")
 		sy.Error("Something went wrong. Please try again.")
 	})
+
+	sy.Subheader("Exception")
+	sy.Caption("sy.Exception renders a Go error in a monospace box.")
+	sy.Exception(fmt.Errorf("dial tcp 10.0.0.5:5432: connect: connection refused"))
 
 	sy.Divider()
 

@@ -40,6 +40,9 @@ type widgetOpts struct {
 	color           string
 	dynamicRows     bool
 	verticalAlign   string
+	icon              string
+	buttonType        string // "primary" (default), "secondary", "tertiary"
+	useContainerWidth bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -70,6 +73,16 @@ func XLabels(l []string) Option    { return func(o *widgetOpts) { o.xLabels = l 
 func Expanded() Option             { return DefaultValue(true) }
 func DynamicRows() Option          { return func(o *widgetOpts) { o.dynamicRows = true } }
 func VerticalAlignment(align string) Option { return func(o *widgetOpts) { o.verticalAlign = align } }
+
+// Icon prefixes a button's label with an icon (emoji or short string).
+func Icon(v string) Option { return func(o *widgetOpts) { o.icon = v } }
+
+// ButtonType selects a button's visual style: "primary" (default, accent
+// fill), "secondary" (outlined), or "tertiary" (text only).
+func ButtonType(v string) Option { return func(o *widgetOpts) { o.buttonType = v } }
+
+// UseContainerWidth makes a button span the full width of its container.
+func UseContainerWidth() Option { return func(o *widgetOpts) { o.useContainerWidth = true } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {
@@ -131,6 +144,15 @@ func Success(text string) { current().add(statusNode("success", text)) }
 func Info(text string)    { current().add(statusNode("info", text)) }
 func Warning(text string) { current().add(statusNode("warning", text)) }
 func Error(text string)   { current().add(statusNode("error", text)) }
+
+// Exception renders a Go error in a styled, monospace error box — the
+// equivalent of Streamlit's st.exception. A nil error renders nothing.
+func Exception(err error) {
+	if err == nil {
+		return
+	}
+	current().add(&Node{Type: "exception", Props: map[string]any{"text": err.Error()}})
+}
 
 func statusNode(level, text string) *Node {
 	return &Node{Type: "status", Props: map[string]any{"level": level, "text": text}}
@@ -220,6 +242,15 @@ func Button(label string, opts ...Option) bool {
 	props := map[string]any{"label": label}
 	if o.disabled {
 		props["disabled"] = true
+	}
+	if o.icon != "" {
+		props["icon"] = o.icon
+	}
+	if o.buttonType != "" {
+		props["buttonType"] = o.buttonType
+	}
+	if o.useContainerWidth {
+		props["containerWidth"] = true
 	}
 	rc.add(&Node{ID: id, Type: "button", Props: props})
 	return pressed

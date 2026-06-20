@@ -746,6 +746,58 @@ body {
   box-shadow: none;
 }
 
+/* Button variants (type / full width) */
+.sy-button-block { width: 100%; }
+.sy-button-outline {
+  background: transparent;
+  color: var(--sy-accent);
+  border: 1px solid var(--sy-accent);
+  box-shadow: none;
+}
+.sy-button-outline:hover {
+  background: color-mix(in srgb, var(--sy-accent) 10%, transparent);
+  filter: none;
+  box-shadow: none;
+}
+.sy-button-tertiary {
+  background: transparent;
+  color: var(--sy-accent);
+  box-shadow: none;
+  padding-left: .5rem;
+  padding-right: .5rem;
+}
+.sy-button-tertiary:hover {
+  background: var(--sy-hover);
+  filter: none;
+  box-shadow: none;
+}
+
+/* Exception box (sy.Exception) */
+.sy-exception {
+  margin: .6rem 0;
+  border: 1px solid color-mix(in srgb, var(--sy-error) 45%, var(--sy-border));
+  border-left: 3px solid var(--sy-error);
+  border-radius: var(--sy-radius);
+  background: color-mix(in srgb, var(--sy-error) 8%, transparent);
+  overflow: hidden;
+}
+.sy-exception-head {
+  padding: .5rem .8rem;
+  font-weight: 600;
+  font-size: .9rem;
+  color: var(--sy-error);
+}
+.sy-exception-body {
+  margin: 0;
+  padding: 0 .8rem .7rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: .85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--sy-fg);
+}
+
 .sy-checkbox {
   width: 1.05rem;
   height: 1.05rem;

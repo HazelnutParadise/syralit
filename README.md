@@ -92,7 +92,7 @@ Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.
 
 ### Display
 
-Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame.
+Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, Exception (styled Go `error` box).
 
 ### Data
 
@@ -318,6 +318,11 @@ sy.ChartTitle("Title")      // chart title
 sy.Border()                 // container border
 sy.Color("green")           // element color
 sy.Language("go")           // code language
+
+// Button styling
+sy.Icon("🚀")               // prefix a button label with an icon
+sy.ButtonType("secondary")  // "primary" (default), "secondary", "tertiary"
+sy.UseContainerWidth()      // make a button span its container
 ```
 
 ## Insyra Integration

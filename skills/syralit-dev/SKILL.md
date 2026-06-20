@@ -98,6 +98,9 @@ sy.Color("green")             // badge/element color
 sy.DynamicRows()              // DataEditor add/delete rows
 sy.Expanded()                 // expander starts open
 sy.VerticalAlignment("center") // columns alignment
+sy.Icon("🚀")                 // prefix a button label with an icon
+sy.ButtonType("secondary")    // button style: primary/secondary/tertiary
+sy.UseContainerWidth()        // button spans its container
 ```
 
 ### Display
@@ -258,6 +261,7 @@ sy.Success("Done!")
 sy.Info("Note: ...")
 sy.Warning("Watch out")
 sy.Error("Failed")
+sy.Exception(err)               // styled monospace error box; nil renders nothing
 sy.Toast("Message", "success")  // "success", "info", "warning", "error"
 sy.Balloons()
 sy.Snow()

@@ -3,6 +3,7 @@ package syralit
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -1319,5 +1320,87 @@ func TestPydeckChart(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("pydeck_chart not found")
+	}
+}
+
+func TestException(t *testing.T) {
+	app := func() {
+		Exception(nil) // should render nothing
+		Exception(errors.New("boom: connection refused"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	count := 0
+	for _, n := range nodes {
+		if n["type"] == "exception" {
+			count++
+			props := n["props"].(map[string]any)
+			if txt, _ := props["text"].(string); txt != "boom: connection refused" {
+				t.Fatalf("unexpected exception text: %q", txt)
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 exception node (nil should be skipped), got %d", count)
+	}
+}
+
+func TestButtonVariants(t *testing.T) {
+	app := func() {
+		Button("Go", Key("b1"), Icon("🚀"), ButtonType("secondary"), UseContainerWidth())
+		Button("Plain", Key("b2"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+
+	b1, ok := nodeByID(nodes, "b1")
+	if !ok {
+		t.Fatal("button b1 not found")
+	}
+	p1 := b1["props"].(map[string]any)
+	if p1["icon"] != "🚀" {
+		t.Fatalf("expected icon, got %v", p1["icon"])
+	}
+	if p1["buttonType"] != "secondary" {
+		t.Fatalf("expected secondary, got %v", p1["buttonType"])
+	}
+	if p1["containerWidth"] != true {
+		t.Fatalf("expected containerWidth true, got %v", p1["containerWidth"])
+	}
+
+	b2, ok := nodeByID(nodes, "b2")
+	if !ok {
+		t.Fatal("button b2 not found")
+	}
+	p2 := b2["props"].(map[string]any)
+	if _, has := p2["icon"]; has {
+		t.Fatal("plain button should not have icon prop")
+	}
+	if _, has := p2["buttonType"]; has {
+		t.Fatal("plain button should not have buttonType prop")
 	}
 }

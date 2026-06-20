@@ -28,7 +28,7 @@ TextInput, PasswordInput, NumberInput, Slider, SelectSlider, TextArea, Checkbox,
 
 ### Display
 
-Title, Header, Subheader, Text, Markdown, Caption, Badge, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables with column config), Link, LinkButton, PageLink, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output), Component (custom HTML/JS widgets), IFrame
+Title, Header, Subheader, Text, Markdown, Caption, Badge, Code (with syntax highlighting), LaTeX (KaTeX), JSON, HTML, Image, ImageFromBytes, Audio, Video, Table, DataFrame, DataEditor (editable tables with 11 column types: text, number, checkbox, select, date, time, datetime, link, image, progress, list), Link, LinkButton, PageLink, Metric (with delta), Progress, Spinner, Map (Leaflet.js), WriteStream (token-by-token streaming for LLM output), Component (custom HTML/JS widgets), IFrame
 
 ### Layout
 
@@ -36,7 +36,9 @@ Columns, WeightedColumns, Tabs, Sidebar, Expander, Container, Form, Status, Popo
 
 ### Charts
 
-LineChart, BarChart, AreaChart, ScatterChart, PieChart, GraphvizChart — all with title and x-axis label support
+All charts are powered by **Chart.js** with interactive tooltips, hover highlights, and responsive sizing:
+
+LineChart, BarChart, AreaChart, ScatterChart, PieChart, DoughnutChart, HistogramChart, RadarChart, GraphvizChart (Graphviz DOT via viz.js)
 
 ### State & Navigation
 

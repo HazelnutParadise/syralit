@@ -571,6 +571,70 @@ func Popover(label string, fn func(), opts ...Option) {
 	rc.stack = rc.stack[:len(rc.stack)-1]
 }
 
+// SegmentedControl renders a row of mutually exclusive buttons. Returns the
+// selected option string. Similar to Radio but rendered as a single bar.
+func SegmentedControl(label string, options []string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("segmented_control", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	if s == "" {
+		if dv, ok := o.defaultVal.(string); ok {
+			s = dv
+		} else if len(options) > 0 {
+			s = options[0]
+		}
+	}
+	props := map[string]any{"label": label, "options": options, "value": s}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "segmented_control", Props: props})
+	return s
+}
+
+// Pills renders a set of selectable tag-like buttons. Returns the selected
+// option string. Use for filter or category selection.
+func Pills(label string, options []string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("pills", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	if s == "" {
+		if dv, ok := o.defaultVal.(string); ok {
+			s = dv
+		} else if len(options) > 0 {
+			s = options[0]
+		}
+	}
+	props := map[string]any{"label": label, "options": options, "value": s}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "pills", Props: props})
+	return s
+}
+
+// Pagination renders a page selector for paginating data. Returns the current
+// page number (1-based). totalPages is the total number of pages.
+func Pagination(totalPages int, opts ...Option) int {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("pagination", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	page, _ := val.(float64)
+	if page < 1 {
+		page = 1
+	}
+	if int(page) > totalPages {
+		page = float64(totalPages)
+	}
+	props := map[string]any{"page": int(page), "total_pages": totalPages}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	rc.add(&Node{ID: id, Type: "pagination", Props: props})
+	return int(page)
+}
+
 // CameraInput renders a webcam capture widget. The user clicks "Take Photo"
 // to capture a snapshot, which is returned as a base64-encoded JPEG data URI.
 // Returns empty string until a photo is taken.

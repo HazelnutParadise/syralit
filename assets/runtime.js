@@ -346,6 +346,9 @@
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
       case "camera_input": return cameraInputEl(node, p);
+      case "pagination":   return paginationEl(node, p);
+      case "segmented_control": return segmentedControlEl(node, p);
+      case "pills":        return pillsEl(node, p);
       case "write_stream": return writeStreamEl(node, p);
       case "map":          return mapEl(node, p);
       case "spinner":      return spinnerEl(node, p);
@@ -743,6 +746,49 @@
     var div = el("div", "sy-tab-panel");
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
+  }
+
+  function segmentedControlEl(node, p) {
+    var wrap = el("div", "sy-segmented-control");
+    (p.options || []).forEach(function (opt) {
+      var btn = el("button", "sy-segmented-btn" + (opt === p.value ? " sy-segmented-active" : ""), opt);
+      btn.disabled = p.disabled;
+      btn.onclick = function () { send(node.id, opt, false); };
+      wrap.appendChild(btn);
+    });
+    return field(p.label, wrap, p.help, p.label_visibility);
+  }
+
+  function pillsEl(node, p) {
+    var wrap = el("div", "sy-pills");
+    (p.options || []).forEach(function (opt) {
+      var pill = el("button", "sy-pill" + (opt === p.value ? " sy-pill-active" : ""), opt);
+      pill.disabled = p.disabled;
+      pill.onclick = function () { send(node.id, opt, false); };
+      wrap.appendChild(pill);
+    });
+    return field(p.label, wrap, p.help, p.label_visibility);
+  }
+
+  function paginationEl(node, p) {
+    var wrap = el("div", "sy-pagination");
+    var total = p.total_pages || 1;
+    var current = p.page || 1;
+
+    var prev = el("button", "sy-pagination-btn", "←");
+    prev.disabled = current <= 1 || p.disabled;
+    prev.onclick = function () { send(node.id, current - 1, false); };
+
+    var label = el("span", "sy-pagination-label", current + " / " + total);
+
+    var next = el("button", "sy-pagination-btn", "→");
+    next.disabled = current >= total || p.disabled;
+    next.onclick = function () { send(node.id, current + 1, false); };
+
+    wrap.appendChild(prev);
+    wrap.appendChild(label);
+    wrap.appendChild(next);
+    return wrap;
   }
 
   function writeStreamEl(node, p) {

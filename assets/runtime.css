@@ -163,6 +163,97 @@ body {
   padding: .4rem .75rem;
 }
 
+/* --- Segmented Control ------------------------------------------------- */
+
+.sy-segmented-control {
+  display: inline-flex;
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  overflow: hidden;
+}
+
+.sy-segmented-btn {
+  background: transparent;
+  color: var(--sy-fg);
+  border: none;
+  border-right: 1px solid var(--sy-border);
+  padding: .4rem .9rem;
+  cursor: pointer;
+  font-size: .875rem;
+  transition: background .15s;
+}
+
+.sy-segmented-btn:last-child { border-right: none; }
+
+.sy-segmented-btn:hover { background: var(--sy-sidebar-bg); }
+
+.sy-segmented-active {
+  background: var(--sy-primary);
+  color: #fff;
+}
+
+.sy-segmented-active:hover { background: var(--sy-primary); }
+
+/* --- Pills ------------------------------------------------------------- */
+
+.sy-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.sy-pill {
+  background: var(--sy-sidebar-bg);
+  color: var(--sy-fg);
+  border: 1px solid var(--sy-border);
+  border-radius: 999px;
+  padding: .3rem .8rem;
+  cursor: pointer;
+  font-size: .85rem;
+  transition: background .15s, border-color .15s;
+}
+
+.sy-pill:hover {
+  border-color: var(--sy-primary);
+}
+
+.sy-pill-active {
+  background: var(--sy-primary);
+  color: #fff;
+  border-color: var(--sy-primary);
+}
+
+/* --- Pagination -------------------------------------------------------- */
+
+.sy-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  padding: .5rem 0;
+}
+
+.sy-pagination-btn {
+  background: var(--sy-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--sy-radius);
+  padding: .35rem .75rem;
+  cursor: pointer;
+  font-size: .9rem;
+}
+
+.sy-pagination-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.sy-pagination-label {
+  font-size: .9rem;
+  color: var(--sy-fg);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Map --------------------------------------------------------------- */
 
 .sy-map {

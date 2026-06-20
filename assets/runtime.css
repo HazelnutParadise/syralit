@@ -223,6 +223,37 @@ body {
   border-color: var(--sy-primary);
 }
 
+/* --- Feedback ---------------------------------------------------------- */
+
+.sy-feedback {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sy-feedback-btn {
+  background: none;
+  border: 1px solid var(--sy-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 1.2em;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.sy-feedback-btn:hover:not(:disabled) {
+  opacity: 1;
+  border-color: var(--sy-primary);
+}
+.sy-feedback-active {
+  opacity: 1;
+  border-color: var(--sy-primary);
+  background: var(--sy-primary-alpha, rgba(255,75,75,0.1));
+}
+.sy-feedback-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
 /* --- Pagination -------------------------------------------------------- */
 
 .sy-pagination {

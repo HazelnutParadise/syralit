@@ -572,6 +572,22 @@ func Popover(label string, fn func(), opts ...Option) {
 	rc.stack = rc.stack[:len(rc.stack)-1]
 }
 
+// Feedback renders a thumbs up/down rating widget. Returns "up", "down",
+// or "" (no selection yet). Useful for collecting user feedback on AI responses.
+func Feedback(opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("feedback", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	props := map[string]any{"value": s}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	rc.add(&Node{ID: id, Type: "feedback", Props: props})
+	return s
+}
+
 // SegmentedControl renders a row of mutually exclusive buttons. Returns the
 // selected option string. Similar to Radio but rendered as a single bar.
 func SegmentedControl(label string, options []string, opts ...Option) string {

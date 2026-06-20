@@ -349,6 +349,7 @@
       case "chat_input":   return chatInputEl(node, p);
       case "camera_input": return cameraInputEl(node, p);
       case "pagination":   return paginationEl(node, p);
+      case "feedback":     return feedbackEl(node, p);
       case "segmented_control": return segmentedControlEl(node, p);
       case "pills":        return pillsEl(node, p);
       case "write_stream": return writeStreamEl(node, p);
@@ -770,6 +771,28 @@
       wrap.appendChild(pill);
     });
     return field(p.label, wrap, p.help, p.label_visibility);
+  }
+
+  function feedbackEl(node, p) {
+    var wrap = el("div", "sy-feedback");
+    var current = p.value || "";
+    var disabled = !!p.disabled;
+
+    function makeBtn(type, emoji) {
+      var btn = document.createElement("button");
+      btn.className = "sy-feedback-btn" + (current === type ? " sy-feedback-active" : "");
+      btn.textContent = emoji;
+      btn.disabled = disabled;
+      btn.onclick = function () {
+        var next = current === type ? "" : type;
+        send(node.id, next, false);
+      };
+      return btn;
+    }
+
+    wrap.appendChild(makeBtn("up", "👍"));
+    wrap.appendChild(makeBtn("down", "👎"));
+    return wrap;
   }
 
   function paginationEl(node, p) {

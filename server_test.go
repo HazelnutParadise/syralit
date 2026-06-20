@@ -635,3 +635,225 @@ func TestIndexServed(t *testing.T) {
 		t.Fatalf("runtime.js status %d", js.StatusCode)
 	}
 }
+
+func TestFeedback(t *testing.T) {
+	app := func() {
+		val := Feedback(Key("fb"))
+		if val != "" {
+			Text("Feedback: " + val)
+		}
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	n, ok := nodeByID(nodes, "fb")
+	if !ok {
+		t.Fatal("feedback widget not found")
+	}
+	if n["type"] != "feedback" {
+		t.Fatalf("expected feedback, got %v", n["type"])
+	}
+
+	sendChange(t, ctx, c, "fb", "up", false)
+	nodes = readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Feedback: up"); !ok {
+		t.Fatal("expected 'Feedback: up' after thumbs up")
+	}
+}
+
+func TestComponent(t *testing.T) {
+	app := func() {
+		val := Component("<button>hi</button>", Key("comp1"), Height(200))
+		if val != nil {
+			Textf("Got: %v", val)
+		}
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	n, ok := nodeByID(nodes, "comp1")
+	if !ok {
+		t.Fatal("component not found")
+	}
+	props := n["props"].(map[string]any)
+	if props["html"] != "<button>hi</button>" {
+		t.Fatalf("unexpected html: %v", props["html"])
+	}
+	if props["height"] != float64(200) {
+		t.Fatalf("unexpected height: %v", props["height"])
+	}
+}
+
+func TestNavigation(t *testing.T) {
+	defer resetPages()
+
+	homeCalled := false
+	settingsCalled := false
+
+	app := func() {
+		Navigation([]Page{
+			{Title: "Home", Fn: func() {
+				homeCalled = true
+				Title("Home Page")
+			}, Icon: "🏠"},
+			{Title: "Settings", Fn: func() {
+				settingsCalled = true
+				Title("Settings Page")
+			}, Icon: "⚙️"},
+		})
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if !homeCalled {
+		t.Fatal("home page function should have been called")
+	}
+	if _, ok := findText(nodes, "Home Page"); !ok {
+		t.Fatal("expected 'Home Page'")
+	}
+
+	b, _ := json.Marshal(map[string]any{"type": "page_change", "page": "Settings"})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes = readPatch(t, ctx, c)
+	if !settingsCalled {
+		t.Fatal("settings page function should have been called")
+	}
+	if _, ok := findText(nodes, "Settings Page"); !ok {
+		t.Fatal("expected 'Settings Page'")
+	}
+}
+
+func TestLoginGateAndUser(t *testing.T) {
+	app := func() {
+		u := User()
+		if u != nil {
+			Text("Welcome, " + u["username"])
+			if Button("Logout", Key("logout_btn")) {
+				Logout()
+				Rerun()
+			}
+			return
+		}
+		user := TextInput("Username", Key("__login_user"))
+		_ = PasswordInput("Password", Key("__login_pass"))
+		if Button("Login", Key("__login_btn")) {
+			if user == "admin" {
+				Login(map[string]string{"username": user})
+				Rerun()
+			} else {
+				Error("Invalid credentials")
+			}
+		}
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	if _, ok := nodeByID(nodes, "__login_user"); !ok {
+		t.Fatal("login form should appear when not logged in")
+	}
+
+	sendChange(t, ctx, c, "__login_user", "admin", false)
+	_ = readPatch(t, ctx, c)
+
+	sendChange(t, ctx, c, "__login_btn", true, true)
+	nodes = readPatch(t, ctx, c)
+	if _, ok := findText(nodes, "Welcome, admin"); !ok {
+		t.Fatal("expected 'Welcome, admin' after login")
+	}
+
+	sendChange(t, ctx, c, "logout_btn", true, true)
+	nodes = readPatch(t, ctx, c)
+	if _, ok := nodeByID(nodes, "__login_user"); !ok {
+		t.Fatal("login form should reappear after logout")
+	}
+}
+
+func TestDataEditorColumnConfig(t *testing.T) {
+	app := func() {
+		headers := []string{"Name", "Age", "Active"}
+		rows := [][]any{{"Alice", 30, true}}
+		DataEditor(headers, rows, Key("de"), ColConfig(map[string]ColumnConfig{
+			"Name":   {Type: "text"},
+			"Age":    {Type: "number"},
+			"Active": {Type: "checkbox"},
+		}))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	n, ok := nodeByID(nodes, "de")
+	if !ok {
+		t.Fatal("data_editor not found")
+	}
+	props := n["props"].(map[string]any)
+	cc, ok := props["column_config"].(map[string]any)
+	if !ok {
+		t.Fatal("column_config missing")
+	}
+	if nameCol, ok := cc["Name"].(map[string]any); !ok || nameCol["type"] != "text" {
+		t.Fatalf("expected Name column type 'text', got %v", cc["Name"])
+	}
+	if ageCol, ok := cc["Age"].(map[string]any); !ok || ageCol["type"] != "number" {
+		t.Fatalf("expected Age column type 'number', got %v", cc["Age"])
+	}
+	if activeCol, ok := cc["Active"].(map[string]any); !ok || activeCol["type"] != "checkbox" {
+		t.Fatalf("expected Active column type 'checkbox', got %v", cc["Active"])
+	}
+}

@@ -39,6 +39,9 @@
           patchFragment(msg.fragment_key, msg.nodes || []);
           if (msg.toasts) msg.toasts.forEach(handleToast);
           break;
+        case "stream_append":
+          appendStream(msg.id, msg.chunk);
+          break;
         case "__dev_status":
           setBadge(msg.state === "building" ? "Reloading…" : "");
           break;
@@ -343,6 +346,7 @@
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
       case "camera_input": return cameraInputEl(node, p);
+      case "write_stream": return writeStreamEl(node, p);
       case "map":          return mapEl(node, p);
       case "spinner":      return spinnerEl(node, p);
       case "popover":      return popoverEl(node, p);
@@ -739,6 +743,19 @@
     var div = el("div", "sy-tab-panel");
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
+  }
+
+  function writeStreamEl(node, p) {
+    var div = el("div", "sy-write-stream sy-markdown");
+    div.setAttribute("data-stream-id", node.id);
+    if (p.text) div.textContent = p.text;
+    return div;
+  }
+
+  function appendStream(id, chunk) {
+    var target = content.querySelector('[data-stream-id="' + id + '"]');
+    if (!target) return;
+    target.textContent += chunk;
   }
 
   function patchFragment(key, nodes) {

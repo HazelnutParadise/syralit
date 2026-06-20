@@ -15,6 +15,7 @@ type renderContext struct {
 	stack       []*Node        // container stack; root sits at the bottom
 	autoSeq     map[string]int // widget type -> counter, for auto-generated IDs
 	fragmentKey string         // non-empty when rendering inside a Fragment
+	streamer    func(id, chunk string) // sends stream_append to client mid-rerun
 }
 
 // The rerun model lets users write `sy.App(func(){ sy.TextInput("Name") })` with
@@ -86,7 +87,7 @@ func Rerun() {
 // runRerun executes the user's App function once and returns the produced UI
 // tree. A panic in user code is caught and rendered as an error node so a single
 // rerun cannot crash the server (SPEC §14).
-func runRerun(sess *session) *Node {
+func runRerun(sess *session, opts ...func(*renderContext)) *Node {
 	rerunMu.Lock()
 	defer rerunMu.Unlock()
 
@@ -94,6 +95,9 @@ func runRerun(sess *session) *Node {
 		sess:    sess,
 		root:    &Node{Type: "root"},
 		autoSeq: map[string]int{},
+	}
+	for _, o := range opts {
+		o(rc)
 	}
 	rc.stack = []*Node{rc.root}
 	cur = rc

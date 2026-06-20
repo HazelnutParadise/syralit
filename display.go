@@ -3,6 +3,7 @@ package syralit
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 )
 
 // Table renders a static data table.
@@ -200,6 +201,32 @@ func Map(points []MapPoint, opts ...Option) {
 		props["height"] = o.height
 	}
 	current().add(&Node{Type: "map", Props: props})
+}
+
+// WriteStream renders text that streams in token by token. The function receives
+// a yield callback; call it with each text chunk. Useful for displaying LLM
+// responses as they arrive.
+//
+//	sy.WriteStream(func(yield func(string)) {
+//	    for token := range llm.Stream(prompt) {
+//	        yield(token)
+//	    }
+//	})
+func WriteStream(fn func(yield func(string)), opts ...Option) {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("write_stream", o.key)
+
+	rc.add(&Node{ID: id, Type: "write_stream", Props: map[string]any{"text": ""}})
+
+	var buf strings.Builder
+	fn(func(chunk string) {
+		buf.WriteString(chunk)
+		if rc.streamer != nil {
+			rc.streamer(id, chunk)
+		}
+	})
+	rc.sess.setWidget(id, buf.String())
 }
 
 // Audio renders an HTML audio player. src can be a URL or data URI.

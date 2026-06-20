@@ -971,6 +971,15 @@ body {
   padding: 1.25rem;
 }
 
+/* --- LaTeX ------------------------------------------------------------- */
+
+.sy-latex {
+  margin: .75rem 0;
+  padding: .5rem 0;
+  text-align: center;
+  overflow-x: auto;
+}
+
 /* --- Sidebar Logo ------------------------------------------------------ */
 
 .sy-sidebar-logo {

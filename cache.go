@@ -60,6 +60,31 @@ func CacheData[T any](key string, fn func() T, opts ...CacheOption) T {
 	return value
 }
 
+// CacheResource returns a cached singleton for key. Unlike CacheData, the value
+// never expires and is intended for long-lived resources like database
+// connections, ML models, or HTTP clients.
+//
+//	db := sy.CacheResource("db", func() *sql.DB {
+//	    db, _ := sql.Open("postgres", dsn)
+//	    return db
+//	})
+func CacheResource[T any](key string, fn func() T) T {
+	dataCacheMu.RLock()
+	if entry, ok := dataCache[key]; ok {
+		dataCacheMu.RUnlock()
+		return entry.value.(T)
+	}
+	dataCacheMu.RUnlock()
+
+	value := fn()
+
+	dataCacheMu.Lock()
+	dataCache[key] = &cacheEntry{value: value}
+	dataCacheMu.Unlock()
+
+	return value
+}
+
 // ClearCache removes cached entries. With no arguments it clears all entries;
 // with keys it clears only the specified entries.
 func ClearCache(keys ...string) {

@@ -153,6 +153,12 @@ func ConfigLogo(src string) PageConfigOption {
 	return func(c *pageConfig) { c.logo = src }
 }
 
+// LaTeX renders a mathematical formula using KaTeX (loaded from CDN on first
+// use). The formula string should use LaTeX syntax without delimiters.
+func LaTeX(formula string) {
+	current().add(&Node{Type: "latex", Props: map[string]any{"formula": formula}})
+}
+
 // Audio renders an HTML audio player. src can be a URL or data URI.
 func Audio(src string, opts ...Option) {
 	current().add(&Node{Type: "audio", Props: map[string]any{"src": src}})

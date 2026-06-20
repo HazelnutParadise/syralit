@@ -298,6 +298,7 @@
       case "dataframe":  return dataframeEl(node, p);
       case "dialog":     return dialogEl(node, p);
       case "html":       return htmlEl(node, p);
+      case "latex":      return latexEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
       case "spinner":      return spinnerEl(node, p);
@@ -305,7 +306,8 @@
       // --- Charts ---
       case "line_chart":  return lineChartEl(node, p);
       case "bar_chart":   return barChartEl(node, p);
-      case "area_chart":  return areaChartEl(node, p);
+      case "area_chart":    return areaChartEl(node, p);
+      case "scatter_chart": return scatterChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -866,6 +868,39 @@
     return outer;
   }
 
+  // --- LaTeX (KaTeX) ------------------------------------------------------
+
+  var kaTexLoaded = false;
+  var kaTexQueue = [];
+
+  function loadKaTeX(cb) {
+    if (kaTexLoaded) { cb(); return; }
+    kaTexQueue.push(cb);
+    if (kaTexQueue.length > 1) return;
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.18/dist/katex.min.css";
+    document.head.appendChild(link);
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/katex@0.16.18/dist/katex.min.js";
+    script.onload = function () {
+      kaTexLoaded = true;
+      kaTexQueue.forEach(function (fn) { fn(); });
+      kaTexQueue = [];
+    };
+    document.head.appendChild(script);
+  }
+
+  function latexEl(node, p) {
+    var div = el("div", "sy-latex");
+    div.textContent = p.formula || "";
+    loadKaTeX(function () {
+      try { window.katex.render(p.formula || "", div, { throwOnError: false, displayMode: true }); }
+      catch (e) { div.textContent = p.formula || ""; }
+    });
+    return div;
+  }
+
   // --- Raw HTML ----------------------------------------------------------
 
   function htmlEl(node, p) {
@@ -1266,6 +1301,58 @@
     return wrapChart(svg, c);
   }
 
+  function scatterChartEl(node, p) {
+    var series = p.series || {};
+    var names = Object.keys(series);
+    if (!names.length) return el("div", "sy-chart-empty", "No data");
+
+    var w = p.width || 600, h = p.height || 300;
+    var pad = { top: 20, right: 20, bottom: 30, left: 55 };
+    var plotW = w - pad.left - pad.right;
+    var plotH = h - pad.top - pad.bottom;
+    var allX = [], allY = [];
+    names.forEach(function (name) {
+      (series[name] || []).forEach(function (pt) { allX.push(pt[0]); allY.push(pt[1]); });
+    });
+    if (!allX.length) return el("div", "sy-chart-empty", "No data");
+    var minX = Math.min.apply(null, allX), maxX = Math.max.apply(null, allX);
+    var minY = Math.min.apply(null, allY), maxY = Math.max.apply(null, allY);
+    if (minX === maxX) { minX -= 1; maxX += 1; }
+    if (minY === maxY) { minY -= 1; maxY += 1; }
+    var rangeX = maxX - minX, rangeY = maxY - minY;
+
+    var svg = svgNS("svg", { viewBox: "0 0 " + w + " " + h, class: "sy-chart" });
+    svg.style.width = "100%";
+    svg.style.maxWidth = w + "px";
+    var cs = getComputedStyle(document.documentElement);
+    var borderC = cs.getPropertyValue("--sy-border").trim() || "#e5e7eb";
+    var mutedC = cs.getPropertyValue("--sy-muted").trim() || "#6b7280";
+
+    var ticks = 5;
+    for (var i = 0; i <= ticks; i++) {
+      var yy = pad.top + plotH - (i / ticks) * plotH;
+      svg.appendChild(svgNS("line", { x1: pad.left, y1: yy, x2: w - pad.right, y2: yy, stroke: borderC, "stroke-dasharray": "3,3" }));
+      var valY = minY + (i / ticks) * rangeY;
+      var tY = svgNS("text", { x: pad.left - 8, y: yy + 4, fill: mutedC, "font-size": "11", "text-anchor": "end" });
+      tY.textContent = formatNum(valY);
+      svg.appendChild(tY);
+    }
+    svg.appendChild(svgNS("line", { x1: pad.left, y1: h - pad.bottom, x2: w - pad.right, y2: h - pad.bottom, stroke: borderC }));
+    svg.appendChild(svgNS("line", { x1: pad.left, y1: pad.top, x2: pad.left, y2: h - pad.bottom, stroke: borderC }));
+
+    names.forEach(function (name, si) {
+      var color = CHART_COLORS[si % CHART_COLORS.length];
+      (series[name] || []).forEach(function (pt) {
+        var cx = pad.left + ((pt[0] - minX) / rangeX) * plotW;
+        var cy = pad.top + plotH - ((pt[1] - minY) / rangeY) * plotH;
+        svg.appendChild(svgNS("circle", { cx: cx, cy: cy, r: "4", fill: color, opacity: "0.7" }));
+      });
+    });
+
+    return wrapChart(svg, { names: names });
+  }
+
   connect();
 })();
+
 

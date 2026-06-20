@@ -337,6 +337,7 @@
       case "latex":      return latexEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
+      case "camera_input": return cameraInputEl(node, p);
       case "spinner":      return spinnerEl(node, p);
       case "popover":      return popoverEl(node, p);
       // --- Charts ---
@@ -1281,6 +1282,67 @@
     wrap.appendChild(avatar);
     wrap.appendChild(content);
     return wrap;
+  }
+
+  function cameraInputEl(node, p) {
+    var wrap = el("div", "sy-camera-input");
+    var video = document.createElement("video");
+    video.className = "sy-camera-video";
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    var canvas = document.createElement("canvas");
+    canvas.style.display = "none";
+    var preview = document.createElement("img");
+    preview.className = "sy-camera-preview";
+    preview.style.display = "none";
+    var btn = el("button", "sy-button", "📷 Take Photo");
+    var retakeBtn = el("button", "sy-button sy-button-secondary", "Retake");
+    retakeBtn.style.display = "none";
+    var stream = null;
+
+    function startCamera() {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(function (s) {
+          stream = s;
+          video.srcObject = s;
+          video.style.display = "";
+          preview.style.display = "none";
+          btn.style.display = "";
+          retakeBtn.style.display = "none";
+        }).catch(function () {
+          wrap.appendChild(el("div", "sy-status-error", "Camera access denied"));
+        });
+      } else {
+        wrap.appendChild(el("div", "sy-status-error", "Camera not supported"));
+      }
+    }
+
+    btn.onclick = function () {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      preview.src = dataUrl;
+      preview.style.display = "";
+      video.style.display = "none";
+      btn.style.display = "none";
+      retakeBtn.style.display = "";
+      if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+      send(node.id, dataUrl, false);
+    };
+
+    retakeBtn.onclick = function () { startCamera(); };
+
+    wrap.appendChild(video);
+    wrap.appendChild(preview);
+    wrap.appendChild(canvas);
+    var btns = el("div", "sy-camera-buttons");
+    btns.appendChild(btn);
+    btns.appendChild(retakeBtn);
+    wrap.appendChild(btns);
+    startCamera();
+    return field(p.label, wrap, p.help, p.label_visibility);
   }
 
   function chatInputEl(node, p) {

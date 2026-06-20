@@ -163,6 +163,32 @@ body {
   padding: .4rem .75rem;
 }
 
+/* --- Camera Input ------------------------------------------------------ */
+
+.sy-camera-video,
+.sy-camera-preview {
+  width: 100%;
+  max-width: 480px;
+  border-radius: var(--sy-radius);
+  background: #000;
+}
+
+.sy-camera-buttons {
+  display: flex;
+  gap: .5rem;
+  margin-top: .5rem;
+}
+
+.sy-button-secondary {
+  background: var(--sy-sidebar-bg);
+  color: var(--sy-fg);
+  border: 1px solid var(--sy-border);
+}
+
+.sy-button-secondary:hover {
+  background: var(--sy-border);
+}
+
 /* --- Searchable Select ------------------------------------------------- */
 
 .sy-searchable-select {

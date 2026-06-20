@@ -571,6 +571,21 @@ func Popover(label string, fn func(), opts ...Option) {
 	rc.stack = rc.stack[:len(rc.stack)-1]
 }
 
+// CameraInput renders a webcam capture widget. The user clicks "Take Photo"
+// to capture a snapshot, which is returned as a base64-encoded JPEG data URI.
+// Returns empty string until a photo is taken.
+func CameraInput(label string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("camera_input", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	props := map[string]any{"label": label}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "camera_input", Props: props})
+	return s
+}
+
 func toFloat64(v any) float64 {
 	switch n := v.(type) {
 	case float64:

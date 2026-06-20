@@ -52,6 +52,38 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* --- Scrollbars ------------------------------------------------------- */
+/* Themed scrollbars that blend with the surface. Firefox uses the
+   standard properties; Chromium/WebKit use the ::-webkit-scrollbar
+   pseudo-elements. The thumb uses a transparent border + padding-box
+   clip so it reads as a thin pill on any background (page or sidebar). */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sy-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sy-border);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sy-muted);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* --- Layout ------------------------------------------------------------ */
 
 #syralit-root {

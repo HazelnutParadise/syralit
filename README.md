@@ -361,7 +361,7 @@ go run .
 
 ## Agent Skills
 
-The [`Skills/`](Skills/) directory contains agent skill definitions for building Syralit apps with AI coding assistants. Add `Skills/syralit-dev.md` to your agent's context for a complete API reference.
+The [`Skills/`](Skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](Skills/syralit-dev/SKILL.md) skill provides a complete API reference — copy the `Skills/syralit-dev/` folder into your project's skills directory (e.g. `.claude/skills/`).
 
 ## CLI Commands
 

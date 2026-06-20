@@ -1,3 +1,8 @@
+---
+name: syralit-dev
+description: Build interactive data apps, dashboards, and AI tool UIs in Go with the Syralit framework. Use when writing or editing Syralit apps — adding widgets, charts, layouts, forms, chat, state, caching, auth, or multi-page navigation with the `sy` (github.com/HazelnutParadise/syralit) package.
+---
+
 # Syralit App Development
 
 You are an expert Syralit developer. Syralit is a Go-native framework for building interactive data apps — inspired by Streamlit, designed for Go.

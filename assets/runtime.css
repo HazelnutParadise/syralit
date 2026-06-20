@@ -700,12 +700,17 @@ body {
 
 /* --- Display: Code ----------------------------------------------------- */
 
+.sy-code-wrap {
+  position: relative;
+  margin: .75rem 0;
+}
+
 .sy-code {
   background: var(--sy-hover);
   border: 1px solid var(--sy-border);
   border-radius: var(--sy-radius);
   padding: .85rem 1rem;
-  margin: .75rem 0;
+  margin: 0;
   overflow-x: auto;
   font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
   font-size: .85rem;
@@ -715,6 +720,22 @@ body {
 .sy-code code {
   font: inherit;
 }
+
+.sy-code-copy {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: 6px;
+  padding: .2rem .6rem;
+  font-size: .75rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .15s;
+  color: var(--sy-fg);
+}
+.sy-code-wrap:hover .sy-code-copy { opacity: 1; }
 
 /* --- Display: Image ---------------------------------------------------- */
 

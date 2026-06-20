@@ -764,14 +764,58 @@
     return wrap;
   }
 
+  var hljsLoaded = false;
+  var hljsQueue = [];
+
+  function loadHighlightJS(cb) {
+    if (hljsLoaded) { cb(); return; }
+    hljsQueue.push(cb);
+    if (hljsQueue.length > 1) return;
+    var link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github.min.css";
+    var linkDark = document.createElement("link");
+    linkDark.rel = "stylesheet";
+    linkDark.media = "(prefers-color-scheme: dark)";
+    linkDark.href = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css";
+    document.head.appendChild(link);
+    document.head.appendChild(linkDark);
+    var script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js";
+    script.onload = function () {
+      hljsLoaded = true;
+      hljsQueue.forEach(function (fn) { fn(); });
+      hljsQueue = [];
+    };
+    document.head.appendChild(script);
+  }
+
   function codeBlock(node, p) {
+    var wrap = el("div", "sy-code-wrap");
     var pre = document.createElement("pre");
     pre.className = "sy-code";
     var code = document.createElement("code");
     if (p.language) code.className = "language-" + p.language;
     code.textContent = p.code;
     pre.appendChild(code);
-    return pre;
+    wrap.appendChild(pre);
+
+    var copyBtn = el("button", "sy-code-copy", "Copy");
+    copyBtn.onclick = function () {
+      navigator.clipboard.writeText(p.code).then(function () {
+        copyBtn.textContent = "Copied!";
+        setTimeout(function () { copyBtn.textContent = "Copy"; }, 2000);
+      });
+    };
+    wrap.appendChild(copyBtn);
+
+    if (p.language) {
+      loadHighlightJS(function () {
+        try { window.hljs.highlightElement(code); } catch (e) {}
+      });
+    }
+
+    return wrap;
   }
 
   function imageEl(node, p) {

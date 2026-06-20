@@ -857,3 +857,132 @@ func TestDataEditorColumnConfig(t *testing.T) {
 		t.Fatalf("expected Active column type 'checkbox', got %v", cc["Active"])
 	}
 }
+
+func TestBadge(t *testing.T) {
+	app := func() {
+		Badge("New", Color("green"))
+		Badge("Beta", Color("blue"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := 0
+	for _, n := range nodes {
+		if n["type"] == "badge" {
+			props := n["props"].(map[string]any)
+			txt := props["text"].(string)
+			color := props["color"].(string)
+			if txt == "New" && color == "green" {
+				found++
+			}
+			if txt == "Beta" && color == "blue" {
+				found++
+			}
+		}
+	}
+	if found != 2 {
+		t.Fatalf("expected 2 badges, found %d", found)
+	}
+}
+
+func TestAudioInput(t *testing.T) {
+	app := func() {
+		AudioInput("Record", Key("mic"))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	n, ok := nodeByID(nodes, "mic")
+	if !ok {
+		t.Fatal("audio_input not found")
+	}
+	if n["type"] != "audio_input" {
+		t.Fatalf("expected audio_input, got %v", n["type"])
+	}
+}
+
+func TestGraphvizChart(t *testing.T) {
+	app := func() {
+		GraphvizChart(`digraph { A -> B; }`, Height(300))
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "graphviz_chart" {
+			props := n["props"].(map[string]any)
+			if props["dot"] == "digraph { A -> B; }" && props["height"] == float64(300) {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("graphviz_chart not found or wrong props")
+	}
+}
+
+func TestPageLink(t *testing.T) {
+	app := func() {
+		PageLink("Go to Settings", "Settings")
+	}
+
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	found := false
+	for _, n := range nodes {
+		if n["type"] == "page_link" {
+			props := n["props"].(map[string]any)
+			if props["label"] == "Go to Settings" && props["page"] == "Settings" {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("page_link not found")
+	}
+}

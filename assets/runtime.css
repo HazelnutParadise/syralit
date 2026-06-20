@@ -223,6 +223,45 @@ body {
   border-color: var(--sy-primary);
 }
 
+/* --- Page Link --------------------------------------------------------- */
+
+.sy-page-link {
+  color: var(--sy-primary);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 0;
+  display: inline-block;
+  cursor: pointer;
+}
+.sy-page-link:hover {
+  text-decoration: underline;
+}
+.sy-page-link.sy-disabled {
+  color: var(--sy-muted);
+  cursor: not-allowed;
+}
+
+/* --- Badge ------------------------------------------------------------- */
+
+.sy-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+/* --- Audio Input ------------------------------------------------------- */
+
+.sy-audio-input {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* --- Feedback ---------------------------------------------------------- */
 
 .sy-feedback {

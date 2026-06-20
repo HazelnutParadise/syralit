@@ -37,6 +37,7 @@ type widgetOpts struct {
 	title           string
 	xLabels         []string
 	colConfig       map[string]ColumnConfig
+	color           string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -62,6 +63,7 @@ func Gap(px int) Option            { return func(o *widgetOpts) { o.gap = px } }
 func LabelHidden() Option          { return func(o *widgetOpts) { o.labelVisibility = "hidden" } }
 func LabelCollapsed() Option       { return func(o *widgetOpts) { o.labelVisibility = "collapsed" } }
 func ChartTitle(t string) Option   { return func(o *widgetOpts) { o.title = t } }
+func Color(c string) Option        { return func(o *widgetOpts) { o.color = c } }
 func XLabels(l []string) Option    { return func(o *widgetOpts) { o.xLabels = l } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
@@ -90,7 +92,18 @@ func Title(text string)     { current().add(textNode("title", text)) }
 func Header(text string)    { current().add(textNode("header", text)) }
 func Subheader(text string) { current().add(textNode("subheader", text)) }
 func Text(text string)      { current().add(textNode("text", text)) }
-func Caption(text string)   { current().add(textNode("caption", text)) }
+func Caption(text string) { current().add(textNode("caption", text)) }
+
+// Badge renders a small colored label. Color can be "blue", "green", "red",
+// "orange", "gray", "violet", or any CSS color string.
+func Badge(text string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"text": text}
+	if o.color != "" {
+		props["color"] = o.color
+	}
+	current().add(&Node{Type: "badge", Props: props})
+}
 
 func Markdown(text string) {
 	var buf bytes.Buffer
@@ -470,6 +483,17 @@ func LinkButton(label, url string, opts ...Option) {
 	current().add(&Node{Type: "link_button", Props: props})
 }
 
+// PageLink renders a navigation link to another page in the app (or an
+// external URL). When clicked for an internal page, a page_change is sent.
+func PageLink(label string, page string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"label": label, "page": page}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	current().add(&Node{Type: "page_link", Props: props})
+}
+
 // SelectSlider renders a slider that snaps to labelled options, returning
 // the selected label string. options must have at least 2 elements.
 func SelectSlider(label string, options []string, opts ...Option) string {
@@ -664,6 +688,20 @@ func CameraInput(label string, opts ...Option) string {
 	props := map[string]any{"label": label}
 	applyCommonProps(props, o)
 	rc.add(&Node{ID: id, Type: "camera_input", Props: props})
+	return s
+}
+
+// AudioInput renders a microphone recording widget. Returns the recorded audio
+// as a base64 data URI (audio/webm), or "" if nothing recorded.
+func AudioInput(label string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("audio_input", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	props := map[string]any{"label": label}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "audio_input", Props: props})
 	return s
 }
 

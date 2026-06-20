@@ -348,6 +348,9 @@
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
       case "camera_input": return cameraInputEl(node, p);
+      case "audio_input":  return audioInputEl(node, p);
+      case "page_link":    return pageLinkEl(node, p);
+      case "badge":        return badgeEl(node, p);
       case "pagination":   return paginationEl(node, p);
       case "feedback":     return feedbackEl(node, p);
       case "segmented_control": return segmentedControlEl(node, p);
@@ -362,6 +365,7 @@
       case "area_chart":    return areaChartEl(node, p);
       case "scatter_chart": return scatterChartEl(node, p);
       case "pie_chart":     return pieChartEl(node, p);
+      case "graphviz_chart": return graphvizChartEl(node, p);
       default:          return el("div", "sy-unknown", "[unknown: " + node.type + "]");
     }
   }
@@ -1570,6 +1574,92 @@
     return field(p.label, wrap, p.help, p.label_visibility);
   }
 
+  function audioInputEl(node, p) {
+    var wrap = el("div", "sy-audio-input");
+    var btn = el("button", "sy-button", "🎙️ Record");
+    var stopBtn = el("button", "sy-button sy-button-secondary", "⏹ Stop");
+    stopBtn.style.display = "none";
+    var audioPreview = document.createElement("audio");
+    audioPreview.className = "sy-audio";
+    audioPreview.controls = true;
+    audioPreview.style.display = "none";
+    var mediaRec = null;
+    var chunks = [];
+
+    btn.onclick = function () {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+          chunks = [];
+          mediaRec = new MediaRecorder(stream);
+          mediaRec.ondataavailable = function (e) { if (e.data.size > 0) chunks.push(e.data); };
+          mediaRec.onstop = function () {
+            stream.getTracks().forEach(function (t) { t.stop(); });
+            var blob = new Blob(chunks, { type: "audio/webm" });
+            var reader = new FileReader();
+            reader.onloadend = function () {
+              audioPreview.src = reader.result;
+              audioPreview.style.display = "";
+              send(node.id, reader.result, false);
+            };
+            reader.readAsDataURL(blob);
+            btn.textContent = "🎙️ Re-record";
+            btn.style.display = "";
+            stopBtn.style.display = "none";
+          };
+          mediaRec.start();
+          btn.style.display = "none";
+          stopBtn.style.display = "";
+        }).catch(function () {
+          wrap.appendChild(el("div", "sy-status-error", "Microphone access denied"));
+        });
+      }
+    };
+    stopBtn.onclick = function () { if (mediaRec) mediaRec.stop(); };
+
+    var btns = el("div", "sy-camera-buttons");
+    btns.appendChild(btn);
+    btns.appendChild(stopBtn);
+    wrap.appendChild(btns);
+    wrap.appendChild(audioPreview);
+    return field(p.label, wrap, p.help, p.label_visibility);
+  }
+
+  function pageLinkEl(node, p) {
+    var a = document.createElement("a");
+    a.className = "sy-page-link";
+    a.textContent = p.label || p.page || "";
+    a.href = "#";
+    if (p.disabled) {
+      a.classList.add("sy-disabled");
+      a.onclick = function (e) { e.preventDefault(); };
+    } else {
+      a.onclick = function (e) {
+        e.preventDefault();
+        if (p.page && p.page.match(/^https?:\/\//)) {
+          window.open(p.page, "_blank");
+        } else {
+          var b = JSON.stringify({ type: "page_change", page: p.page });
+          if (ws && ws.readyState === 1) ws.send(b);
+        }
+      };
+    }
+    return a;
+  }
+
+  function badgeEl(node, p) {
+    var colorMap = {
+      blue: "#1f77b4", green: "#2ca02c", red: "#d62728",
+      orange: "#ff7f0e", gray: "#6b7280", violet: "#9467bd"
+    };
+    var c = p.color || "blue";
+    var bg = colorMap[c] || c;
+    var span = document.createElement("span");
+    span.className = "sy-badge";
+    span.textContent = p.text || "";
+    span.style.background = bg;
+    return span;
+  }
+
   function chatInputEl(node, p) {
     var wrap = el("div", "sy-chat-input-wrap");
     var input = document.createElement("input");
@@ -1933,6 +2023,45 @@
     });
 
     return wrapChart(svg, { names: names });
+  }
+
+  // --- Graphviz Chart (viz.js CDN) ----------------------------------------
+
+  var vizState = "idle"; // idle | loading | ready
+  var vizQueue = [];
+
+  function loadViz(cb) {
+    if (vizState === "ready") { cb(); return; }
+    vizQueue.push(cb);
+    if (vizState === "loading") return;
+    vizState = "loading";
+    var s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@viz-js/viz@3.11.0/lib/viz-standalone.js";
+    s.onload = function () {
+      vizState = "ready";
+      vizQueue.forEach(function (fn) { fn(); });
+      vizQueue = [];
+    };
+    document.head.appendChild(s);
+  }
+
+  function graphvizChartEl(node, p) {
+    var wrap = el("div", "sy-graphviz");
+    if (p.height) wrap.style.height = p.height + "px";
+    wrap.textContent = "Loading graph…";
+    loadViz(function () {
+      if (typeof Viz !== "undefined") {
+        Viz.instance().then(function (viz) {
+          var svgStr = viz.renderSVGElement(p.dot || "digraph {}");
+          wrap.textContent = "";
+          svgStr.style.maxWidth = "100%";
+          wrap.appendChild(svgStr);
+        }).catch(function (e) {
+          wrap.textContent = "Graphviz error: " + e.message;
+        });
+      }
+    });
+    return wrap;
   }
 
   connect();

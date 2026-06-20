@@ -73,3 +73,18 @@ func AreaChart(data map[string][]float64, opts ...Option) {
 	o := applyOpts(opts)
 	current().add(&Node{Type: "area_chart", Props: chartProps(o, data)})
 }
+
+// GraphvizChart renders a Graphviz DOT graph using viz.js (CDN).
+//
+//	sy.GraphvizChart(`digraph { A -> B -> C; B -> D; }`)
+func GraphvizChart(dot string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"dot": dot}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "graphviz_chart", Props: props})
+}

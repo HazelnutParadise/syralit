@@ -28,6 +28,7 @@ type DevOptions struct {
 	Port      int    // outward port (default 8600)
 	Title     string // page title
 	AssetsDir string // optional: serve front-end assets from disk and hot-reload them
+	PublicDir string // optional: serve user static files (public/) from disk at site root
 	Theme     Theme
 }
 
@@ -350,11 +351,32 @@ func (s *supervisor) broadcast(data []byte) {
 
 func (s *supervisor) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
+		// In dev the supervisor owns the outward port, so it must serve the
+		// project's public/ files itself (the child isn't proxied for HTTP).
+		if s.opts.PublicDir != "" && s.servePublic(w, r) {
+			return
+		}
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(renderIndex(s.opts.Title, s.opts.Theme)))
+}
+
+// servePublic serves a file from the project's public/ dir for the request path,
+// returning true if a file was written. Paths are confined to the dir.
+func (s *supervisor) servePublic(w http.ResponseWriter, r *http.Request) bool {
+	name := strings.TrimPrefix(r.URL.Path, "/")
+	if name == "" || strings.Contains(name, "..") {
+		return false
+	}
+	full := filepath.Join(s.opts.PublicDir, filepath.FromSlash(name))
+	fi, err := os.Stat(full)
+	if err != nil || fi.IsDir() {
+		return false
+	}
+	http.ServeFile(w, r, full)
+	return true
 }
 
 func (s *supervisor) assetsHandler() http.Handler {

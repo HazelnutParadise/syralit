@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/coder/websocket"
 )
@@ -78,7 +79,16 @@ func (s *server) handler() http.Handler {
 	mux.HandleFunc("GET /", s.handleIndex)
 
 	sub, _ := fs.Sub(assetsFS, "assets")
-	mux.Handle("GET /_syralit/assets/", http.StripPrefix("/_syralit/assets/", http.FileServer(http.FS(sub))))
+	frameworkAssets := http.StripPrefix("/_syralit/assets/", http.FileServer(http.FS(sub)))
+	mux.Handle("GET /_syralit/assets/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A user override (sy.StaticAssets) shadows the built-in asset of the
+		// same name; otherwise fall through to the embedded framework copy.
+		name := strings.TrimPrefix(r.URL.Path, "/_syralit/assets/")
+		if serveOverlayAsset(w, r, name) {
+			return
+		}
+		frameworkAssets.ServeHTTP(w, r)
+	}))
 
 	mux.HandleFunc("GET /_syralit/ws", s.handleWS)
 	return mux
@@ -92,6 +102,11 @@ func (s *server) listenAndServe() error {
 
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
+		// Non-root paths fall through to user static files (sy.Static / an
+		// embedded public/ dir) before 404.
+		if serveRootStatic(w, r) {
+			return
+		}
 		http.NotFound(w, r)
 		return
 	}

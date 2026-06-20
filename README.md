@@ -2,6 +2,12 @@
 
 **Interactive data apps in Go.**
 
+[![CI](https://github.com/HazelnutParadise/syralit/actions/workflows/ci.yml/badge.svg)](https://github.com/HazelnutParadise/syralit/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/HazelnutParadise/syralit.svg)](https://pkg.go.dev/github.com/HazelnutParadise/syralit)
+[![Go Report Card](https://goreportcard.com/badge/github.com/HazelnutParadise/syralit)](https://goreportcard.com/report/github.com/HazelnutParadise/syralit)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/HazelnutParadise/syralit)](go.mod)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Syralit is a Go-native framework for building interactive data apps, dashboards, and AI tool interfaces — inspired by Streamlit, designed for Go.
 
 Write Go functions, get a live web app. No JavaScript, no HTML templates, no frontend build step.
@@ -380,9 +386,27 @@ Or copy the `skills/syralit-dev/` folder into your agent's skills directory manu
 
 | Command | Description |
 |---------|-------------|
-| `syralit new <name>` | Scaffold a new project |
+| `syralit new <name>` | Scaffold a new project in a new folder |
+| `syralit new .` | Scaffold into the current directory (no wrapper folder) |
 | `syralit dev` | Hot reload with state preservation |
-| `syralit run` | Build and run in production mode |
+| `syralit run` | Build and run once (no watching) |
+| `syralit build [-o out] [dir]` | Compile to a single self-contained executable |
+
+## Static Files & Bundling
+
+Drop files in a `public/` directory and they're served at the site root —
+`public/logo.png` → `/logo.png`. In `syralit dev` they're served from disk; for
+production, `syralit build` folds `public/` (and any `assets/` overrides) into
+the binary via `//go:embed`, so the result is **one executable with the
+front-end, backend, and all your static files** — nothing to copy alongside it.
+
+```bash
+syralit build              # → ./<dir-name>[.exe], everything embedded
+syralit build -o myapp .   # custom output path
+```
+
+You can also wire static files manually with `sy.Static(fsys)` (served at the
+root) and `sy.StaticAssets(fsys)` (overrides the built-in front-end assets).
 
 ## Requirements
 

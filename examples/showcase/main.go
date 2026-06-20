@@ -169,16 +169,16 @@ func charts() {
 		"Expenses": {80, 90, 100, 95, 110, 105},
 	}
 
-	tab := sy.Tabs([]string{"Line", "Bar", "Area", "Scatter", "Pie"})
+	tab := sy.Tabs([]string{"Line", "Bar", "Area", "Scatter", "Pie", "Doughnut", "Histogram", "Radar", "Graphviz"})
 
 	tab("Line", func() {
 		sy.Subheader("Line Chart")
-		sy.LineChart(months)
+		sy.LineChart(months, sy.ChartTitle("Monthly Trends"))
 	})
 
 	tab("Bar", func() {
 		sy.Subheader("Bar Chart")
-		sy.BarChart(months)
+		sy.BarChart(months, sy.ChartTitle("Sales vs Expenses"))
 	})
 
 	tab("Area", func() {
@@ -206,6 +206,47 @@ func charts() {
 			"TypeScript": 20,
 			"Other":      10,
 		})
+	})
+
+	tab("Doughnut", func() {
+		sy.Subheader("Doughnut Chart")
+		sy.DoughnutChart(map[string]float64{
+			"API":    45,
+			"Web":    30,
+			"Mobile": 20,
+			"CLI":    5,
+		}, sy.ChartTitle("Traffic Sources"))
+	})
+
+	tab("Histogram", func() {
+		sy.Subheader("Histogram")
+		data := make([]float64, 200)
+		for i := range data {
+			data[i] = 50 + math.Sin(float64(i)*0.3)*20 + float64(i%7)*2
+		}
+		sy.HistogramChart(data, 15, sy.ChartTitle("Value Distribution"))
+	})
+
+	tab("Radar", func() {
+		sy.Subheader("Radar Chart")
+		sy.RadarChart(
+			[]string{"Speed", "Reliability", "Cost", "Features", "Support"},
+			map[string][]float64{
+				"Product A": {85, 90, 60, 75, 80},
+				"Product B": {70, 80, 90, 85, 65},
+			},
+			sy.ChartTitle("Product Comparison"),
+		)
+	})
+
+	tab("Graphviz", func() {
+		sy.Subheader("Graphviz Chart")
+		sy.GraphvizChart(`digraph {
+  rankdir=LR;
+  Client -> "Load Balancer" -> "App Server" -> Database;
+  "App Server" -> Cache;
+  Cache -> "App Server" [style=dashed];
+}`, sy.Height(300))
 	})
 }
 
@@ -320,6 +361,19 @@ func main() {
 		},
 	)
 
+	sy.Header("Badges")
+	bcols := sy.Columns(4)
+	bcols[0](func() { sy.Badge("Production", sy.Color("green")) })
+	bcols[1](func() { sy.Badge("Beta", sy.Color("orange")) })
+	bcols[2](func() { sy.Badge("Deprecated", sy.Color("red")) })
+	bcols[3](func() { sy.Badge("New", sy.Color("blue")) })
+
+	sy.Header("Feedback Widget")
+	fb := sy.Feedback(sy.Key("showcase_feedback"))
+	if fb != "" {
+		sy.Textf("You voted: %s", fb)
+	}
+
 	sy.Header("Editable Table")
 	edited := sy.DataEditor(
 		[]string{"Name", "Score", "Grade"},
@@ -329,10 +383,26 @@ func main() {
 			{"Carol", 78, "C+"},
 		},
 		sy.Key("grade_editor"),
+		sy.DynamicRows(),
 	)
 	if len(edited) > 0 {
 		sy.Caption(fmt.Sprintf("First row: %v", edited[0]))
 	}
+
+	sy.Header("Column Config Table")
+	sy.DataEditor(
+		[]string{"Name", "Score", "Pass", "Grade"},
+		[][]any{
+			{"Alice", 95, true, "A"},
+			{"Bob", 82, true, "B"},
+		},
+		sy.Key("config_editor"),
+		sy.ColConfig(map[string]sy.ColumnConfig{
+			"Score": {Type: "number", Min: 0, Max: 100},
+			"Pass":  {Type: "checkbox"},
+			"Grade": {Type: "select", Options: []string{"A", "B", "C", "D", "F"}},
+		}),
+	)
 
 	sy.Header("Status Container")
 	sy.Status("Processing data", "complete", func() {

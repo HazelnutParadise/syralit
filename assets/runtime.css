@@ -1127,6 +1127,10 @@ body {
   gap: 0;
   border-bottom: 2px solid var(--sy-border);
   overflow-x: auto;
+  /* Only ever scroll horizontally. Without this, overflow-x:auto makes
+     overflow-y compute to auto too, and the tabs' -2px bottom margin plus the
+     reserved horizontal scrollbar height triggered a stray vertical scrollbar. */
+  overflow-y: hidden;
 }
 
 .sy-tab-button {

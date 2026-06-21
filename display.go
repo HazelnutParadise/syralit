@@ -99,14 +99,20 @@ func JSON(data any, opts ...Option) {
 }
 
 // Progress renders a progress bar. value is 0.0 to 1.0.
-func Progress(value float64) {
+// Progress draws a progress bar for a value in [0,1]. An optional text label is
+// shown above the bar (st.progress text=).
+func Progress(value float64, text ...string) {
 	if value < 0 {
 		value = 0
 	}
 	if value > 1 {
 		value = 1
 	}
-	current().add(&Node{Type: "progress", Props: map[string]any{"value": value}})
+	props := map[string]any{"value": value}
+	if len(text) > 0 && text[0] != "" {
+		props["text"] = text[0]
+	}
+	current().add(&Node{Type: "progress", Props: props})
 }
 
 // Link renders a clickable hyperlink that opens in a new tab.

@@ -448,6 +448,12 @@ if len(tree.Find("metric")) != 1 { t.Fatal("expected a metric") }
 
 - Go 1.25+
 
+## Streamlit parity
+
+Syralit covers the commonly-used Streamlit surface in idiomatic Go. See
+[docs/STREAMLIT_PARITY.md](docs/STREAMLIT_PARITY.md) for the full mapping and the
+few intentional gaps.
+
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md).

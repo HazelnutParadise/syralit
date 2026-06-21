@@ -1375,6 +1375,11 @@ body {
   margin: .75rem 0;
 }
 
+.sy-progress-text {
+  font-size: .85rem;
+  color: var(--sy-fg);
+  margin-bottom: .35rem;
+}
 .sy-progress-bar {
   height: 8px;
   background: var(--sy-border);

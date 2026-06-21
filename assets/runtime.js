@@ -1303,6 +1303,7 @@
 
   function progressBar(node, p) {
     var wrap = el("div", "sy-progress-wrap");
+    if (p.text) wrap.appendChild(el("div", "sy-progress-text", p.text));
     var bar = el("div", "sy-progress-bar");
     var fill = el("div", "sy-progress-fill");
     var pct = Math.max(0, Math.min(1, p.value || 0)) * 100;

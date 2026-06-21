@@ -1644,6 +1644,43 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestMultiChoiceAndTimeSlider(t *testing.T) {
+	app := func() {
+		PillsMulti("Tags", []string{"a", "b", "c"}, Key("pm"))
+		TimeSlider("At", "08:00", "18:00", DefaultValue("09:30"), Key("ts"))
+	}
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	pm, _ := nodeByID(nodes, "pm")
+	if pm["props"].(map[string]any)["multi"] != true {
+		t.Fatalf("pills multi: %v", pm["props"])
+	}
+	ts, _ := nodeByID(nodes, "ts")
+	if ts["props"].(map[string]any)["value"] != "09:30" {
+		t.Fatalf("time slider default: %v", ts["props"])
+	}
+
+	// Multi pills round-trip: select [a, c].
+	b, _ := json.Marshal(map[string]any{"type": "widget_change", "widget_id": "pm", "value": []any{"a", "c"}})
+	c.Write(ctx, websocket.MessageText, b)
+	nodes = readPatch(t, ctx, c)
+	pm, _ = nodeByID(nodes, "pm")
+	pmProps := pm["props"].(map[string]any)
+	got, _ := pmProps["value"].([]any)
+	if len(got) != 2 || got[0] != "a" || got[1] != "c" {
+		t.Fatalf("pills multi value: %v", pmProps["value"])
+	}
+}
+
 func TestCodeAndChatOptions(t *testing.T) {
 	tree := RenderOnce(func() {
 		Code("a\nb\nc", Language("go"), LineNumbers(), Wrap())

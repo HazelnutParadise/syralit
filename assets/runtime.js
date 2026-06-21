@@ -254,6 +254,11 @@
         changes.push({ widget_id: id, value: new Date(dayMs).toISOString().slice(0, 10) });
         return;
       }
+      if (inp.dataset.multi === "timeslider") {
+        var tm = parseInt(inp.value, 10), th = Math.floor(tm / 60), tmm = tm % 60;
+        changes.push({ widget_id: id, value: (th < 10 ? "0" : "") + th + ":" + (tmm < 10 ? "0" : "") + tmm });
+        return;
+      }
       if (inp.type === "checkbox") {
         changes.push({ widget_id: id, value: inp.checked });
       } else if (inp.tagName === "SELECT") {
@@ -334,6 +339,7 @@
       case "slider":        return slider(node, p);
       case "range_slider":  return rangeSlider(node, p);
       case "date_slider":   return dateSlider(node, p);
+      case "time_slider":   return timeSlider(node, p);
       case "textarea":      return textarea(node, p);
       case "radio":         return radio(node, p);
       case "multi_select":  return multiSelect(node, p);
@@ -908,12 +914,27 @@
     return div;
   }
 
+  // toggleChoice computes the next value for a single/multi choice widget and
+  // sends it: multi toggles membership in an array, single sends the option.
+  function toggleChoice(node, p, opt) {
+    if (p.multi) {
+      var cur = p.value || [];
+      var next = cur.indexOf(opt) >= 0 ? cur.filter(function (x) { return x !== opt; }) : cur.concat([opt]);
+      send(node.id, next, false);
+    } else {
+      send(node.id, opt, false);
+    }
+  }
+  function isChoiceActive(p, opt) {
+    return p.multi ? (p.value || []).indexOf(opt) >= 0 : opt === p.value;
+  }
+
   function segmentedControlEl(node, p) {
     var wrap = el("div", "sy-segmented-control");
     (p.options || []).forEach(function (opt) {
-      var btn = el("button", "sy-segmented-btn" + (opt === p.value ? " sy-segmented-active" : ""), opt);
+      var btn = el("button", "sy-segmented-btn" + (isChoiceActive(p, opt) ? " sy-segmented-active" : ""), opt);
       btn.disabled = p.disabled;
-      btn.onclick = function () { send(node.id, opt, false); };
+      btn.onclick = function () { toggleChoice(node, p, opt); };
       wrap.appendChild(btn);
     });
     return field(p.label, wrap, p.help, p.label_visibility);
@@ -922,9 +943,9 @@
   function pillsEl(node, p) {
     var wrap = el("div", "sy-pills");
     (p.options || []).forEach(function (opt) {
-      var pill = el("button", "sy-pill" + (opt === p.value ? " sy-pill-active" : ""), opt);
+      var pill = el("button", "sy-pill" + (isChoiceActive(p, opt) ? " sy-pill-active" : ""), opt);
       pill.disabled = p.disabled;
-      pill.onclick = function () { send(node.id, opt, false); };
+      pill.onclick = function () { toggleChoice(node, p, opt); };
       wrap.appendChild(pill);
     });
     return field(p.label, wrap, p.help, p.label_visibility);
@@ -1472,6 +1493,30 @@
     input.oninput = function () { display.textContent = fromDays(parseInt(input.value, 10)); };
     input.onchange = function () {
       if (!inForm(input)) send(node.id, fromDays(parseInt(input.value, 10)), false);
+    };
+    wrap.appendChild(input);
+    wrap.appendChild(display);
+    return field(p.label, wrap, p.help);
+  }
+
+  function timeSlider(node, p) {
+    function toMin(s) { var a = (s || "00:00").split(":"); return (parseInt(a[0], 10) || 0) * 60 + (parseInt(a[1], 10) || 0); }
+    function fromMin(m) { var h = Math.floor(m / 60), mm = m % 60; return (h < 10 ? "0" : "") + h + ":" + (mm < 10 ? "0" : "") + mm; }
+    var minN = toMin(p.min), maxN = toMin(p.max), curN = toMin(p.value || p.min);
+    var step = p.step || 15;
+
+    var wrap = el("div", "sy-slider-wrap");
+    var input = document.createElement("input");
+    input.type = "range";
+    input.className = "sy-slider";
+    input.dataset.id = node.id;
+    input.dataset.multi = "timeslider"; // submitForm converts minute-offset -> HH:MM
+    input.min = minN; input.max = maxN; input.step = step; input.value = curN;
+    if (p.disabled) input.disabled = true;
+    var display = el("span", "sy-slider-value", fromMin(curN));
+    input.oninput = function () { display.textContent = fromMin(parseInt(input.value, 10)); };
+    input.onchange = function () {
+      if (!inForm(input)) send(node.id, fromMin(parseInt(input.value, 10)), false);
     };
     wrap.appendChild(input);
     wrap.appendChild(display);

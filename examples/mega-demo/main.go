@@ -136,6 +136,11 @@ func pageWidgets() {
 
 		pill := sy.Pills("Category", []string{"All", "Active", "Archived", "Draft"}, sy.Key("w_pill"))
 		sy.Text("Filter: " + pill)
+
+		langs := sy.PillsMulti("Languages (multi)", []string{"Go", "Rust", "Python", "TS"}, sy.Key("w_pill_multi"))
+		if len(langs) > 0 {
+			sy.Text("Picked: " + strings.Join(langs, ", "))
+		}
 	})
 
 	tab("Numbers", func() {
@@ -155,6 +160,9 @@ func pageWidgets() {
 
 		d := sy.DateSlider("Release date", "2026-01-01", "2026-12-31", sy.DefaultValue("2026-06-15"), sy.Key("w_dslider"))
 		sy.Text("Release: " + d)
+
+		tm := sy.TimeSlider("Reminder", "08:00", "18:00", sy.DefaultValue("09:30"), sy.Step(30), sy.Key("w_tslider"))
+		sy.Text("Reminder at: " + tm)
 
 		page := sy.Pagination(20, sy.Key("w_page"))
 		sy.Textf("Page: %d / 20", page)

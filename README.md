@@ -78,6 +78,7 @@ go run .
 | `Slider` | `float64` | Range slider |
 | `RangeSlider` | `(float64, float64)` | Two-handle slider returning a (low, high) range |
 | `DateSlider` | `string` | Slider over a date range, returns "YYYY-MM-DD" |
+| `TimeSlider` | `string` | Slider over a time range, returns "HH:MM" |
 | `SelectSlider` | `string` | Discrete slider with labels |
 | `Checkbox` | `bool` | Checkbox |
 | `Toggle` | `bool` | Toggle switch |
@@ -93,8 +94,8 @@ go run .
 | `AudioInput` | `string` | Microphone recording |
 | `ChatInput` | `string` | Chat message input |
 | `Feedback` | `string` | Thumbs up/down |
-| `SegmentedControl` | `string` | Segmented buttons |
-| `Pills` | `string` | Pill-style buttons |
+| `SegmentedControl` | `string` | Segmented buttons (`SegmentedControlMulti` → `[]string`) |
+| `Pills` | `string` | Pill-style buttons (`PillsMulti` → `[]string`) |
 | `Pagination` | `int` | Page selector |
 
 Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.

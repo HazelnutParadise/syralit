@@ -457,6 +457,37 @@ func DateSlider(label, minDate, maxDate string, opts ...Option) string {
 	return cur
 }
 
+// TimeSlider is a slider over a time-of-day range, returning "HH:MM" — the
+// time-valued form of Streamlit's st.slider. minTime/maxTime are "HH:MM"; the
+// initial value defaults to minTime. Use sy.Step (minutes) for the increment
+// (default 15). It is form-batched.
+func TimeSlider(label, minTime, maxTime string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("time_slider", o.key)
+	val, exists := rc.sess.widgetValue(id)
+	cur, _ := val.(string)
+	if !exists || cur == "" {
+		if dv, ok := o.defaultVal.(string); ok && dv != "" {
+			cur = dv
+		} else {
+			cur = minTime
+		}
+	}
+	props := map[string]any{"label": label, "value": cur, "min": minTime, "max": maxTime}
+	if o.step != nil {
+		props["step"] = *o.step
+	}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "time_slider", Props: props})
+	return cur
+}
+
 func TextArea(label string, opts ...Option) string {
 	rc := current()
 	o := applyOpts(opts)
@@ -877,6 +908,51 @@ func SegmentedControl(label string, options []string, opts ...Option) string {
 
 // Pills renders a set of selectable tag-like buttons. Returns the selected
 // option string. Use for filter or category selection.
+// toStringSlice coerces a stored widget value (a JSON array → []any, or already
+// []string) into []string.
+func toStringSlice(val any) []string {
+	switch v := val.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, e := range v {
+			if s, ok := e.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+// PillsMulti is the multi-select form of Pills: the user can toggle any number
+// of options, and it returns the selected set (st.pills selection_mode="multi").
+func PillsMulti(label string, options []string, opts ...Option) []string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("pills", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	sel := toStringSlice(val)
+	props := map[string]any{"label": label, "options": options, "value": sel, "multi": true}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "pills", Props: props})
+	return sel
+}
+
+// SegmentedControlMulti is the multi-select form of SegmentedControl.
+func SegmentedControlMulti(label string, options []string, opts ...Option) []string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("segmented_control", o.key)
+	val, _ := rc.sess.widgetValue(id)
+	sel := toStringSlice(val)
+	props := map[string]any{"label": label, "options": options, "value": sel, "multi": true}
+	applyCommonProps(props, o)
+	rc.add(&Node{ID: id, Type: "segmented_control", Props: props})
+	return sel
+}
+
 func Pills(label string, options []string, opts ...Option) string {
 	rc := current()
 	o := applyOpts(opts)

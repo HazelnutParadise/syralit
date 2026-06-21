@@ -264,9 +264,11 @@ func LaTeX(formula string) {
 
 // MapPoint represents a single marker on a Map widget.
 type MapPoint struct {
-	Lat  float64
-	Lon  float64
-	Text string // optional popup text
+	Lat   float64
+	Lon   float64
+	Text  string  // optional popup text
+	Size  float64 // optional marker radius in px (renders a circle marker)
+	Color string  // optional marker color (CSS color)
 }
 
 // Map renders an interactive map with markers using Leaflet.js (CDN).
@@ -284,11 +286,20 @@ func Map(points []MapPoint, opts ...Option) {
 		if p.Text != "" {
 			m["text"] = p.Text
 		}
+		if p.Size > 0 {
+			m["size"] = p.Size
+		}
+		if p.Color != "" {
+			m["color"] = p.Color
+		}
 		ps[i] = m
 	}
 	props := map[string]any{"points": ps}
 	if o.height > 0 {
 		props["height"] = o.height
+	}
+	if o.zoom > 0 {
+		props["zoom"] = o.zoom
 	}
 	current().add(&Node{Type: "map", Props: props})
 }

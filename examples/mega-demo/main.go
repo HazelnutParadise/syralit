@@ -1014,12 +1014,12 @@ func pageMaps() {
 
 	sy.Header("Interactive Map (Leaflet.js)")
 	sy.Map([]sy.MapPoint{
-		{Lat: 25.0330, Lon: 121.5654, Text: "Taipei 101"},
-		{Lat: 25.0478, Lon: 121.5170, Text: "Taipei Main Station"},
-		{Lat: 25.0340, Lon: 121.5645, Text: "Xinyi District"},
-		{Lat: 25.0524, Lon: 121.5207, Text: "Zhongshan District"},
-		{Lat: 25.0418, Lon: 121.5075, Text: "Wanhua (Longshan Temple)"},
-	}, sy.Height(450))
+		{Lat: 25.0330, Lon: 121.5654, Text: "Taipei 101", Size: 18, Color: "#7c3aed"},
+		{Lat: 25.0478, Lon: 121.5170, Text: "Taipei Main Station", Size: 12, Color: "#06b6d4"},
+		{Lat: 25.0340, Lon: 121.5645, Text: "Xinyi District", Size: 10, Color: "#16a34a"},
+		{Lat: 25.0524, Lon: 121.5207, Text: "Zhongshan District", Size: 10, Color: "#16a34a"},
+		{Lat: 25.0418, Lon: 121.5075, Text: "Wanhua (Longshan Temple)", Size: 14, Color: "#d97706"},
+	}, sy.Height(450), sy.Zoom(13))
 
 	sy.Divider()
 

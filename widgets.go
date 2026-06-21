@@ -56,6 +56,7 @@ type widgetOpts struct {
 	lineNumbers       bool
 	wrap              bool
 	avatar            string
+	zoom              int
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -130,6 +131,9 @@ func Wrap() Option        { return func(o *widgetOpts) { o.wrap = true } }
 
 // Avatar sets a custom avatar (emoji or image URL) for a ChatMessage.
 func Avatar(v string) Option { return func(o *widgetOpts) { o.avatar = v } }
+
+// Zoom sets the initial zoom level (1–18) of a Map.
+func Zoom(level int) Option { return func(o *widgetOpts) { o.zoom = level } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

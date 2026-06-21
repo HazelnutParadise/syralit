@@ -1644,6 +1644,23 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestMapPointsAndZoom(t *testing.T) {
+	tree := RenderOnce(func() {
+		Map([]MapPoint{{Lat: 1, Lon: 2, Size: 10, Color: "#f00", Text: "x"}}, Zoom(8))
+	})
+	m := tree.Find("map")
+	if len(m) != 1 {
+		t.Fatalf("expected map, got %d", len(m))
+	}
+	if m[0].Props["zoom"] != 8 {
+		t.Fatalf("zoom: %v", m[0].Props["zoom"])
+	}
+	pts, _ := m[0].Props["points"].([]map[string]any)
+	if len(pts) != 1 || pts[0]["size"] != 10.0 || pts[0]["color"] != "#f00" {
+		t.Fatalf("point props: %v", pts)
+	}
+}
+
 func TestContext(t *testing.T) {
 	app := func() {
 		c := Context()

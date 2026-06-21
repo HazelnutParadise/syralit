@@ -1760,17 +1760,29 @@
     loadLeaflet(function () {
       var pts = p.points || [];
       var center = pts.length > 0 ? [pts[0].lat, pts[0].lon] : [25.033, 121.565];
-      var map = window.L.map(wrap).setView(center, 12);
+      var map = window.L.map(wrap).setView(center, p.zoom || 12);
       window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap"
       }).addTo(map);
       var bounds = [];
       pts.forEach(function (pt) {
-        var m = window.L.marker([pt.lat, pt.lon]).addTo(map);
+        var m;
+        if (pt.size || pt.color) {
+          m = window.L.circleMarker([pt.lat, pt.lon], {
+            radius: pt.size || 6,
+            color: pt.color || "#7c3aed",
+            fillColor: pt.color || "#7c3aed",
+            fillOpacity: 0.6,
+            weight: 1,
+          }).addTo(map);
+        } else {
+          m = window.L.marker([pt.lat, pt.lon]).addTo(map);
+        }
         if (pt.text) m.bindPopup(pt.text);
         bounds.push([pt.lat, pt.lon]);
       });
-      if (bounds.length > 1) {
+      // An explicit zoom takes precedence over auto-fitting the bounds.
+      if (bounds.length > 1 && !p.zoom) {
         map.fitBounds(bounds, { padding: [30, 30] });
       }
       setTimeout(function () { map.invalidateSize(); }, 100);

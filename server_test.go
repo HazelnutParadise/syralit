@@ -1644,6 +1644,45 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestFormClearOnSubmit(t *testing.T) {
+	app := func() {
+		Form("f", func() {
+			name := TextInput("Name", Key("fname"))
+			if FormSubmitButton("Go", Key("fsub")) {
+				Text("got:" + name)
+			}
+		}, ClearOnSubmit())
+	}
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+	_ = readPatch(t, ctx, c)
+
+	b, _ := json.Marshal(map[string]any{
+		"type": "form_submit", "widget_id": "fsub",
+		"changes": []map[string]any{{"widget_id": "fname", "value": "Alice"}},
+	})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	nodes := readPatch(t, ctx, c)
+	// Handler must have seen the submitted value...
+	if _, ok := findText(nodes, "got:Alice"); !ok {
+		t.Fatal("submit handler did not see submitted value")
+	}
+	// ...but the input renders cleared in the same response.
+	fn, ok := nodeByID(nodes, "fname")
+	if !ok || fn["props"].(map[string]any)["value"] != "" {
+		t.Fatalf("expected fname cleared, got %v", fn["props"])
+	}
+}
+
 func TestPopoverAndMetricOptions(t *testing.T) {
 	tree := RenderOnce(func() {
 		Popover("Menu", func() { Text("x") }, Icon("⚙️"), Help("open menu"))

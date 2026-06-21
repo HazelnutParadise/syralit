@@ -197,8 +197,23 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 				sess.applyChange(ch.WidgetID, ch.Value, false)
 			}
 			sess.pressButton(msg.WidgetID)
-			if err := pushUI(ctx, c, sess); err != nil {
-				return
+			formID := sess.formOf(msg.WidgetID)
+			if formID != "" && sess.isClearOnSubmit(formID) {
+				// Render once with the submitted values (so the handler sees
+				// them), but blank the form's inputs in the sent tree; then drop
+				// the stored values so later renders stay cleared.
+				if err := pushUI(ctx, c, sess, func(root *Node) {
+					if form := findNodeByID(root, formID); form != nil {
+						clearFormInputs(form)
+					}
+				}); err != nil {
+					return
+				}
+				sess.clearFormWidgets(formID)
+			} else {
+				if err := pushUI(ctx, c, sess); err != nil {
+					return
+				}
 			}
 		case devMsgDump: // supervisor asks for state before restarting this child
 			st := sess.dumpState()
@@ -218,7 +233,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 // pushUI runs a rerun and sends the resulting UI tree to the browser.
 // Sidebar user content (nodes of type "sidebar_content") is separated from the
 // main tree and sent in a dedicated "sidebar" field.
-func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
+func pushUI(ctx context.Context, c *websocket.Conn, sess *session, transforms ...func(*Node)) error {
 	streamer := func(rc *renderContext) {
 		rc.streamer = func(id, chunk string) {
 			out, _ := json.Marshal(map[string]any{
@@ -240,6 +255,10 @@ func pushUI(ctx context.Context, c *websocket.Conn, sess *session) error {
 		if stable {
 			break
 		}
+	}
+
+	for _, tf := range transforms {
+		tf(root)
 	}
 
 	var mainNodes, sidebarNodes []*Node

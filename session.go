@@ -26,6 +26,9 @@ type session struct {
 
 	fragmentFns     map[string]func() // fragment key -> registered function
 	widgetFragments map[string]string // widget id -> fragment key (for partial reruns)
+
+	clearOnSubmit map[string]bool   // form id -> reset inputs after submit
+	formWidgets   map[string]string // widget id -> form id (members of a form)
 }
 
 type pageConfig struct {
@@ -179,6 +182,49 @@ func (s *session) fragmentByKey(key string) (func(), bool) {
 	defer s.mu.Unlock()
 	fn, ok := s.fragmentFns[key]
 	return fn, ok
+}
+
+func (s *session) registerClearOnSubmit(formID string) {
+	s.mu.Lock()
+	if s.clearOnSubmit == nil {
+		s.clearOnSubmit = map[string]bool{}
+	}
+	s.clearOnSubmit[formID] = true
+	s.mu.Unlock()
+}
+
+func (s *session) registerFormWidget(widgetID, formID string) {
+	s.mu.Lock()
+	if s.formWidgets == nil {
+		s.formWidgets = map[string]string{}
+	}
+	s.formWidgets[widgetID] = formID
+	s.mu.Unlock()
+}
+
+// formOf returns the form id a widget belongs to (the submit button included).
+func (s *session) formOf(widgetID string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.formWidgets[widgetID]
+}
+
+func (s *session) isClearOnSubmit(formID string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.clearOnSubmit[formID]
+}
+
+// clearFormWidgets drops the stored values of every widget in a form, so the
+// next render shows them empty (paired with clearing the just-sent tree).
+func (s *session) clearFormWidgets(formID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for wid, fid := range s.formWidgets {
+		if fid == formID {
+			delete(s.widgets, wid)
+		}
+	}
 }
 
 func cloneAnyMap(m map[string]any) map[string]any {

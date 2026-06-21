@@ -684,7 +684,7 @@ func pageForms() {
 	sy.Title("Forms & Dialogs")
 
 	sy.Header("Form (Batched Inputs)")
-	sy.Caption("Widgets inside a form don't trigger reruns until submit.")
+	sy.Caption("Widgets inside a form don't trigger reruns until submit. Inputs clear on submit.")
 
 	sy.Form("contact_form", func() {
 		fcols := sy.Columns(2)
@@ -712,7 +712,7 @@ func pageForms() {
 				_ = fmsg
 			}
 		}
-	})
+	}, sy.ClearOnSubmit())
 
 	sy.Divider()
 

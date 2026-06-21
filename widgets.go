@@ -59,6 +59,7 @@ type widgetOpts struct {
 	avatar            string
 	zoom              int
 	runEvery          int // fragment auto-refresh interval in ms
+	clearOnSubmit     bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -143,6 +144,13 @@ func Zoom(level int) Option { return func(o *widgetOpts) { o.zoom = level } }
 func RunEvery(d time.Duration) Option {
 	return func(o *widgetOpts) { o.runEvery = int(d.Milliseconds()) }
 }
+
+// ClearOnSubmit resets a Form's inputs after a successful submit (st.form
+// clear_on_submit). The submit handler still sees the submitted values; the
+// inputs reset to type defaults (text→"", number→0, bool→false, select→first
+// option). Widgets given an explicit DefaultValue reset to the type default,
+// not that custom value.
+func ClearOnSubmit() Option { return func(o *widgetOpts) { o.clearOnSubmit = true } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

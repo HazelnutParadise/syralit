@@ -122,14 +122,23 @@ func Container(fn func(), opts ...Option) {
 
 // Form groups widgets so their changes are batched and only sent when the user
 // clicks FormSubmitButton. Inside a Form, widget changes do not trigger reruns.
-func Form(key string, fn func()) {
+func Form(key string, fn func(), opts ...Option) {
 	rc := current()
+	o := applyOpts(opts)
 	id := rc.widgetID("form", key)
-	node := &Node{ID: id, Type: "form"}
+	props := map[string]any{}
+	if o.clearOnSubmit {
+		props["clear_on_submit"] = true
+		rc.sess.registerClearOnSubmit(id)
+	}
+	node := &Node{ID: id, Type: "form", Props: props}
 	rc.add(node)
+	prevForm := rc.formKey
+	rc.formKey = id
 	rc.stack = append(rc.stack, node)
 	fn()
 	rc.stack = rc.stack[:len(rc.stack)-1]
+	rc.formKey = prevForm
 }
 
 // FormSubmitButton renders a submit button inside a Form. Returns true on the

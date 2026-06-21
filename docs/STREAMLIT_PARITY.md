@@ -45,7 +45,7 @@ Options, Width, Min/Max/Step, Format, Label, Help, Color, and the display-only
 
 ### Layout & containers
 `columns`(+weighted), `tabs`, `expander`(+`Icon`), `container`(+`Border`/`Height`
-scroll), `sidebar`, `popover`(+icon/width/disabled/help), `empty`, `form` +
+scroll), `sidebar`, `popover`(+icon/width/disabled/help), `empty`, `form`(+`ClearOnSubmit`) +
 `form_submit_button` (batched inputs), `status`, `dialog`.
 
 ### Flow, state, platform
@@ -65,9 +65,9 @@ DataTable + DataList helpers (`Table`, `List`, `ListMetrics`, `ListDescribe`,
 charts, `Histogram`, …) — no equivalent in Streamlit; Syralit-specific.
 
 ## Intentional / known gaps
-- **`st.form(clear_on_submit=True)`** — clearing inputs in the same rerun that
-  delivers the submitted values to the handler requires distinguishing a
-  widget's returned value from its emitted value across every input; deferred.
+- **`st.form(clear_on_submit=True)`** — supported via `ClearOnSubmit`. Caveat:
+  inputs reset to type defaults (text→"", number→0, select→first option), not to
+  a widget's custom `DefaultValue`.
 - **`st.help`** — relies on Python runtime docstrings; no Go equivalent.
 - **`st.number_input(format=...)`** display formatting — native numeric input;
   use a `Text` line or DataFrame `ColConfig` Format for formatted display.

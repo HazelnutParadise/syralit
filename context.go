@@ -15,6 +15,7 @@ type renderContext struct {
 	stack       []*Node        // container stack; root sits at the bottom
 	autoSeq     map[string]int // widget type -> counter, for auto-generated IDs
 	fragmentKey string         // non-empty when rendering inside a Fragment
+	formKey     string         // non-empty when rendering inside a Form
 	streamer    func(id, chunk string) // sends stream_append to client mid-rerun
 }
 
@@ -62,6 +63,9 @@ func (rc *renderContext) widgetID(typ, key string) string {
 	}
 	if rc.fragmentKey != "" {
 		rc.sess.registerWidgetFragment(id, rc.fragmentKey)
+	}
+	if rc.formKey != "" {
+		rc.sess.registerFormWidget(id, rc.formKey)
 	}
 	return id
 }

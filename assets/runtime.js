@@ -1179,7 +1179,8 @@
     img.className = "sy-image";
     img.src = p.src;
     if (p.alt) img.alt = p.alt;
-    if (p.width) img.style.maxWidth = p.width + "px";
+    if (p.containerWidth) img.style.width = "100%";
+    else if (p.width) img.style.maxWidth = p.width + "px";
     wrap.appendChild(img);
     if (p.caption) wrap.appendChild(el("p", "sy-caption", p.caption));
     return wrap;
@@ -1764,6 +1765,9 @@
     audio.className = "sy-audio";
     audio.src = p.src;
     audio.controls = true;
+    if (p.autoplay) audio.autoplay = true;
+    if (p.loop) audio.loop = true;
+    if (p.muted) audio.muted = true;
     return audio;
   }
 
@@ -1774,6 +1778,9 @@
     video.src = p.src;
     video.controls = true;
     if (p.width) video.style.maxWidth = p.width + "px";
+    if (p.autoplay) video.autoplay = true;
+    if (p.loop) video.loop = true;
+    if (p.muted) video.muted = true;
     wrap.appendChild(video);
     return wrap;
   }

@@ -1644,6 +1644,25 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestMediaProps(t *testing.T) {
+	tree := RenderOnce(func() {
+		Image("a.png", UseContainerWidth())
+		Audio("a.mp3", Autoplay(), Loop(), Muted())
+		Video("v.mp4", Loop())
+	})
+	if img := tree.Find("image"); len(img) != 1 || img[0].Props["containerWidth"] != true {
+		t.Fatalf("image containerWidth: %v", tree.Find("image"))
+	}
+	au := tree.Find("audio")
+	if len(au) != 1 || au[0].Props["autoplay"] != true || au[0].Props["loop"] != true || au[0].Props["muted"] != true {
+		t.Fatalf("audio props: %v", au)
+	}
+	vid := tree.Find("video")
+	if len(vid) != 1 || vid[0].Props["loop"] != true {
+		t.Fatalf("video props: %v", vid)
+	}
+}
+
 func TestChartOptions(t *testing.T) {
 	tree := RenderOnce(func() {
 		BarChart(map[string][]float64{"A": {1, 2}}, Horizontal(), Stacked(), Colors([]string{"#f00", "#0f0"}))

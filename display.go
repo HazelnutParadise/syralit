@@ -55,6 +55,9 @@ func Image(src string, opts ...Option) {
 	if o.caption != "" {
 		props["caption"] = o.caption
 	}
+	if o.useContainerWidth {
+		props["containerWidth"] = true
+	}
 	current().add(&Node{Type: "image", Props: props})
 }
 
@@ -343,20 +346,38 @@ func IFrame(url string, opts ...Option) {
 	current().add(&Node{Type: "iframe", Props: props})
 }
 
-// Audio renders an HTML audio player. src can be a URL or data URI.
+// Audio renders an HTML audio player. src can be a URL or data URI. Supports
+// sy.Autoplay(), sy.Loop(), sy.Muted().
 func Audio(src string, opts ...Option) {
-	current().add(&Node{Type: "audio", Props: map[string]any{"src": src}})
+	o := applyOpts(opts)
+	props := map[string]any{"src": src}
+	applyMediaProps(props, o)
+	current().add(&Node{Type: "audio", Props: props})
 }
 
 // Video renders an HTML video player. src can be a URL or data URI.
-// Use Width(640) to constrain the player width.
+// Use Width(640) to constrain the player width; supports Autoplay/Loop/Muted.
 func Video(src string, opts ...Option) {
 	o := applyOpts(opts)
 	props := map[string]any{"src": src}
 	if o.width > 0 {
 		props["width"] = o.width
 	}
+	applyMediaProps(props, o)
 	current().add(&Node{Type: "video", Props: props})
+}
+
+// applyMediaProps copies playback options onto an audio/video node's props.
+func applyMediaProps(props map[string]any, o widgetOpts) {
+	if o.autoplay {
+		props["autoplay"] = true
+	}
+	if o.loop {
+		props["loop"] = true
+	}
+	if o.muted {
+		props["muted"] = true
+	}
 }
 
 // Echo displays source code alongside its output. Pass the code text and a

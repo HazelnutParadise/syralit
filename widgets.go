@@ -50,6 +50,9 @@ type widgetOpts struct {
 	horizontal        bool
 	stacked           bool
 	colors            []string
+	autoplay          bool
+	loop              bool
+	muted             bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -111,6 +114,11 @@ func Stacked() Option { return func(o *widgetOpts) { o.stacked = true } }
 
 // Colors overrides the chart's series color palette with the given CSS colors.
 func Colors(c []string) Option { return func(o *widgetOpts) { o.colors = c } }
+
+// Autoplay / Loop / Muted control Audio and Video playback.
+func Autoplay() Option { return func(o *widgetOpts) { o.autoplay = true } }
+func Loop() Option     { return func(o *widgetOpts) { o.loop = true } }
+func Muted() Option    { return func(o *widgetOpts) { o.muted = true } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

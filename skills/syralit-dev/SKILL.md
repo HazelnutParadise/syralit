@@ -239,7 +239,7 @@ sy.Form("form_key", func() {
         // process name, email
         sy.Toast("Submitted!", "success")
     }
-})
+}, sy.ClearOnSubmit()) // optional: reset inputs after submit
 ```
 
 ### Dialog (modal)

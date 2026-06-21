@@ -170,7 +170,7 @@ tab("Tab1", func() { sy.Text("Content 1") })
 sy.Sidebar(func() { ... })
 sy.Expander("Title", func() { ... })
 sy.Container(func() { ... }, sy.Border())
-sy.Form("key", func() { ... })
+sy.Form("key", func() { ... }, sy.ClearOnSubmit())  // ClearOnSubmit optional
 sy.Status("Loading", "running", func() { ... })
 sy.Fragment("key", func() { ... })  // partial rerun
 ```

@@ -1234,12 +1234,71 @@
   }
 
   function jsonView(node, p) {
-    var pre = document.createElement("pre");
-    pre.className = "sy-code sy-json";
-    var code = document.createElement("code");
-    code.textContent = p.data;
-    pre.appendChild(code);
-    return pre;
+    var wrap = el("div", "sy-json");
+    var data;
+    try { data = JSON.parse(p.data); }
+    catch (e) { wrap.textContent = p.data; return wrap; }
+    wrap.appendChild(buildJsonNode(data, null, p.expanded !== false));
+    return wrap;
+  }
+
+  function jsonPrimitive(v) {
+    var span = document.createElement("span");
+    if (v === null) { span.className = "sy-json-null"; span.textContent = "null"; }
+    else if (typeof v === "string") { span.className = "sy-json-str"; span.textContent = JSON.stringify(v); }
+    else if (typeof v === "number") { span.className = "sy-json-num"; span.textContent = String(v); }
+    else if (typeof v === "boolean") { span.className = "sy-json-bool"; span.textContent = String(v); }
+    else { span.textContent = String(v); }
+    return span;
+  }
+
+  function jsonKey(k) {
+    var s = el("span", "sy-json-key", (typeof k === "number" ? k : JSON.stringify(k)) + ": ");
+    return s;
+  }
+
+  // buildJsonNode renders a value as a collapsible tree row. Objects/arrays get
+  // a disclosure toggle; expand cascades to descendants.
+  function buildJsonNode(value, keyLabel, expand) {
+    var isArr = Array.isArray(value);
+    var isObj = value !== null && typeof value === "object";
+    if (!isObj) {
+      var leaf = el("div", "sy-json-row");
+      if (keyLabel !== null) leaf.appendChild(jsonKey(keyLabel));
+      leaf.appendChild(jsonPrimitive(value));
+      return leaf;
+    }
+    var keys = isArr ? value.map(function (_, i) { return i; }) : Object.keys(value);
+    var open = isArr ? "[" : "{", close = isArr ? "]" : "}";
+
+    var box = el("div", "sy-json-node");
+    var head = el("div", "sy-json-head");
+    var toggle = el("span", "sy-json-toggle", expand ? "▾" : "▸");
+    head.appendChild(toggle);
+    if (keyLabel !== null) head.appendChild(jsonKey(keyLabel));
+    head.appendChild(el("span", "sy-json-punct", open));
+    var summary = el("span", "sy-json-count", keys.length + (isArr ? " items" : " keys"));
+    head.appendChild(summary);
+
+    var children = el("div", "sy-json-children");
+    if (!expand) children.style.display = "none";
+    keys.forEach(function (k) { children.appendChild(buildJsonNode(value[k], k, expand)); });
+    var tail = el("div", "sy-json-punct sy-json-tail", close);
+    if (!expand) tail.style.display = "none";
+
+    head.onclick = function () {
+      var shown = children.style.display !== "none";
+      children.style.display = shown ? "none" : "";
+      tail.style.display = shown ? "none" : "";
+      toggle.textContent = shown ? "▸" : "▾";
+      summary.style.display = shown ? "" : "none";
+    };
+    if (expand) summary.style.display = "none";
+
+    box.appendChild(head);
+    box.appendChild(children);
+    box.appendChild(tail);
+    return box;
   }
 
   function progressBar(node, p) {

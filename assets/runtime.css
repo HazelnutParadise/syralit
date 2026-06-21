@@ -1316,6 +1316,31 @@ body {
   object-fit: cover;
 }
 
+/* --- JSON tree (sy.JSON) ---------------------------------------------- */
+.sy-json {
+  margin: .75rem 0;
+  padding: .75rem 1rem;
+  background: var(--sy-hover);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: .85rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+.sy-json-children { padding-left: 1.25rem; }
+.sy-json-head { cursor: pointer; user-select: none; white-space: nowrap; }
+.sy-json-toggle { display: inline-block; width: 1em; color: var(--sy-muted); }
+.sy-json-key { color: var(--sy-accent); }
+.sy-json-str { color: var(--sy-success); }
+.sy-json-num { color: var(--sy-info); }
+.sy-json-bool { color: var(--sy-warning); }
+.sy-json-null { color: var(--sy-muted); }
+.sy-json-punct { color: var(--sy-muted); }
+.sy-json-count { color: var(--sy-muted); font-style: italic; margin-left: .35rem; font-size: .8em; }
+.sy-json-tail { padding-left: 0; }
+.sy-json-row { white-space: nowrap; }
+
 .sy-code-copy {
   position: absolute;
   top: .5rem;

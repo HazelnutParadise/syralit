@@ -83,12 +83,19 @@ func ImageFromBytes(data []byte, opts ...Option) {
 }
 
 // JSON renders a formatted JSON viewer for any serializable value.
-func JSON(data any) {
-	b, err := json.MarshalIndent(data, "", "  ")
+// JSON renders data as an interactive, collapsible tree. It is fully expanded
+// by default; pass sy.DefaultValue(false) to start collapsed.
+func JSON(data any, opts ...Option) {
+	o := applyOpts(opts)
+	b, err := json.Marshal(data)
 	if err != nil {
-		b = []byte(err.Error())
+		b, _ = json.Marshal(err.Error())
 	}
-	current().add(&Node{Type: "json", Props: map[string]any{"data": string(b)}})
+	expanded := true
+	if dv, ok := o.defaultVal.(bool); ok {
+		expanded = dv
+	}
+	current().add(&Node{Type: "json", Props: map[string]any{"data": string(b), "expanded": expanded}})
 }
 
 // Progress renders a progress bar. value is 0.0 to 1.0.

@@ -486,6 +486,8 @@ if job.Running() {
 ```
 
 - **`sy.Task[T]`** — non-blocking background work with auto-push on completion.
+- **`sy.Shared[T]`** — app-wide state shared across all sessions; a `Set`/`Update`
+  pushes a live update to every connected client (real-time collaboration).
 - **`sy.Fragment(key, fn, sy.RunEvery(d))`** — server-driven live refresh.
 - **`syralit build`** — compile the whole app (front-end + backend + your
   `public/`) into one self-contained executable; no Python, no runtime, no deps.

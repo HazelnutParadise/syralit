@@ -68,6 +68,8 @@ charts, `Histogram`, …) — no equivalent in Streamlit; Syralit-specific.
 Capabilities with no Streamlit equivalent:
 - **`Task[T]`** — background jobs in a goroutine; the server pushes the result
   when done, so the UI never blocks (a Streamlit rerun blocks the session).
+- **`Shared[T]`** — app-wide state across sessions; `Set`/`Update` live-pushes to
+  every client (real-time collaboration; Streamlit state is per-session only).
 - **`Fragment` + `RunEvery`** — server-driven live refresh of one fragment.
 - **`syralit build`** — single self-contained binary (front-end + backend +
   `public/`), no runtime/interpreter or dependencies.

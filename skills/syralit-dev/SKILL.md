@@ -342,6 +342,14 @@ if job.Running() {
 }
 ```
 
+### Shared state (beyond Streamlit — real-time, cross-session)
+```go
+// App-wide value shared by ALL sessions; Set/Update live-pushes to everyone.
+online := sy.Shared("online", 0)
+online.Update(func(v int) int { return v + 1 }) // atomic read-modify-write
+sy.Metric("Online now", fmt.Sprint(online.Get()))
+```
+
 ### Configuration
 ```go
 sy.SetPageConfig(

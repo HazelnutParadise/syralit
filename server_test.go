@@ -1644,6 +1644,54 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestSharedState(t *testing.T) {
+	sharedMu.Lock()
+	sharedStore = map[string]any{}
+	sharedMu.Unlock()
+
+	app := func() {
+		n := Shared("tcount", 0)
+		if Button("inc", Key("inc")) {
+			n.Update(func(v int) int { return v + 1 })
+		}
+		Text(fmt.Sprintf("count=%d", n.Get()))
+	}
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http") + "/_syralit/ws"
+
+	a, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.CloseNow()
+	b, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.CloseNow()
+
+	if _, ok := findText(readPatch(t, ctx, a), "count=0"); !ok {
+		t.Fatal("A initial count")
+	}
+	if _, ok := findText(readPatch(t, ctx, b), "count=0"); !ok {
+		t.Fatal("B initial count")
+	}
+
+	// A clicks the button (is_button=true).
+	msg, _ := json.Marshal(map[string]any{"type": "widget_change", "widget_id": "inc", "value": true, "is_button": true})
+	if err := a.Write(ctx, websocket.MessageText, msg); err != nil {
+		t.Fatal(err)
+	}
+
+	// B must receive a server-pushed update reflecting A's change.
+	if _, ok := findText(readPatch(t, ctx, b), "count=1"); !ok {
+		t.Fatal("B did not receive shared-state update from A")
+	}
+}
+
 func TestBackgroundTask(t *testing.T) {
 	app := func() {
 		job := Task("work", func() string {

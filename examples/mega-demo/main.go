@@ -1186,6 +1186,19 @@ func pageState() {
 
 	sy.Divider()
 
+	sy.Header("Shared State (beyond Streamlit)")
+	sy.Caption("App-wide and live: open this page in two tabs — a click in one updates the other instantly.")
+	clicks := sy.Shared("mega_shared_clicks", 0)
+	scols := sy.Columns(2)
+	scols[0](func() {
+		if sy.Button("Everyone's counter +1", sy.Key("shared_inc")) {
+			clicks.Update(func(v int) int { return v + 1 })
+		}
+	})
+	scols[1](func() { sy.Metric("Shared clicks (all visitors)", fmt.Sprintf("%d", clicks.Get())) })
+
+	sy.Divider()
+
 	sy.Header("Render Info")
 	sy.JSON(map[string]any{
 		"rendered_at": time.Now().Format("2006-01-02 15:04:05"),

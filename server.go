@@ -143,6 +143,8 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	sess := newSession(s.appFn)
+	registerSession(sess)
+	defer deregisterSession(sess)
 
 	qp := make(map[string]string)
 	for k, v := range r.URL.Query() {

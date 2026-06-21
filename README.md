@@ -64,6 +64,28 @@ go run .
 # Open http://localhost:8600
 ```
 
+## Screenshots
+
+Real screenshots captured from the runnable examples in [`examples/`](examples/).
+
+### Showcase dashboard (`examples/showcase`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit showcase dashboard](docs/images/showcase-dashboard.png) | ![Syralit showcase dashboard dark mode](docs/images/showcase-dashboard-dark.png) |
+
+### Data explorer (`examples/data-explorer`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit data explorer analysis view](docs/images/data-explorer-analysis.png) | ![Syralit data explorer analysis view dark mode](docs/images/data-explorer-analysis-dark.png) |
+
+### Conference registration form (`examples/form-app`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit conference registration form](docs/images/form-app-registration.png) | ![Syralit conference registration form dark mode](docs/images/form-app-registration-dark.png) |
+
 ## Features
 
 ### Input Widgets

@@ -1129,6 +1129,10 @@ func pageState() {
 	sy.Header("Fragment (Partial Rerun)")
 	sy.Caption("Only the fragment re-renders when its widgets change — not the whole page.")
 
+	sy.Fragment("mega_live", func() {
+		sy.Metric("Live clock (auto-refresh 1s)", time.Now().Format("15:04:05"))
+	}, sy.RunEvery(time.Second))
+
 	sy.Fragment("mega_fragment", func() {
 		fcount := sy.State("mega_frag_count", 0)
 		sy.Container(func() {

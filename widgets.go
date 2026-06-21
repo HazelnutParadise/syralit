@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/yuin/goldmark"
 )
@@ -57,6 +58,7 @@ type widgetOpts struct {
 	wrap              bool
 	avatar            string
 	zoom              int
+	runEvery          int // fragment auto-refresh interval in ms
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -134,6 +136,13 @@ func Avatar(v string) Option { return func(o *widgetOpts) { o.avatar = v } }
 
 // Zoom sets the initial zoom level (1–18) of a Map.
 func Zoom(level int) Option { return func(o *widgetOpts) { o.zoom = level } }
+
+// RunEvery makes a Fragment re-run automatically on the given interval, for live
+// dashboards (st.fragment run_every). The fragment re-executes only its own
+// function each tick, not the whole app.
+func RunEvery(d time.Duration) Option {
+	return func(o *widgetOpts) { o.runEvery = int(d.Milliseconds()) }
+}
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

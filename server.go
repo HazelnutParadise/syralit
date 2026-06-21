@@ -121,9 +121,10 @@ type clientMsg struct {
 	WidgetID string         `json:"widget_id"`
 	Value    any            `json:"value"`
 	IsButton bool           `json:"is_button"`
-	Page     string         `json:"page,omitempty"`    // for page_change
-	Changes  []widgetChange `json:"changes,omitempty"` // for form_submit
-	State    *sessionState  `json:"state,omitempty"`   // for __dev_restore
+	Page        string         `json:"page,omitempty"`         // for page_change
+	Changes     []widgetChange `json:"changes,omitempty"`      // for form_submit
+	State       *sessionState  `json:"state,omitempty"`        // for __dev_restore
+	FragmentKey string         `json:"fragment_key,omitempty"` // for fragment_rerun
 }
 
 type widgetChange struct {
@@ -177,6 +178,12 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 				}
 			} else {
 				if err := pushUI(ctx, c, sess); err != nil {
+					return
+				}
+			}
+		case "fragment_rerun": // auto-refresh (RunEvery) tick from the client
+			if fn, ok := sess.fragmentByKey(msg.FragmentKey); ok {
+				if err := pushFragmentUI(ctx, c, sess, msg.FragmentKey, fn); err != nil {
 					return
 				}
 			}

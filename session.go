@@ -172,6 +172,15 @@ func (s *session) fragmentForWidget(widgetID string) (string, func(), bool) {
 	return key, fn, ok
 }
 
+// fragmentByKey looks up a registered fragment function by its key, used by the
+// auto-refresh (RunEvery) path.
+func (s *session) fragmentByKey(key string) (func(), bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	fn, ok := s.fragmentFns[key]
+	return fn, ok
+}
+
 func cloneAnyMap(m map[string]any) map[string]any {
 	out := make(map[string]any, len(m))
 	for k, v := range m {

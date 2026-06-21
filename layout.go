@@ -216,10 +216,15 @@ func Empty() func(func()) {
 //	    x := sy.Slider("X", sy.Min(0), sy.Max(100), sy.Key("x"))
 //	    sy.LineChart([]float64{float64(x), float64(x*2)})
 //	})
-func Fragment(key string, fn func()) {
+func Fragment(key string, fn func(), opts ...Option) {
 	rc := current()
+	o := applyOpts(opts)
 	id := "fragment:" + key
-	node := &Node{ID: id, Type: "fragment", Props: map[string]any{"key": key}}
+	props := map[string]any{"key": key}
+	if o.runEvery > 0 {
+		props["run_every"] = o.runEvery
+	}
+	node := &Node{ID: id, Type: "fragment", Props: props}
 	rc.add(node)
 
 	prevFrag := rc.fragmentKey

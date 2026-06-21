@@ -18,6 +18,7 @@
   var layoutRoot = document.getElementById("syralit-root");
   var ws;
   var lastPagesKey = "";
+  var fragmentTimers = {}; // fragment key -> setInterval id (RunEvery)
 
   function connect() {
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -1023,22 +1024,34 @@
   }
 
   function appendStream(id, chunk) {
-    var target = content.querySelector('[data-stream-id="' + id + '"]');
+    var target = root.querySelector('[data-stream-id="' + id + '"]');
     if (!target) return;
     target.textContent += chunk;
   }
 
   function patchFragment(key, nodes) {
-    var target = content.querySelector('[data-fragment-key="' + key + '"]');
+    var target = root.querySelector('[data-fragment-key="' + key + '"]');
     if (!target) return;
     target.replaceChildren();
-    nodes.forEach(function (n) { target.appendChild(renderNode(n)); });
+    nodes.forEach(function (n) { target.appendChild(buildNode(n)); });
   }
 
   function fragmentEl(node) {
+    var p = node.props || {};
+    var key = p.key || "";
     var div = el("div", "sy-fragment");
-    div.setAttribute("data-fragment-key", (node.props || {}).key || "");
+    div.setAttribute("data-fragment-key", key);
     childNodes(node).forEach(function (c) { div.appendChild(c); });
+    // RunEvery: poll the server to re-run just this fragment on an interval.
+    // Reset any prior timer for this key (a full re-render recreates the div).
+    if (fragmentTimers[key]) { clearInterval(fragmentTimers[key]); delete fragmentTimers[key]; }
+    if (p.run_every > 0) {
+      fragmentTimers[key] = setInterval(function () {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "fragment_rerun", fragment_key: key }));
+        }
+      }, p.run_every);
+    }
     return div;
   }
 

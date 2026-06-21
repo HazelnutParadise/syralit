@@ -1644,6 +1644,44 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestFragmentRunEvery(t *testing.T) {
+	app := func() {
+		Fragment("live", func() { Text("tick") }, RunEvery(500*time.Millisecond))
+	}
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	frag, ok := nodeByID(nodes, "fragment:live")
+	if !ok || frag["props"].(map[string]any)["run_every"] != float64(500) {
+		t.Fatalf("fragment run_every: %v", frag)
+	}
+
+	// A fragment_rerun message should yield a fragment_patch for that key.
+	b, _ := json.Marshal(map[string]any{"type": "fragment_rerun", "fragment_key": "live"})
+	if err := c.Write(ctx, websocket.MessageText, b); err != nil {
+		t.Fatal(err)
+	}
+	for {
+		_, data, err := c.Read(ctx)
+		if err != nil {
+			t.Fatal("no fragment_patch received")
+		}
+		var m map[string]any
+		json.Unmarshal(data, &m)
+		if m["type"] == "fragment_patch" && m["fragment_key"] == "live" {
+			break
+		}
+	}
+}
+
 func TestMapPointsAndZoom(t *testing.T) {
 	tree := RenderOnce(func() {
 		Map([]MapPoint{{Lat: 1, Lon: 2, Size: 10, Color: "#f00", Text: "x"}}, Zoom(8))

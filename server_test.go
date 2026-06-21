@@ -1644,6 +1644,21 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestPopoverAndMetricOptions(t *testing.T) {
+	tree := RenderOnce(func() {
+		Popover("Menu", func() { Text("x") }, Icon("⚙️"), Help("open menu"))
+		Metric("Users", "100", Help("active users"))
+	})
+	pv := tree.Find("popover")
+	if len(pv) != 1 || pv[0].Props["icon"] != "⚙️" || pv[0].Props["help"] != "open menu" {
+		t.Fatalf("popover opts: %v", pv)
+	}
+	m := tree.Find("metric")
+	if len(m) != 1 || m[0].Props["help"] != "active users" {
+		t.Fatalf("metric help: %v", m)
+	}
+}
+
 func TestFragmentRunEvery(t *testing.T) {
 	app := func() {
 		Fragment("live", func() { Text("tick") }, RunEvery(500*time.Millisecond))

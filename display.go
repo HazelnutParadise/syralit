@@ -28,6 +28,9 @@ func Metric(label, value string, opts ...Option) {
 	if o.border {
 		props["border"] = true
 	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
 	current().add(&Node{Type: "metric", Props: props})
 }
 

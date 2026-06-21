@@ -1133,6 +1133,7 @@
 
   function metric(node, p) {
     var wrap = el("div", "sy-metric" + (p.border ? " sy-metric-bordered" : ""));
+    if (p.help) wrap.title = p.help;
     wrap.appendChild(el("div", "sy-metric-label", p.label));
     wrap.appendChild(el("div", "sy-metric-value", p.value));
     if (p.delta) {
@@ -2180,9 +2181,11 @@
 
   function popoverEl(node, p) {
     var wrap = el("div", "sy-popover-wrap");
-    var btn = el("button", "sy-button sy-popover-trigger", p.label);
+    var btn = el("button", btnClass("sy-button sy-popover-trigger", p), btnLabel(p));
     btn.dataset.id = node.id;
-    btn.onclick = function () { send(node.id, !p.open, false); };
+    if (p.disabled) btn.disabled = true;
+    if (p.help) btn.title = p.help;
+    btn.onclick = function () { if (!p.disabled) send(node.id, !p.open, false); };
     wrap.appendChild(btn);
     if (p.open) {
       var panel = el("div", "sy-popover-panel");

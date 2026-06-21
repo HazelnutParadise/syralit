@@ -874,10 +874,15 @@ func Popover(label string, fn func(), opts ...Option) {
 	id := rc.widgetID("popover", o.key)
 	val, _ := rc.sess.widgetValue(id)
 	open, _ := val.(bool)
-	pop := &Node{ID: id, Type: "popover", Props: map[string]any{
-		"label": label,
-		"open":  open,
-	}}
+	props := map[string]any{"label": label, "open": open}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	applyButtonProps(props, o)
+	pop := &Node{ID: id, Type: "popover", Props: props}
 	rc.add(pop)
 	rc.stack = append(rc.stack, pop)
 	fn()

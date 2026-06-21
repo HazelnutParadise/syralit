@@ -162,6 +162,21 @@ func colConfigProps(cc map[string]ColumnConfig) map[string]any {
 		if cfg.Max != 0 {
 			entry["max"] = cfg.Max
 		}
+		if cfg.Step != 0 {
+			entry["step"] = cfg.Step
+		}
+		if cfg.Format != "" {
+			entry["format"] = cfg.Format
+		}
+		if cfg.Label != "" {
+			entry["label"] = cfg.Label
+		}
+		if cfg.Help != "" {
+			entry["help"] = cfg.Help
+		}
+		if cfg.Color != "" {
+			entry["color"] = cfg.Color
+		}
 		out[col] = entry
 	}
 	return out
@@ -355,11 +370,16 @@ func Echo(code string, fn func()) {
 // Supported types: "text", "number", "checkbox", "select", "date",
 // "time", "datetime", "link", "image", "progress", "list".
 type ColumnConfig struct {
-	Type    string   // column type (see above)
+	Type    string   // column type (see above), incl. "bar_chart" / "line_chart"
 	Options []string // for "select" type: dropdown options
 	Width   int      // optional column width in pixels
 	Min     float64  // for "number" or "progress": minimum value
 	Max     float64  // for "number" or "progress": maximum value
+	Step    float64  // for "number": editor step
+	Format  string   // printf-style display format for numbers, e.g. "$%.2f", "%d%%"
+	Label   string   // override the column header text
+	Help    string   // header tooltip
+	Color   string   // line/bar chart column color (CSS color)
 }
 
 // ColConfig is an Option that sets column configurations for DataEditor.

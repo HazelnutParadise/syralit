@@ -150,13 +150,17 @@ selected := sy.DataFrame(headers, rows, sy.Selectable(), sy.Key("df")) // []int
 // Editable data editor — returns current rows
 edited := sy.DataEditor(headers, rows, opts...)
 
-// Column configuration for DataEditor and DataFrame
+// Column configuration for DataEditor and DataFrame. Fields: Type, Options,
+// Width, Min, Max, Step, Format ("$%.2f"/"%d%%"), Label, Help, Color.
+// Types: text/number/checkbox/select/date/time/datetime/link/image/progress/
+// list, plus display-only bar_chart / line_chart (cell value = []float64).
 sy.ColConfig(map[string]sy.ColumnConfig{
-    "Score":  {Type: "number", Min: 0, Max: 100},
+    "Score":  {Type: "number", Min: 0, Max: 100, Format: "%.1f"},
     "Pass":   {Type: "checkbox"},
     "Grade":  {Type: "select", Options: []string{"A","B","C"}},
     "Due":    {Type: "date"},
     "Link":   {Type: "link"},
+    "Trend":  {Type: "line_chart", Label: "30-day", Color: "#7c3aed"},
     "Avatar": {Type: "image"},
     "Done":   {Type: "progress", Max: 100},
 })

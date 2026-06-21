@@ -111,7 +111,7 @@ Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlight
 | `DataFrame` | Sortable table; optional row selection (`sy.Selectable()` → returns selected indices) and typed display via `sy.ColConfig` |
 | `DataEditor` | Editable table with 11 column types |
 
-DataEditor supports column configuration with types: `text`, `number`, `checkbox`, `select`, `date`, `time`, `datetime`, `link`, `image`, `progress`, `list`. Dynamic row add/delete with `sy.DynamicRows()`.
+Column configuration (`sy.ColConfig`, shared by DataFrame and DataEditor) supports types `text`, `number`, `checkbox`, `select`, `date`, `time`, `datetime`, `link`, `image`, `progress`, `list`, plus the display-only mini-chart columns `bar_chart` / `line_chart` (cell value is a `[]float64`). Each column may set `Format` (printf-style, e.g. `"$%.2f"`, `"%d%%"`), `Label` (header override), `Help` (header tooltip), `Width`, `Min`/`Max`/`Step`, and `Color` (chart columns). Dynamic row add/delete with `sy.DynamicRows()`.
 
 ```go
 sy.DataEditor(headers, rows,

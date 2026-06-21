@@ -1265,15 +1265,70 @@
 
   // --- DataFrame (sortable table) ----------------------------------------
 
+  // applyNumFormat renders a number through a printf-style format string
+  // (a useful subset: %d, %f, %.Nf, %e, %g, and literal %%), e.g. "$%.2f".
+  function applyNumFormat(fmt, value) {
+    if (!fmt) return String(value);
+    return fmt.replace(/%(\.\d+)?([dfeg%])/g, function (m, prec, verb) {
+      if (verb === "%") return "%";
+      var n = parseFloat(value);
+      if (isNaN(n)) return String(value);
+      var p = prec ? parseInt(prec.slice(1), 10) : (verb === "d" ? 0 : 6);
+      if (verb === "d") return String(Math.round(n));
+      if (verb === "f") return n.toFixed(p);
+      if (verb === "e") return n.toExponential(prec ? p : 6);
+      return String(n); // g
+    });
+  }
+
+  // sparkline draws a tiny inline bar/line chart from an array of numbers, for
+  // the "bar_chart" / "line_chart" column types (st.column_config equivalents).
+  function sparkline(values, type, color) {
+    var w = 84, h = 24, pad = 2, ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("width", w);
+    svg.setAttribute("height", h);
+    svg.setAttribute("class", "sy-spark");
+    var nums = (Array.isArray(values) ? values : []).map(function (v) { return parseFloat(v) || 0; });
+    if (!nums.length) return svg;
+    var min = Math.min.apply(null, nums), max = Math.max.apply(null, nums), range = (max - min) || 1;
+    var c = (color || "var(--sy-accent)");
+    function x(i) { return pad + (nums.length === 1 ? (w - 2 * pad) / 2 : i * (w - 2 * pad) / (nums.length - 1)); }
+    function y(v) { return h - pad - (v - min) / range * (h - 2 * pad); }
+    if (type === "line_chart") {
+      var pl = document.createElementNS(ns, "polyline");
+      pl.setAttribute("points", nums.map(function (v, i) { return x(i) + "," + y(v); }).join(" "));
+      pl.setAttribute("fill", "none");
+      pl.setAttribute("stroke", c);
+      pl.setAttribute("stroke-width", "1.5");
+      svg.appendChild(pl);
+    } else {
+      var bw = Math.max(1, (w - 2 * pad) / nums.length * 0.7);
+      var base = h - pad;
+      nums.forEach(function (v, i) {
+        var r = document.createElementNS(ns, "rect");
+        var yy = y(v);
+        r.setAttribute("x", x(i) - bw / 2);
+        r.setAttribute("y", yy);
+        r.setAttribute("width", bw);
+        r.setAttribute("height", Math.max(0, base - yy));
+        r.setAttribute("fill", c);
+        svg.appendChild(r);
+      });
+    }
+    return svg;
+  }
+
   // renderReadonlyCell formats a non-editable cell by its column type. Shared by
   // DataFrame (column_config display) and DataEditor's disabled mode.
   function renderReadonlyCell(td, cell, colType, cfg) {
+    cfg = cfg || {};
     if (colType === "checkbox") {
       td.textContent = cell ? "✓" : "✗";
     } else if (colType === "link") {
       var a = document.createElement("a");
       a.href = cell || "#";
-      a.textContent = cell || "";
+      a.textContent = cfg.format ? applyNumFormat(cfg.format, cell) : (cell || "");
       a.target = "_blank";
       a.rel = "noopener noreferrer";
       td.appendChild(a);
@@ -1285,12 +1340,17 @@
     } else if (colType === "progress") {
       var bar = el("div", "sy-progress-bar sy-progress-cell");
       var fill = el("div", "sy-progress-fill");
-      var pctMax = (cfg && cfg.max) || 100;
+      var pctMax = cfg.max || 100;
       fill.style.width = Math.min(Math.max((parseFloat(cell) || 0) / pctMax, 0), 1) * 100 + "%";
       bar.appendChild(fill);
       td.appendChild(bar);
+      if (cfg.format) { var lbl = el("span", "sy-progress-label", applyNumFormat(cfg.format, cell)); td.appendChild(lbl); }
     } else if (colType === "list") {
       td.textContent = Array.isArray(cell) ? cell.join(", ") : String(cell == null ? "" : cell);
+    } else if (colType === "bar_chart" || colType === "line_chart") {
+      td.appendChild(sparkline(cell, colType, cfg.color));
+    } else if (colType === "number" && cfg.format) {
+      td.textContent = applyNumFormat(cfg.format, cell);
     } else {
       td.textContent = cell == null ? "" : String(cell);
     }
@@ -1323,7 +1383,11 @@
       var tr = document.createElement("tr");
       if (selectable) tr.appendChild(el("th", "sy-df-header sy-df-select"));
       headers.forEach(function (h, ci) {
-        var th = el("th", "sy-df-header", h + (ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
+        var hcfg = colCfg[h] || {};
+        var label = hcfg.label || h;
+        var th = el("th", "sy-df-header", label + (ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
+        if (hcfg.help) th.title = hcfg.help;
+        if (hcfg.width) th.style.width = hcfg.width + "px";
         th.onclick = function () {
           if (sortCol === ci) { sortAsc = !sortAsc; } else { sortCol = ci; sortAsc = true; }
           indexed.sort(function (a, b) {
@@ -1419,8 +1483,9 @@
     var tr = document.createElement("tr");
     headers.forEach(function (h) {
       var th = document.createElement("th");
-      th.textContent = h;
       var cfg = colCfg[h] || {};
+      th.textContent = cfg.label || h;
+      if (cfg.help) th.title = cfg.help;
       if (cfg.width) th.style.width = cfg.width + "px";
       tr.appendChild(th);
     });
@@ -1498,6 +1563,7 @@
           if (colType === "number") {
             if (cfg.min !== undefined) inp.min = cfg.min;
             if (cfg.max !== undefined) inp.max = cfg.max;
+            if (cfg.step !== undefined) inp.step = cfg.step;
           }
           inp.onchange = function () {
             var v = inp.value;

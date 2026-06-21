@@ -1331,6 +1331,18 @@ body {
 /* progress bar rendered inside a table cell (DataFrame/DataEditor) */
 .sy-progress-cell {
   min-width: 80px;
+  display: inline-block;
+  vertical-align: middle;
+}
+.sy-progress-label {
+  margin-left: .5rem;
+  font-size: .8rem;
+  color: var(--sy-muted);
+  font-variant-numeric: tabular-nums;
+}
+/* inline mini chart cells (bar_chart / line_chart column types) */
+.sy-spark {
+  display: block;
 }
 
 /* --- Display: Link ----------------------------------------------------- */

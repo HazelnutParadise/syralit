@@ -1644,6 +1644,32 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestColumnConfigRich(t *testing.T) {
+	tree := RenderOnce(func() {
+		DataFrame(
+			[]string{"Price", "Trend"},
+			[][]any{{12.5, []float64{1, 3, 2}}},
+			ColConfig(map[string]ColumnConfig{
+				"Price": {Type: "number", Format: "$%.2f", Label: "Unit Price", Help: "USD", Step: 0.5},
+				"Trend": {Type: "line_chart", Color: "#f00"},
+			}),
+		)
+	})
+	dfs := tree.Find("dataframe")
+	if len(dfs) != 1 {
+		t.Fatalf("expected dataframe, got %d", len(dfs))
+	}
+	cc, _ := dfs[0].Props["column_config"].(map[string]any)
+	price, _ := cc["Price"].(map[string]any)
+	if price["format"] != "$%.2f" || price["label"] != "Unit Price" || price["help"] != "USD" || price["step"] != 0.5 {
+		t.Fatalf("price config: %v", price)
+	}
+	trend, _ := cc["Trend"].(map[string]any)
+	if trend["type"] != "line_chart" || trend["color"] != "#f00" {
+		t.Fatalf("trend config: %v", trend)
+	}
+}
+
 func TestWidgetFidelity(t *testing.T) {
 	tree := RenderOnce(func() {
 		Feedback(Key("fb"), FeedbackStyle("stars"))

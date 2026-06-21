@@ -835,17 +835,19 @@ func pageData() {
 	sy.Header("DataFrame — Selectable + Column Config")
 	sy.Caption("Click rows to select; columns render by type via ColConfig.")
 	tasks := [][]any{
-		{"Ship v3.1", "Done", 100, "https://example.com/1"},
-		{"Write docs", "In Progress", 60, "https://example.com/2"},
-		{"Fix flaky test", "Todo", 0, "https://example.com/3"},
-		{"Plan Q3", "In Progress", 35, "https://example.com/4"},
+		{"Ship v3.1", 4200.0, 100, []float64{2, 3, 5, 4, 6, 8}, "https://example.com/1"},
+		{"Write docs", 1800.0, 60, []float64{1, 1, 2, 3, 3, 4}, "https://example.com/2"},
+		{"Fix flaky test", 900.0, 0, []float64{5, 4, 4, 3, 2, 1}, "https://example.com/3"},
+		{"Plan Q3", 2600.0, 35, []float64{0, 1, 1, 2, 4, 5}, "https://example.com/4"},
 	}
 	sel := sy.DataFrame(
-		[]string{"Task", "Status", "Progress", "Link"},
+		[]string{"Task", "Budget", "Progress", "Trend", "Link"},
 		tasks,
 		sy.Selectable(),
 		sy.ColConfig(map[string]sy.ColumnConfig{
-			"Progress": {Type: "progress", Max: 100},
+			"Budget":   {Type: "number", Format: "$%.0f", Help: "Allocated budget"},
+			"Progress": {Type: "progress", Max: 100, Format: "%d%%"},
+			"Trend":    {Type: "line_chart", Label: "6-wk trend"},
 			"Link":     {Type: "link"},
 		}),
 		sy.Key("task_df"),

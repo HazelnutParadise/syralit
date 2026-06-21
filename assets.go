@@ -2,12 +2,51 @@ package syralit
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 //go:embed assets
 var assetsFS embed.FS
+
+// Third-party library URLs (Chart.js, Leaflet, KaTeX, Plotly, …) can be
+// repointed so they load from a self-hosted copy instead of a CDN — the key to
+// fully offline / air-gapped / strict-CSP deployments. Drop the files in your
+// public/ dir, point the names at them, and `syralit build` bakes everything
+// into one binary that needs no internet.
+var (
+	assetMu        sync.Mutex
+	assetOverrides = map[string]string{}
+)
+
+// SetAssetURL overrides where a named front-end library is loaded from. Names:
+// chartjs, leaflet_js, leaflet_css, katex_js, katex_css, highlight_js,
+// highlight_css, highlight_css_dark, viz, vega, vega_lite, vega_embed, plotly,
+// bokeh, deckgl, mapbox_js, mapbox_css.
+//
+//	sy.SetAssetURL("chartjs", "/chart.umd.min.js") // served from public/
+func SetAssetURL(name, url string) {
+	assetMu.Lock()
+	assetOverrides[name] = url
+	assetMu.Unlock()
+}
+
+// assetOverridesScript renders the override map as an inline script so the
+// runtime can resolve library URLs against it.
+func assetOverridesScript() string {
+	assetMu.Lock()
+	defer assetMu.Unlock()
+	if len(assetOverrides) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(assetOverrides)
+	if err != nil {
+		return ""
+	}
+	return "\n<script>window.__SY_ASSETS=" + string(b) + ";</script>"
+}
 
 // indexHTML is the app shell. The two %s slots are the page title and an optional
 // inline <style> block carrying theme overrides. The client runtime is loaded
@@ -49,7 +88,7 @@ func renderIndex(title string, th Theme) string {
 		style = "\n<style>:root{" + strings.Join(vars, ";") + "}</style>"
 	}
 
-	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style)
+	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+assetOverridesScript())
 }
 
 // cssValueSafe allows only characters expected in a color/length value, to keep

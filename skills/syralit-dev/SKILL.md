@@ -342,6 +342,15 @@ if job.Running() {
 }
 ```
 
+### Offline / self-hosted libraries (beyond Streamlit)
+```go
+// Repoint a CDN lib to a self-hosted copy (served from public/), so syralit
+// build produces a fully offline / air-gapped / CSP-safe single binary.
+sy.SetAssetURL("chartjs", "/chart.umd.min.js")
+// names: chartjs, leaflet_js/css, katex_js/css, highlight_js/css/css_dark,
+// viz, vega/vega_lite/vega_embed, plotly, bokeh, deckgl, mapbox_js/css
+```
+
 ### Shared state (beyond Streamlit — real-time, cross-session)
 ```go
 // App-wide value shared by ALL sessions; Set/Update live-pushes to everyone.

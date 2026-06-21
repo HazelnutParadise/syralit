@@ -20,6 +20,12 @@
   var lastPagesKey = "";
   var fragmentTimers = {}; // fragment key -> setInterval id (RunEvery)
 
+  // syAsset resolves a third-party library URL, honoring any override set via
+  // sy.SetAssetURL (window.__SY_ASSETS) so libs can be self-hosted for offline.
+  function syAsset(name, def) {
+    return (window.__SY_ASSETS && window.__SY_ASSETS[name]) || def;
+  }
+
   function connect() {
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
     var qs = location.search || "";
@@ -1163,15 +1169,15 @@
     if (hljsQueue.length > 1) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github.min.css";
+    link.href = syAsset("highlight_css", "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github.min.css");
     var linkDark = document.createElement("link");
     linkDark.rel = "stylesheet";
     linkDark.media = "(prefers-color-scheme: dark)";
-    linkDark.href = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css";
+    linkDark.href = syAsset("highlight_css_dark", "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/styles/github-dark.min.css");
     document.head.appendChild(link);
     document.head.appendChild(linkDark);
     var script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js";
+    script.src = syAsset("highlight_js", "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/highlight.min.js");
     script.onload = function () {
       hljsLoaded = true;
       hljsQueue.forEach(function (fn) { fn(); });
@@ -1781,10 +1787,10 @@
     if (kaTexQueue.length > 1) return;
     var link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "https://cdn.jsdelivr.net/npm/katex@0.16.18/dist/katex.min.css";
+    link.href = syAsset("katex_css", "https://cdn.jsdelivr.net/npm/katex@0.16.18/dist/katex.min.css");
     document.head.appendChild(link);
     var script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/katex@0.16.18/dist/katex.min.js";
+    script.src = syAsset("katex_js", "https://cdn.jsdelivr.net/npm/katex@0.16.18/dist/katex.min.js");
     script.onload = function () {
       kaTexLoaded = true;
       kaTexQueue.forEach(function (fn) { fn(); });
@@ -1815,10 +1821,10 @@
     leafletState = "loading";
     var css = document.createElement("link");
     css.rel = "stylesheet";
-    css.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    css.href = syAsset("leaflet_css", "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
     document.head.appendChild(css);
     var js = document.createElement("script");
-    js.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    js.src = syAsset("leaflet_js", "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");
     js.onload = function () {
       leafletState = "ready";
       var q = leafletQueue; leafletQueue = [];
@@ -2312,7 +2318,7 @@
     if (chartjsState === "loading") return;
     chartjsState = "loading";
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js";
+    s.src = syAsset("chartjs", "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js");
     s.onload = function () {
       chartjsState = "ready";
       chartjsQueue.forEach(function (fn) { fn(); });
@@ -2524,7 +2530,7 @@
     if (vizState === "loading") return;
     vizState = "loading";
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/@viz-js/viz@3.11.0/lib/viz-standalone.js";
+    s.src = syAsset("viz", "https://cdn.jsdelivr.net/npm/@viz-js/viz@3.11.0/lib/viz-standalone.js");
     s.onload = function () {
       vizState = "ready";
       vizQueue.forEach(function (fn) { fn(); });
@@ -2563,9 +2569,9 @@
     if (vegaState !== "idle") return;
     vegaState = "loading";
     var scripts = [
-      "https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js",
-      "https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js",
-      "https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js"
+      syAsset("vega", "https://cdn.jsdelivr.net/npm/vega@5/build/vega.min.js"),
+      syAsset("vega_lite", "https://cdn.jsdelivr.net/npm/vega-lite@5/build/vega-lite.min.js"),
+      syAsset("vega_embed", "https://cdn.jsdelivr.net/npm/vega-embed@6/build/vega-embed.min.js")
     ];
     var idx = 0;
     function next() {
@@ -2622,7 +2628,7 @@
     if (plotlyState !== "idle") return;
     plotlyState = "loading";
     var s = document.createElement("script");
-    s.src = "https://cdn.plot.ly/plotly-2.35.0.min.js";
+    s.src = syAsset("plotly", "https://cdn.plot.ly/plotly-2.35.0.min.js");
     s.onload = function () {
       plotlyState = "ready";
       var q = plotlyQueue; plotlyQueue = [];
@@ -2702,7 +2708,7 @@
     if (bokehState !== "idle") return;
     bokehState = "loading";
     var s = document.createElement("script");
-    s.src = "https://cdn.bokeh.org/bokeh/release/bokeh-3.4.1.min.js";
+    s.src = syAsset("bokeh", "https://cdn.bokeh.org/bokeh/release/bokeh-3.4.1.min.js");
     s.onload = function () {
       bokehState = "ready";
       var q = bokehQueue; bokehQueue = [];
@@ -2747,12 +2753,12 @@
     if (deckState !== "idle") return;
     deckState = "loading";
     var scripts = [
-      "https://unpkg.com/deck.gl@latest/dist.min.js",
-      "https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"
+      syAsset("deckgl", "https://unpkg.com/deck.gl@latest/dist.min.js"),
+      syAsset("mapbox_js", "https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js")
     ];
     var css = document.createElement("link");
     css.rel = "stylesheet";
-    css.href = "https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css";
+    css.href = syAsset("mapbox_css", "https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css");
     document.head.appendChild(css);
     var idx = 0;
     function next() {

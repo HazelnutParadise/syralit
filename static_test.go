@@ -63,6 +63,29 @@ func TestStaticServing(t *testing.T) {
 	}
 }
 
+func TestSetAssetURL(t *testing.T) {
+	SetAssetURL("chartjs", "/vendor/chart.umd.min.js")
+	defer func() {
+		assetMu.Lock()
+		delete(assetOverrides, "chartjs")
+		assetMu.Unlock()
+	}()
+
+	srv := httptest.NewServer((&server{cfg: Config{Title: "t"}, appFn: func() {}}).handler())
+	defer srv.Close()
+
+	res, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+	s := string(body)
+	if !strings.Contains(s, "window.__SY_ASSETS") || !strings.Contains(s, "/vendor/chart.umd.min.js") {
+		t.Fatalf("asset override not injected into index: %s", s)
+	}
+}
+
 func TestStaticPathTraversalRejected(t *testing.T) {
 	resetStatic()
 	defer resetStatic()

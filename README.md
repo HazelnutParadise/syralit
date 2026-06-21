@@ -491,6 +491,10 @@ if job.Running() {
 - **`sy.Fragment(key, fn, sy.RunEvery(d))`** — server-driven live refresh.
 - **`syralit build`** — compile the whole app (front-end + backend + your
   `public/`) into one self-contained executable; no Python, no runtime, no deps.
+- **Fully offline / air-gapped** — `sy.SetAssetURL(name, url)` repoints any
+  third-party lib (Chart.js, Leaflet, KaTeX, Plotly, …) to a self-hosted copy;
+  drop the files in `public/` and `syralit build` bakes everything into one
+  binary that needs no internet or CDN (also satisfies strict CSP).
 - **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
 
 ## Streamlit parity

@@ -140,6 +140,8 @@ Built-in interactive charts powered by **Chart.js**:
 | `RadarChart` | `labels, map[string][]float64` | Radar/spider chart |
 | `GraphvizChart` | `dot string` | Graphviz DOT via viz.js |
 
+Bar/area/line charts accept `sy.Stacked()`, `sy.Horizontal()` (bar), `sy.Colors([]string{...})`, `sy.XLabels(...)`, and `sy.ChartTitle(...)`.
+
 External charting library integrations (CDN-loaded, accepting JSON specs):
 
 | Chart | Library | Streamlit Equivalent |

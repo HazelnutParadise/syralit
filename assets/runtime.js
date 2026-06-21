@@ -2183,8 +2183,9 @@
     var labels = p.x_labels && p.x_labels.length > 0
       ? p.x_labels
       : Array.from({ length: maxLen }, function (_, i) { return String(i + 1); });
+    var palette = (p.colors && p.colors.length) ? p.colors : CHART_COLORS;
     var datasets = names.map(function (name, si) {
-      var color = CHART_COLORS[si % CHART_COLORS.length];
+      var color = palette[si % palette.length];
       var ds = { label: name, data: series[name], borderColor: color, backgroundColor: color };
       if (type === "line") {
         ds.fill = false;
@@ -2203,7 +2204,16 @@
     return { labels: labels, datasets: datasets, title: p.title };
   }
 
-  function chartOptions(title, type) {
+  function chartOptions(title, type, p) {
+    p = p || {};
+    var stacked = !!p.stacked;
+    var scales;
+    if (type !== "pie" && type !== "doughnut") {
+      scales = {
+        x: { grid: { display: false }, stacked: stacked },
+        y: { beginAtZero: type === "bar", stacked: stacked },
+      };
+    }
     var opts = {
       responsive: true,
       maintainAspectRatio: false,
@@ -2212,11 +2222,9 @@
         legend: { display: true, position: "top" },
         tooltip: { enabled: true },
       },
-      scales: type !== "pie" && type !== "doughnut" ? {
-        x: { grid: { display: false } },
-        y: { beginAtZero: type === "bar" }
-      } : undefined,
+      scales: scales,
     };
+    if (type === "bar" && p.horizontal) opts.indexAxis = "y";
     if (title) {
       opts.plugins.title = { display: true, text: title, font: { size: 14 } };
     }
@@ -2226,21 +2234,21 @@
   function lineChartEl(node, p) {
     return makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "line");
-      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line") };
+      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line", p) };
     });
   }
 
   function barChartEl(node, p) {
     return makeChartJS("bar", p, function () {
       var d = seriesDatasets(p, "bar");
-      return { type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar") };
+      return { type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar", p) };
     });
   }
 
   function areaChartEl(node, p) {
     return makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "area");
-      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area") };
+      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area", p) };
     });
   }
 

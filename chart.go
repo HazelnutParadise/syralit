@@ -14,6 +14,15 @@ func chartProps(o widgetOpts, data any) map[string]any {
 	if len(o.xLabels) > 0 {
 		props["x_labels"] = o.xLabels
 	}
+	if o.horizontal {
+		props["horizontal"] = true
+	}
+	if o.stacked {
+		props["stacked"] = true
+	}
+	if len(o.colors) > 0 {
+		props["colors"] = o.colors
+	}
 	return props
 }
 

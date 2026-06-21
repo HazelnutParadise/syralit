@@ -320,7 +320,10 @@ func pageCharts() {
 	})
 
 	tab("Bar", func() {
-		sy.BarChart(months, sy.ChartTitle("Sales vs Expenses (Bar)"))
+		sy.BarChart(months, sy.ChartTitle("Stacked"), sy.Stacked(), sy.Colors([]string{"#7c3aed", "#06b6d4"}))
+		sy.BarChart(map[string][]float64{"Votes": {42, 28, 18, 12}},
+			sy.ChartTitle("Horizontal"), sy.Horizontal(),
+			sy.XLabels([]string{"Go", "Python", "Rust", "TS"}))
 	})
 
 	tab("Area", func() {

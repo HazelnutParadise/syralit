@@ -1644,6 +1644,24 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestChartOptions(t *testing.T) {
+	tree := RenderOnce(func() {
+		BarChart(map[string][]float64{"A": {1, 2}}, Horizontal(), Stacked(), Colors([]string{"#f00", "#0f0"}))
+	})
+	bc := tree.Find("bar_chart")
+	if len(bc) != 1 {
+		t.Fatalf("expected bar_chart, got %d", len(bc))
+	}
+	p := bc[0].Props
+	if p["horizontal"] != true || p["stacked"] != true {
+		t.Fatalf("horizontal/stacked: %v", p)
+	}
+	colors, _ := p["colors"].([]string)
+	if len(colors) != 2 || colors[0] != "#f00" {
+		t.Fatalf("colors: %v", p["colors"])
+	}
+}
+
 func TestColumnConfigRich(t *testing.T) {
 	tree := RenderOnce(func() {
 		DataFrame(

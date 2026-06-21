@@ -47,6 +47,9 @@ type widgetOpts struct {
 	maxDate           string
 	selectable        bool
 	feedbackStyle     string
+	horizontal        bool
+	stacked           bool
+	colors            []string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -99,6 +102,15 @@ func Selectable() Option { return func(o *widgetOpts) { o.selectable = true } }
 // FeedbackStyle selects the Feedback widget's rating style: "thumbs" (default,
 // 👍/👎 → "up"/"down"), "stars" (★ → "1".."5"), or "faces" (→ "1".."5").
 func FeedbackStyle(s string) Option { return func(o *widgetOpts) { o.feedbackStyle = s } }
+
+// Horizontal lays out a BarChart with horizontal bars (st.bar_chart horizontal).
+func Horizontal() Option { return func(o *widgetOpts) { o.horizontal = true } }
+
+// Stacked stacks the series of a BarChart or AreaChart (st.bar_chart stack).
+func Stacked() Option { return func(o *widgetOpts) { o.stacked = true } }
+
+// Colors overrides the chart's series color palette with the given CSS colors.
+func Colors(c []string) Option { return func(o *widgetOpts) { o.colors = c } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {

@@ -31,6 +31,7 @@ type session struct {
 	formWidgets   map[string]string // widget id -> form id (members of a form)
 
 	wake chan struct{} // server-initiated rerun signal (background Tasks)
+	sink uiSink        // SSE transport: where pushes go for POST-driven updates
 }
 
 type pageConfig struct {

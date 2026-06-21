@@ -75,6 +75,8 @@ Capabilities with no Streamlit equivalent:
   `public/`), no runtime/interpreter or dependencies.
 - **Fully offline** — `SetAssetURL` repoints third-party libs to self-hosted
   copies, so the binary runs air-gapped / under strict CSP with no CDN.
+- **Automatic SSE fallback** — transparent plain-HTTP transport (Server-Sent
+  Events + POST) when WebSocket is blocked.
 - **Typed** state and task results via Go generics.
 
 ## Intentional / known gaps

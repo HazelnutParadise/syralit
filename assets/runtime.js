@@ -19,6 +19,9 @@
   var ws;
   var lastPagesKey = "";
   var fragmentTimers = {}; // fragment key -> setInterval id (RunEvery)
+  var usingSSE = false;    // true once we've fallen back to the SSE transport
+  var wsEverOpened = false;
+  var sessionId = "";      // SSE transport: correlates POSTs with the SSE stream
 
   // syAsset resolves a third-party library URL, honoring any override set via
   // sy.SetAssetURL (window.__SY_ASSETS) so libs can be self-hosted for offline.
@@ -26,42 +29,83 @@
     return (window.__SY_ASSETS && window.__SY_ASSETS[name]) || def;
   }
 
+  // Dispatch a server message, regardless of transport (WebSocket or SSE).
+  function handleServerMsg(msg) {
+    switch (msg.type) {
+      case "ui_patch":
+        hideOverlay();
+        if (msg.pages || msg.sidebar) {
+          renderSidebar(msg.pages || [], msg.active_page || "", msg.sidebar || []);
+        }
+        if (msg.page_config) applyPageConfig(msg.page_config);
+        render(msg.nodes || []);
+        if (msg.toasts) msg.toasts.forEach(handleToast);
+        break;
+      case "fragment_patch":
+        patchFragment(msg.fragment_key, msg.nodes || []);
+        if (msg.toasts) msg.toasts.forEach(handleToast);
+        break;
+      case "stream_append":
+        appendStream(msg.id, msg.chunk);
+        break;
+      case "__dev_status":
+        setBadge(msg.state === "building" ? "Reloading…" : "");
+        break;
+      case "__dev_build_error":
+        showOverlay(msg.error || "Build failed");
+        break;
+      case "__dev_asset_reload":
+        if (msg.asset === "css") reloadCSS();
+        else location.reload();
+        break;
+    }
+  }
+
   function connect() {
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
     var qs = location.search || "";
-    ws = new WebSocket(proto + "//" + location.host + "/_syralit/ws" + qs);
-    ws.onmessage = function (ev) {
-      var msg = JSON.parse(ev.data);
-      switch (msg.type) {
-        case "ui_patch":
-          hideOverlay();
-          if (msg.pages || msg.sidebar) {
-            renderSidebar(msg.pages || [], msg.active_page || "", msg.sidebar || []);
-          }
-          if (msg.page_config) applyPageConfig(msg.page_config);
-          render(msg.nodes || []);
-          if (msg.toasts) msg.toasts.forEach(handleToast);
-          break;
-        case "fragment_patch":
-          patchFragment(msg.fragment_key, msg.nodes || []);
-          if (msg.toasts) msg.toasts.forEach(handleToast);
-          break;
-        case "stream_append":
-          appendStream(msg.id, msg.chunk);
-          break;
-        case "__dev_status":
-          setBadge(msg.state === "building" ? "Reloading…" : "");
-          break;
-        case "__dev_build_error":
-          showOverlay(msg.error || "Build failed");
-          break;
-        case "__dev_asset_reload":
-          if (msg.asset === "css") reloadCSS();
-          else location.reload();
-          break;
-      }
+    try {
+      ws = new WebSocket(proto + "//" + location.host + "/_syralit/ws" + qs);
+    } catch (e) {
+      startSSE();
+      return;
+    }
+    ws.onopen = function () { wsEverOpened = true; };
+    ws.onmessage = function (ev) { handleServerMsg(JSON.parse(ev.data)); };
+    ws.onclose = function () {
+      // Reconnect over WS if it ever worked; otherwise fall back to SSE (e.g. a
+      // proxy that blocks WebSocket upgrades).
+      if (wsEverOpened) setTimeout(connect, 1000);
+      else startSSE();
     };
-    ws.onclose = function () { setTimeout(connect, 1000); };
+    ws.onerror = function () { /* onclose follows; handled there */ };
+  }
+
+  // SSE fallback: a plain-HTTP EventSource for downstream, POST for upstream.
+  function startSSE() {
+    if (usingSSE) return;
+    usingSSE = true;
+    ws = null;
+    var es = new EventSource("/_syralit/sse" + (location.search || ""));
+    es.addEventListener("session", function (e) { sessionId = e.data; });
+    es.onmessage = function (e) { handleServerMsg(JSON.parse(e.data)); };
+    // EventSource auto-reconnects; the server starts a fresh session on
+    // reconnect, the same as a WebSocket reconnect.
+  }
+
+  // sendMsg routes a client frame to the active transport.
+  function sendMsg(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(obj));
+    } else if (usingSSE) {
+      obj.session_id = sessionId;
+      fetch("/_syralit/msg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(obj),
+        keepalive: true,
+      });
+    }
   }
 
   // --- Sidebar ---------------------------------------------------------
@@ -175,8 +219,7 @@
   }
 
   function sendPageChange(page) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: "page_change", page: page }));
+    sendMsg({ type: "page_change", page: page });
   }
 
   // --- Dev overlay / badge ---------------------------------------------
@@ -229,13 +272,12 @@
   // --- Widget communication --------------------------------------------
 
   function send(widgetID, value, isButton) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({
+    sendMsg({
       type: "widget_change",
       widget_id: widgetID,
       value: value,
       is_button: !!isButton,
-    }));
+    });
   }
 
   function submitForm(formEl, submitId) {
@@ -284,13 +326,11 @@
         changes.push({ widget_id: id, value: inp.value });
       }
     });
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: "form_submit",
-        widget_id: submitId,
-        changes: changes,
-      }));
-    }
+    sendMsg({
+      type: "form_submit",
+      widget_id: submitId,
+      changes: changes,
+    });
   }
 
   function inForm(el) {
@@ -1053,9 +1093,7 @@
     if (fragmentTimers[key]) { clearInterval(fragmentTimers[key]); delete fragmentTimers[key]; }
     if (p.run_every > 0) {
       fragmentTimers[key] = setInterval(function () {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "fragment_rerun", fragment_key: key }));
-        }
+        sendMsg({ type: "fragment_rerun", fragment_key: key });
       }, p.run_every);
     }
     return div;

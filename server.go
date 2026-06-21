@@ -91,6 +91,9 @@ func (s *server) handler() http.Handler {
 	}))
 
 	mux.HandleFunc("GET /_syralit/ws", s.handleWS)
+	// SSE fallback transport for environments where WebSocket can't connect.
+	mux.HandleFunc("GET /_syralit/sse", s.handleSSE)
+	mux.HandleFunc("POST /_syralit/msg", s.handleMsg)
 	return mux
 }
 
@@ -125,6 +128,7 @@ type clientMsg struct {
 	Changes     []widgetChange `json:"changes,omitempty"`      // for form_submit
 	State       *sessionState  `json:"state,omitempty"`        // for __dev_restore
 	FragmentKey string         `json:"fragment_key,omitempty"` // for fragment_rerun
+	SessionID   string         `json:"session_id,omitempty"`   // SSE transport (POST /_syralit/msg)
 }
 
 type widgetChange struct {
@@ -157,8 +161,10 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()
 
+	sink := wsSink{c: c, ctx: ctx}
+
 	// Initial render.
-	if err := pushUI(ctx, c, sess); err != nil {
+	if err := pushUI(sink, sess); err != nil {
 		return
 	}
 
@@ -190,35 +196,35 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return // connection closed
 			}
-			if !s.handleClientMsg(ctx, c, sess, msg) {
+			if !s.handleClientMsg(sink, sess, msg) {
 				return
 			}
 		case <-sess.wake: // a background Task (or other server event) finished
-			if err := pushUI(ctx, c, sess); err != nil {
+			if err := pushUI(sink, sess); err != nil {
 				return
 			}
 		}
 	}
 }
 
-// handleClientMsg processes one inbound frame. It returns false if the
-// connection should be torn down (a write error).
-func (s *server) handleClientMsg(ctx context.Context, c *websocket.Conn, sess *session, msg clientMsg) bool {
+// handleClientMsg processes one inbound frame, pushing any resulting UI through
+// sink. It returns false if the connection should be torn down (write error).
+func (s *server) handleClientMsg(sink uiSink, sess *session, msg clientMsg) bool {
 	switch msg.Type {
 	case "widget_change":
 		sess.applyChange(msg.WidgetID, msg.Value, msg.IsButton)
 		if fragKey, fragFn, ok := sess.fragmentForWidget(msg.WidgetID); ok && !msg.IsButton {
-			return pushFragmentUI(ctx, c, sess, fragKey, fragFn) == nil
+			return pushFragmentUI(sink, sess, fragKey, fragFn) == nil
 		}
-		return pushUI(ctx, c, sess) == nil
+		return pushUI(sink, sess) == nil
 	case "fragment_rerun": // auto-refresh (RunEvery) tick from the client
 		if fn, ok := sess.fragmentByKey(msg.FragmentKey); ok {
-			return pushFragmentUI(ctx, c, sess, msg.FragmentKey, fn) == nil
+			return pushFragmentUI(sink, sess, msg.FragmentKey, fn) == nil
 		}
 		return true
 	case "page_change":
 		sess.setCurrentPage(msg.Page)
-		return pushUI(ctx, c, sess) == nil
+		return pushUI(sink, sess) == nil
 	case "form_submit":
 		for _, ch := range msg.Changes {
 			sess.applyChange(ch.WidgetID, ch.Value, false)
@@ -229,7 +235,7 @@ func (s *server) handleClientMsg(ctx context.Context, c *websocket.Conn, sess *s
 			// Render once with the submitted values (so the handler sees them),
 			// but blank the form's inputs in the sent tree; then drop the stored
 			// values so later renders stay cleared.
-			ok := pushUI(ctx, c, sess, func(root *Node) {
+			ok := pushUI(sink, sess, func(root *Node) {
 				if form := findNodeByID(root, formID); form != nil {
 					clearFormInputs(form)
 				}
@@ -237,14 +243,14 @@ func (s *server) handleClientMsg(ctx context.Context, c *websocket.Conn, sess *s
 			sess.clearFormWidgets(formID)
 			return ok
 		}
-		return pushUI(ctx, c, sess) == nil
+		return pushUI(sink, sess) == nil
 	case devMsgDump: // supervisor asks for state before restarting this child
 		st := sess.dumpState()
 		out, _ := json.Marshal(map[string]any{"type": devMsgState, "state": st})
-		return c.Write(ctx, websocket.MessageText, out) == nil
+		return sink.send(out) == nil
 	case devMsgRestore: // supervisor hands back state into the fresh child
 		sess.restoreState(msg.State)
-		return pushUI(ctx, c, sess) == nil
+		return pushUI(sink, sess) == nil
 	}
 	return true
 }
@@ -252,13 +258,13 @@ func (s *server) handleClientMsg(ctx context.Context, c *websocket.Conn, sess *s
 // pushUI runs a rerun and sends the resulting UI tree to the browser.
 // Sidebar user content (nodes of type "sidebar_content") is separated from the
 // main tree and sent in a dedicated "sidebar" field.
-func pushUI(ctx context.Context, c *websocket.Conn, sess *session, transforms ...func(*Node)) error {
+func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 	streamer := func(rc *renderContext) {
 		rc.streamer = func(id, chunk string) {
 			out, _ := json.Marshal(map[string]any{
 				"type": "stream_append", "id": id, "chunk": chunk,
 			})
-			_ = c.Write(ctx, websocket.MessageText, out)
+			_ = sink.send(out)
 		}
 	}
 
@@ -339,11 +345,11 @@ func pushUI(ctx context.Context, c *websocket.Conn, sess *session, transforms ..
 	if err != nil {
 		return err
 	}
-	return c.Write(ctx, websocket.MessageText, out)
+	return sink.send(out)
 }
 
 // pushFragmentUI runs only a fragment's function and sends a partial update.
-func pushFragmentUI(ctx context.Context, c *websocket.Conn, sess *session, key string, fn func()) error {
+func pushFragmentUI(sink uiSink, sess *session, key string, fn func()) error {
 	root := runFragment(sess, key, fn)
 
 	msg := map[string]any{
@@ -363,7 +369,7 @@ func pushFragmentUI(ctx context.Context, c *websocket.Conn, sess *session, key s
 	if err != nil {
 		return err
 	}
-	return c.Write(ctx, websocket.MessageText, out)
+	return sink.send(out)
 }
 
 func htmlEscape(s string) string {

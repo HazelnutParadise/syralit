@@ -495,6 +495,9 @@ if job.Running() {
   third-party lib (Chart.js, Leaflet, KaTeX, Plotly, …) to a self-hosted copy;
   drop the files in `public/` and `syralit build` bakes everything into one
   binary that needs no internet or CDN (also satisfies strict CSP).
+- **Automatic SSE fallback** — when a WebSocket can't be established (e.g. a
+  proxy that blocks WS upgrades), the client transparently switches to a plain
+  HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
 - **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
 
 ## Streamlit parity

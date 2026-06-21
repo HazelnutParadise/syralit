@@ -38,6 +38,12 @@ func Code(code string, opts ...Option) {
 	if o.language != "" {
 		props["language"] = o.language
 	}
+	if o.lineNumbers {
+		props["line_numbers"] = true
+	}
+	if o.wrap {
+		props["wrap"] = true
+	}
 	current().add(&Node{Type: "code", Props: props})
 }
 

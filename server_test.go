@@ -1644,6 +1644,21 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestCodeAndChatOptions(t *testing.T) {
+	tree := RenderOnce(func() {
+		Code("a\nb\nc", Language("go"), LineNumbers(), Wrap())
+		ChatMessage("assistant", func() { Text("hi") }, Avatar("https://x/a.png"))
+	})
+	code := tree.Find("code")
+	if len(code) != 1 || code[0].Props["line_numbers"] != true || code[0].Props["wrap"] != true {
+		t.Fatalf("code opts: %v", code)
+	}
+	cm := tree.Find("chat_message")
+	if len(cm) != 1 || cm[0].Props["avatar"] != "https://x/a.png" {
+		t.Fatalf("chat avatar: %v", cm)
+	}
+}
+
 func TestMediaProps(t *testing.T) {
 	tree := RenderOnce(func() {
 		Image("a.png", UseContainerWidth())

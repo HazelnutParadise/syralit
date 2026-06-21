@@ -53,6 +53,9 @@ type widgetOpts struct {
 	autoplay          bool
 	loop              bool
 	muted             bool
+	lineNumbers       bool
+	wrap              bool
+	avatar            string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -119,6 +122,14 @@ func Colors(c []string) Option { return func(o *widgetOpts) { o.colors = c } }
 func Autoplay() Option { return func(o *widgetOpts) { o.autoplay = true } }
 func Loop() Option     { return func(o *widgetOpts) { o.loop = true } }
 func Muted() Option    { return func(o *widgetOpts) { o.muted = true } }
+
+// LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
+// lines instead of scrolling horizontally.
+func LineNumbers() Option { return func(o *widgetOpts) { o.lineNumbers = true } }
+func Wrap() Option        { return func(o *widgetOpts) { o.wrap = true } }
+
+// Avatar sets a custom avatar (emoji or image URL) for a ChatMessage.
+func Avatar(v string) Option { return func(o *widgetOpts) { o.avatar = v } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {
@@ -766,9 +777,14 @@ func Write(args ...any) {
 //
 //	sy.ChatMessage("user", func() { sy.Text(msg.Content) })
 //	sy.ChatMessage("assistant", func() { sy.Markdown(msg.Content) })
-func ChatMessage(role string, fn func()) {
+func ChatMessage(role string, fn func(), opts ...Option) {
 	rc := current()
-	msg := &Node{Type: "chat_message", Props: map[string]any{"role": role}}
+	o := applyOpts(opts)
+	props := map[string]any{"role": role}
+	if o.avatar != "" {
+		props["avatar"] = o.avatar
+	}
+	msg := &Node{Type: "chat_message", Props: props}
 	rc.add(msg)
 	rc.stack = append(rc.stack, msg)
 	fn()

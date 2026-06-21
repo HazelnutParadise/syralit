@@ -1149,11 +1149,23 @@
     var wrap = el("div", "sy-code-wrap");
     var pre = document.createElement("pre");
     pre.className = "sy-code";
+    if (p.wrap) pre.classList.add("sy-code-wrapped");
     var code = document.createElement("code");
     if (p.language) code.className = "language-" + p.language;
     code.textContent = p.code;
     pre.appendChild(code);
-    wrap.appendChild(pre);
+
+    if (p.line_numbers) {
+      var row = el("div", "sy-code-row");
+      var gutter = el("div", "sy-code-gutter");
+      var lines = String(p.code).replace(/\n$/, "").split("\n");
+      lines.forEach(function (_, i) { gutter.appendChild(el("span", null, String(i + 1))); });
+      row.appendChild(gutter);
+      row.appendChild(pre);
+      wrap.appendChild(row);
+    } else {
+      wrap.appendChild(pre);
+    }
 
     var copyBtn = el("button", "sy-code-copy", "Copy");
     copyBtn.onclick = function () {
@@ -1898,7 +1910,14 @@
   function chatMessageEl(node, p) {
     var wrap = el("div", "sy-chat-message sy-chat-" + (p.role || "user"));
     var avatar = el("div", "sy-chat-avatar");
-    avatar.textContent = p.role === "assistant" ? "🤖" : "👤";
+    if (p.avatar && /^(https?:|data:|\/)/.test(p.avatar)) {
+      var aimg = document.createElement("img");
+      aimg.src = p.avatar;
+      aimg.className = "sy-chat-avatar-img";
+      avatar.appendChild(aimg);
+    } else {
+      avatar.textContent = p.avatar || (p.role === "assistant" ? "🤖" : "👤");
+    }
     var content = el("div", "sy-chat-content");
     childNodes(node).forEach(function (c) { content.appendChild(c); });
     wrap.appendChild(avatar);

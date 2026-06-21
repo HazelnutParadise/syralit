@@ -1280,6 +1280,41 @@ body {
 .sy-code code {
   font: inherit;
 }
+.sy-code-wrapped {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Line-number gutter (sy.LineNumbers) — line-height/padding mirror .sy-code */
+.sy-code-row {
+  display: flex;
+  align-items: stretch;
+}
+.sy-code-row .sy-code {
+  flex: 1;
+  border-left: none;
+  border-radius: 0 var(--sy-radius) var(--sy-radius) 0;
+}
+.sy-code-gutter {
+  display: flex;
+  flex-direction: column;
+  padding: .85rem .6rem;
+  background: var(--sy-hover);
+  border: 1px solid var(--sy-border);
+  border-right: none;
+  border-radius: var(--sy-radius) 0 0 var(--sy-radius);
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: .85rem;
+  line-height: 1.5;
+  color: var(--sy-muted);
+  text-align: right;
+  user-select: none;
+}
+.sy-chat-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
 .sy-code-copy {
   position: absolute;

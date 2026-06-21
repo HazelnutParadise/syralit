@@ -4,6 +4,39 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-06-21
+
+A broad Streamlit-parity pass. See `docs/STREAMLIT_PARITY.md` for the full map.
+
+### Added
+- Inputs: `RangeSlider`, `DateSlider`, `TimeSlider`, `DateRangeInput`;
+  `PillsMulti` / `SegmentedControlMulti` (multi-select); `Feedback` styles
+  (`FeedbackStyle` thumbs/stars/faces); date bounds (`MinDate`/`MaxDate`).
+- Buttons: `Icon`, `ButtonType`, `UseContainerWidth`, `Help` on Button,
+  LinkButton, DownloadButton, Popover.
+- Data: `DataFrame` row selection (`Selectable`) and typed display via
+  `ColConfig` (now shared with DataEditor); richer `ColumnConfig` (`Format`,
+  `Label`, `Help`, `Step`, `Color`) plus `bar_chart`/`line_chart` sparkline
+  columns. Interactive collapsible `JSON` tree.
+- Charts: `Stacked`, `Horizontal`, `Colors`. `Map` `Zoom` + per-point
+  Size/Color.
+- Media: `Image` `UseContainerWidth`; `Audio`/`Video` `Autoplay`/`Loop`/`Muted`.
+- Display: `Exception`, `Metric` `Border`/`Help`, `Code` `LineNumbers`/`Wrap`,
+  `Progress` text, `ChatMessage` `Avatar`, `Toast` icon, `Expander` `Icon`.
+- Platform: `Context` (request headers/cookies/host/IP/locale); `Fragment`
+  `RunEvery` auto-refresh; `Form` `ClearOnSubmit`.
+- Testing: `RenderOnce` + `Node.Find`; unit tests for the Insyra adapter.
+- Insyra: `ListDescribe`; the full symmetric DataList helper set.
+
+### Fixed
+- WriteStream token streaming and all fragment partial updates were broken
+  (`appendStream`/`patchFragment` referenced an undefined `content`/`renderNode`);
+  now wired to the real container/builder.
+- `--sy-primary` was referenced but never defined, breaking SegmentedControl/
+  Pills active states and several accents.
+- Themed scrollbars; stray vertical scrollbar on the tabs bar.
+- Stats render `—` instead of `NaN` for non-numeric columns.
+
 ## [0.1.0] - 2026-06-21
 
 First tagged release. Syralit is installable with

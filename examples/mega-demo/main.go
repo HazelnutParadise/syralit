@@ -272,11 +272,23 @@ func pageWidgets() {
 
 		sy.Divider()
 
-		sy.Text("Feedback")
-		fb := sy.Feedback(sy.Key("w_fb"))
-		if fb != "" {
-			sy.Textf("Feedback: %s", fb)
-		}
+		sy.Text("Feedback — thumbs / stars / faces")
+		fcols := sy.Columns(3)
+		fcols[0](func() {
+			if fb := sy.Feedback(sy.Key("w_fb")); fb != "" {
+				sy.Caption("Thumbs: " + fb)
+			}
+		})
+		fcols[1](func() {
+			if fb := sy.Feedback(sy.Key("w_fb_stars"), sy.FeedbackStyle("stars")); fb != "" {
+				sy.Caption("Stars: " + fb)
+			}
+		})
+		fcols[2](func() {
+			if fb := sy.Feedback(sy.Key("w_fb_faces"), sy.FeedbackStyle("faces")); fb != "" {
+				sy.Caption("Faces: " + fb)
+			}
+		})
 
 		sy.Divider()
 

@@ -52,10 +52,11 @@ func Expander(label string, fn func(), opts ...Option) {
 			expanded = dv
 		}
 	}
-	node := &Node{ID: id, Type: "expander", Props: map[string]any{
-		"label":    label,
-		"expanded": expanded,
-	}}
+	props := map[string]any{"label": label, "expanded": expanded}
+	if o.icon != "" {
+		props["icon"] = o.icon
+	}
+	node := &Node{ID: id, Type: "expander", Props: props}
 	rc.add(node)
 	rc.stack = append(rc.stack, node)
 	fn()

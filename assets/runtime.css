@@ -344,6 +344,17 @@ body {
   cursor: not-allowed;
   opacity: 0.3;
 }
+/* Star rating: borderless, gold when filled */
+.sy-feedback-star {
+  border: none;
+  padding: 2px 3px;
+  font-size: 1.4em;
+  color: var(--sy-muted);
+}
+.sy-feedback-star.sy-feedback-active {
+  color: #f5b301;
+  opacity: 1;
+}
 
 /* --- Pagination -------------------------------------------------------- */
 
@@ -1497,6 +1508,9 @@ body {
 }
 
 .sy-toast {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
   padding: .65rem 1rem;
   border-radius: var(--sy-radius);
   font-size: .88rem;
@@ -1508,6 +1522,7 @@ body {
   pointer-events: auto;
   max-width: 380px;
 }
+.sy-toast-icon { font-size: 1.1em; line-height: 1; }
 .sy-toast-show {
   transform: translateX(0);
   opacity: 1;

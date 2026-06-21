@@ -46,6 +46,7 @@ type widgetOpts struct {
 	minDate           string
 	maxDate           string
 	selectable        bool
+	feedbackStyle     string
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -94,6 +95,10 @@ func MaxDate(d string) Option { return func(o *widgetOpts) { o.maxDate = d } }
 // Selectable enables row selection on a DataFrame; the call then returns the
 // selected row indices.
 func Selectable() Option { return func(o *widgetOpts) { o.selectable = true } }
+
+// FeedbackStyle selects the Feedback widget's rating style: "thumbs" (default,
+// 👍/👎 → "up"/"down"), "stars" (★ → "1".."5"), or "faces" (→ "1".."5").
+func FeedbackStyle(s string) Option { return func(o *widgetOpts) { o.feedbackStyle = s } }
 
 func applyCommonProps(props map[string]any, o widgetOpts) {
 	if o.disabled {
@@ -253,6 +258,9 @@ func Button(label string, opts ...Option) bool {
 	props := map[string]any{"label": label}
 	if o.disabled {
 		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
 	}
 	applyButtonProps(props, o)
 	rc.add(&Node{ID: id, Type: "button", Props: props})
@@ -798,7 +806,11 @@ func Feedback(opts ...Option) string {
 	id := rc.widgetID("feedback", o.key)
 	val, _ := rc.sess.widgetValue(id)
 	s, _ := val.(string)
-	props := map[string]any{"value": s}
+	style := o.feedbackStyle
+	if style == "" {
+		style = "thumbs"
+	}
+	props := map[string]any{"value": s, "style": style}
 	if o.disabled {
 		props["disabled"] = true
 	}

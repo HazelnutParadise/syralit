@@ -542,6 +542,7 @@
     var b = el("button", btnClass("sy-button", p), btnLabel(p));
     b.dataset.id = node.id;
     if (p.disabled) b.disabled = true;
+    if (p.help) b.title = p.help;
     b.onclick = function () { send(node.id, true, true); };
     return b;
   }
@@ -868,7 +869,7 @@
     if (p.expanded) details.open = true;
     var summary = document.createElement("summary");
     summary.className = "sy-expander-summary";
-    summary.textContent = p.label;
+    summary.textContent = p.icon ? (p.icon + " " + p.label) : p.label;
     details.appendChild(summary);
     var content = el("div", "sy-expander-content");
     childNodes(node).forEach(function (c) { content.appendChild(c); });
@@ -933,10 +934,11 @@
     var wrap = el("div", "sy-feedback");
     var current = p.value || "";
     var disabled = !!p.disabled;
+    var style = p.style || "thumbs";
 
-    function makeBtn(type, emoji) {
+    function makeBtn(type, emoji, active) {
       var btn = document.createElement("button");
-      btn.className = "sy-feedback-btn" + (current === type ? " sy-feedback-active" : "");
+      btn.className = "sy-feedback-btn" + (active ? " sy-feedback-active" : "");
       btn.textContent = emoji;
       btn.disabled = disabled;
       btn.onclick = function () {
@@ -946,8 +948,28 @@
       return btn;
     }
 
-    wrap.appendChild(makeBtn("up", "👍"));
-    wrap.appendChild(makeBtn("down", "👎"));
+    if (style === "stars") {
+      // ★ rating 1..5; clicking a star selects that rating (filled up to it).
+      var cur = parseInt(current, 10) || 0;
+      for (var s = 1; s <= 5; s++) {
+        (function (rating) {
+          var b = makeBtn(String(rating), rating <= cur ? "★" : "☆", false);
+          b.classList.add("sy-feedback-star");
+          if (rating <= cur) b.classList.add("sy-feedback-active");
+          wrap.appendChild(b);
+        })(s);
+      }
+    } else if (style === "faces") {
+      var faces = ["😞", "🙁", "😐", "🙂", "😀"];
+      for (var fi = 0; fi < faces.length; fi++) {
+        (function (rating) {
+          wrap.appendChild(makeBtn(String(rating), faces[rating - 1], current === String(rating)));
+        })(fi + 1);
+      }
+    } else {
+      wrap.appendChild(makeBtn("up", "👍", current === "up"));
+      wrap.appendChild(makeBtn("down", "👎", current === "down"));
+    }
     return wrap;
   }
 
@@ -1695,7 +1717,9 @@
   function handleToast(t) {
     if (t.type === "balloons") { showBalloons(); return; }
     if (t.type === "snow")     { showSnow(); return; }
-    var toast = el("div", "sy-toast sy-toast-" + (t.level || "info"), t.text);
+    var toast = el("div", "sy-toast sy-toast-" + (t.level || "info"));
+    if (t.icon) toast.appendChild(el("span", "sy-toast-icon", t.icon));
+    toast.appendChild(el("span", "sy-toast-text", t.text));
     var container = document.getElementById("syralit-toasts");
     if (!container) {
       container = document.createElement("div");

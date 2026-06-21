@@ -405,19 +405,29 @@ func DataEditor(headers []string, rows [][]any, opts ...Option) [][]any {
 	return rows
 }
 
-// Toast shows a brief notification that auto-dismisses. Level is one of
-// "info", "success", "warning", "error".
-func Toast(text string, level ...string) {
+// Toast shows a brief notification that auto-dismisses. The optional variadic
+// args are, in order, the level ("info", "success", "warning", "error") and an
+// icon (emoji or short string) shown before the text:
+//
+//	sy.Toast("Saved")
+//	sy.Toast("Done!", "success")
+//	sy.Toast("Launched", "success", "🚀")
+func Toast(text string, levelAndIcon ...string) {
 	rc := current()
 	lvl := "info"
-	if len(level) > 0 && level[0] != "" {
-		lvl = level[0]
+	icon := ""
+	if len(levelAndIcon) > 0 && levelAndIcon[0] != "" {
+		lvl = levelAndIcon[0]
+	}
+	if len(levelAndIcon) > 1 {
+		icon = levelAndIcon[1]
+	}
+	msg := map[string]any{"text": text, "level": lvl}
+	if icon != "" {
+		msg["icon"] = icon
 	}
 	rc.sess.mu.Lock()
-	rc.sess.pendingToasts = append(rc.sess.pendingToasts, map[string]any{
-		"text":  text,
-		"level": lvl,
-	})
+	rc.sess.pendingToasts = append(rc.sess.pendingToasts, msg)
 	rc.sess.mu.Unlock()
 }
 

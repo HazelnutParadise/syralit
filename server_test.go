@@ -1644,6 +1644,27 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestWidgetFidelity(t *testing.T) {
+	tree := RenderOnce(func() {
+		Feedback(Key("fb"), FeedbackStyle("stars"))
+		Button("Go", Key("b"), Help("does the thing"))
+		Expander("Adv", func() { Text("x") }, Icon("⚙️"))
+	})
+
+	fb := tree.Find("feedback")
+	if len(fb) != 1 || fb[0].Props["style"] != "stars" {
+		t.Fatalf("feedback style: %v", fb)
+	}
+	btn := tree.Find("button")
+	if len(btn) != 1 || btn[0].Props["help"] != "does the thing" {
+		t.Fatalf("button help: %v", btn)
+	}
+	exp := tree.Find("expander")
+	if len(exp) != 1 || exp[0].Props["icon"] != "⚙️" {
+		t.Fatalf("expander icon: %v", exp)
+	}
+}
+
 func TestRenderOnce(t *testing.T) {
 	tree := RenderOnce(func() {
 		Title("Hi")

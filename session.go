@@ -22,6 +22,7 @@ type session struct {
 	pageConfig    *pageConfig
 	needsRerun    bool // set by SwitchPage to re-render after stop
 	queryParams   map[string]string
+	reqCtx        RequestContext
 
 	fragmentFns     map[string]func() // fragment key -> registered function
 	widgetFragments map[string]string // widget id -> fragment key (for partial reruns)

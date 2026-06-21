@@ -1644,6 +1644,37 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestContext(t *testing.T) {
+	app := func() {
+		c := Context()
+		Text("hdr=" + c.Headers["X-Test"])
+		Text("locale=" + c.Locale)
+		Text("cookie=" + c.Cookies["sid"])
+	}
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	hdr := http.Header{}
+	hdr.Set("X-Test", "hello")
+	hdr.Set("Accept-Language", "fr-FR,fr;q=0.9")
+	hdr.Set("Cookie", "sid=abc123")
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws",
+		&websocket.DialOptions{HTTPHeader: hdr})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	nodes := readPatch(t, ctx, c)
+	for _, want := range []string{"hdr=hello", "locale=fr-FR", "cookie=abc123"} {
+		if _, ok := findText(nodes, want); !ok {
+			t.Fatalf("Context did not expose %q", want)
+		}
+	}
+}
+
 func TestMultiChoiceAndTimeSlider(t *testing.T) {
 	app := func() {
 		PillsMulti("Tags", []string{"a", "b", "c"}, Key("pm"))

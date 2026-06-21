@@ -151,6 +151,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	}
 	sess.mu.Lock()
 	sess.queryParams = qp
+	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()
 
 	// Initial render.

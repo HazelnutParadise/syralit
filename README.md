@@ -186,6 +186,10 @@ count.Set(42)
 // Query parameters
 val := sy.QueryParam("page")
 
+// Request context (headers, cookies, host, IP, locale) — st.context
+ctx := sy.Context()
+lang := ctx.Locale
+
 // Flow control
 sy.Stop()   // halt rendering
 sy.Rerun()  // force rerun

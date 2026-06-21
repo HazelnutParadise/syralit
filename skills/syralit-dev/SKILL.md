@@ -328,6 +328,20 @@ db := sy.CacheResource("db", func() *sql.DB {
 sy.ClearCache()  // invalidate all
 ```
 
+### Background tasks (beyond Streamlit)
+```go
+// Runs fn once in a goroutine, keyed per session. The page stays responsive;
+// the server pushes a rerun when the job finishes. Returns a typed handle.
+job := sy.Task("report", func() Report { return buildReport() })
+if job.Running() {
+    sy.Spinner("Working…")
+} else if job.Err() != nil {
+    sy.Exception(job.Err())
+} else {
+    render(job.Result()) // Result() is typed (Report)
+}
+```
+
 ### Configuration
 ```go
 sy.SetPageConfig(

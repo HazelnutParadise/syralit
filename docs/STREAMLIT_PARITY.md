@@ -64,6 +64,15 @@ scroll), `sidebar`, `popover`(+icon/width/disabled/help), `empty`, `form`(+`Clea
 DataTable + DataList helpers (`Table`, `List`, `ListMetrics`, `ListDescribe`,
 charts, `Histogram`, …) — no equivalent in Streamlit; Syralit-specific.
 
+## Beyond Streamlit
+Capabilities with no Streamlit equivalent:
+- **`Task[T]`** — background jobs in a goroutine; the server pushes the result
+  when done, so the UI never blocks (a Streamlit rerun blocks the session).
+- **`Fragment` + `RunEvery`** — server-driven live refresh of one fragment.
+- **`syralit build`** — single self-contained binary (front-end + backend +
+  `public/`), no runtime/interpreter or dependencies.
+- **Typed** state and task results via Go generics.
+
 ## Intentional / known gaps
 - **`st.form(clear_on_submit=True)`** — supported via `ClearOnSubmit`. Caveat:
   inputs reset to type defaults (text→"", number→0, select→first option), not to

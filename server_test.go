@@ -1644,6 +1644,39 @@ func TestDataFrameSelectAndColConfig(t *testing.T) {
 	}
 }
 
+func TestBackgroundTask(t *testing.T) {
+	app := func() {
+		job := Task("work", func() string {
+			time.Sleep(150 * time.Millisecond)
+			return "result42"
+		})
+		if job.Running() {
+			Text("status:running")
+		} else {
+			Text("status:" + job.Result())
+		}
+	}
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: app}).handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.CloseNow()
+
+	// Initial render: the task is running.
+	if _, ok := findText(readPatch(t, ctx, c), "status:running"); !ok {
+		t.Fatal("expected task running on first render")
+	}
+	// The server pushes an update on its own when the task completes — no
+	// client message is sent here.
+	if _, ok := findText(readPatch(t, ctx, c), "status:result42"); !ok {
+		t.Fatal("expected server-pushed task result")
+	}
+}
+
 func TestFormClearOnSubmit(t *testing.T) {
 	app := func() {
 		Form("f", func() {

@@ -470,6 +470,27 @@ if len(tree.Find("metric")) != 1 { t.Fatal("expected a metric") }
 
 - Go 1.25+
 
+## Beyond Streamlit
+
+Things Syralit does that Streamlit can't, by leaning on Go:
+
+```go
+// Background jobs — run work in a goroutine; the page stays responsive and the
+// server pushes the result when ready (a Streamlit rerun blocks the whole app).
+job := sy.Task("report", func() Report { return buildReport() }) // runs once
+if job.Running() {
+    sy.Spinner("Crunching…")
+} else {
+    render(job.Result())
+}
+```
+
+- **`sy.Task[T]`** — non-blocking background work with auto-push on completion.
+- **`sy.Fragment(key, fn, sy.RunEvery(d))`** — server-driven live refresh.
+- **`syralit build`** — compile the whole app (front-end + backend + your
+  `public/`) into one self-contained executable; no Python, no runtime, no deps.
+- **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
+
 ## Streamlit parity
 
 Syralit covers the commonly-used Streamlit surface in idiomatic Go. See

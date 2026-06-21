@@ -1171,6 +1171,21 @@ func pageState() {
 
 	sy.Divider()
 
+	sy.Header("Background Task (beyond Streamlit)")
+	sy.Caption("Runs in a goroutine; the page stays responsive and the server pushes the result when ready.")
+	job := sy.Task("mega_job", func() string {
+		time.Sleep(3 * time.Second)
+		return "Report ready ✓ (computed in a goroutine)"
+	})
+	if job.Running() {
+		sy.Spinner("Working in the background…")
+		sy.Caption("Meanwhile, the +1 / fragment buttons above still work — nothing is blocked.")
+	} else {
+		sy.Success(job.Result())
+	}
+
+	sy.Divider()
+
 	sy.Header("Render Info")
 	sy.JSON(map[string]any{
 		"rendered_at": time.Now().Format("2006-01-02 15:04:05"),

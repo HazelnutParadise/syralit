@@ -160,74 +160,91 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Decode client frames on a reader goroutine so the event loop can also
+	// react to server-initiated reruns (background Tasks signalling sess.wake).
+	msgCh := make(chan clientMsg)
+	go func() {
+		for {
+			_, data, err := c.Read(ctx)
+			if err != nil {
+				close(msgCh)
+				return
+			}
+			var msg clientMsg
+			if err := json.Unmarshal(data, &msg); err != nil {
+				continue
+			}
+			select {
+			case msgCh <- msg:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
-		_, data, err := c.Read(ctx)
-		if err != nil {
-			return // connection closed
-		}
-		var msg clientMsg
-		if err := json.Unmarshal(data, &msg); err != nil {
-			continue
-		}
-		switch msg.Type {
-		case "widget_change":
-			sess.applyChange(msg.WidgetID, msg.Value, msg.IsButton)
-			if fragKey, fragFn, ok := sess.fragmentForWidget(msg.WidgetID); ok && !msg.IsButton {
-				if err := pushFragmentUI(ctx, c, sess, fragKey, fragFn); err != nil {
-					return
-				}
-			} else {
-				if err := pushUI(ctx, c, sess); err != nil {
-					return
-				}
+		select {
+		case msg, ok := <-msgCh:
+			if !ok {
+				return // connection closed
 			}
-		case "fragment_rerun": // auto-refresh (RunEvery) tick from the client
-			if fn, ok := sess.fragmentByKey(msg.FragmentKey); ok {
-				if err := pushFragmentUI(ctx, c, sess, msg.FragmentKey, fn); err != nil {
-					return
-				}
-			}
-		case "page_change":
-			sess.setCurrentPage(msg.Page)
-			if err := pushUI(ctx, c, sess); err != nil {
+			if !s.handleClientMsg(ctx, c, sess, msg) {
 				return
 			}
-		case "form_submit":
-			for _, ch := range msg.Changes {
-				sess.applyChange(ch.WidgetID, ch.Value, false)
-			}
-			sess.pressButton(msg.WidgetID)
-			formID := sess.formOf(msg.WidgetID)
-			if formID != "" && sess.isClearOnSubmit(formID) {
-				// Render once with the submitted values (so the handler sees
-				// them), but blank the form's inputs in the sent tree; then drop
-				// the stored values so later renders stay cleared.
-				if err := pushUI(ctx, c, sess, func(root *Node) {
-					if form := findNodeByID(root, formID); form != nil {
-						clearFormInputs(form)
-					}
-				}); err != nil {
-					return
-				}
-				sess.clearFormWidgets(formID)
-			} else {
-				if err := pushUI(ctx, c, sess); err != nil {
-					return
-				}
-			}
-		case devMsgDump: // supervisor asks for state before restarting this child
-			st := sess.dumpState()
-			out, _ := json.Marshal(map[string]any{"type": devMsgState, "state": st})
-			if err := c.Write(ctx, websocket.MessageText, out); err != nil {
-				return
-			}
-		case devMsgRestore: // supervisor hands back state into the fresh child
-			sess.restoreState(msg.State)
+		case <-sess.wake: // a background Task (or other server event) finished
 			if err := pushUI(ctx, c, sess); err != nil {
 				return
 			}
 		}
 	}
+}
+
+// handleClientMsg processes one inbound frame. It returns false if the
+// connection should be torn down (a write error).
+func (s *server) handleClientMsg(ctx context.Context, c *websocket.Conn, sess *session, msg clientMsg) bool {
+	switch msg.Type {
+	case "widget_change":
+		sess.applyChange(msg.WidgetID, msg.Value, msg.IsButton)
+		if fragKey, fragFn, ok := sess.fragmentForWidget(msg.WidgetID); ok && !msg.IsButton {
+			return pushFragmentUI(ctx, c, sess, fragKey, fragFn) == nil
+		}
+		return pushUI(ctx, c, sess) == nil
+	case "fragment_rerun": // auto-refresh (RunEvery) tick from the client
+		if fn, ok := sess.fragmentByKey(msg.FragmentKey); ok {
+			return pushFragmentUI(ctx, c, sess, msg.FragmentKey, fn) == nil
+		}
+		return true
+	case "page_change":
+		sess.setCurrentPage(msg.Page)
+		return pushUI(ctx, c, sess) == nil
+	case "form_submit":
+		for _, ch := range msg.Changes {
+			sess.applyChange(ch.WidgetID, ch.Value, false)
+		}
+		sess.pressButton(msg.WidgetID)
+		formID := sess.formOf(msg.WidgetID)
+		if formID != "" && sess.isClearOnSubmit(formID) {
+			// Render once with the submitted values (so the handler sees them),
+			// but blank the form's inputs in the sent tree; then drop the stored
+			// values so later renders stay cleared.
+			ok := pushUI(ctx, c, sess, func(root *Node) {
+				if form := findNodeByID(root, formID); form != nil {
+					clearFormInputs(form)
+				}
+			}) == nil
+			sess.clearFormWidgets(formID)
+			return ok
+		}
+		return pushUI(ctx, c, sess) == nil
+	case devMsgDump: // supervisor asks for state before restarting this child
+		st := sess.dumpState()
+		out, _ := json.Marshal(map[string]any{"type": devMsgState, "state": st})
+		return c.Write(ctx, websocket.MessageText, out) == nil
+	case devMsgRestore: // supervisor hands back state into the fresh child
+		sess.restoreState(msg.State)
+		return pushUI(ctx, c, sess) == nil
+	}
+	return true
 }
 
 // pushUI runs a rerun and sends the resulting UI tree to the browser.

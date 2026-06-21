@@ -29,6 +29,8 @@ type session struct {
 
 	clearOnSubmit map[string]bool   // form id -> reset inputs after submit
 	formWidgets   map[string]string // widget id -> form id (members of a form)
+
+	wake chan struct{} // server-initiated rerun signal (background Tasks)
 }
 
 type pageConfig struct {
@@ -48,6 +50,20 @@ func newSession(appFn func()) *session {
 		widgets:   map[string]any{},
 		transient: map[string]bool{},
 		store:     map[string]any{},
+		wake:      make(chan struct{}, 1),
+	}
+}
+
+// requestRerun asks the connection's event loop to re-render and push. It is
+// safe to call from any goroutine (e.g. a background Task) and coalesces:
+// multiple calls before the loop wakes collapse into one re-render.
+func (s *session) requestRerun() {
+	if s.wake == nil {
+		return
+	}
+	select {
+	case s.wake <- struct{}{}:
+	default:
 	}
 }
 

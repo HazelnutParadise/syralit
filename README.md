@@ -394,6 +394,33 @@ syi.ListBarChart(dl)                    // value over index
 syi.ListLineChart(dl)
 syi.ListAreaChart(dl)
 syi.Histogram(dl, 20)                   // distribution (list-only)
+
+// Statistical analysis (insyra/stats), rendered in the UI
+syi.Describe(dt)                              // full per-column summary table
+syi.Correlation(dt, "X", "Y", "pearson")     // r + p as metrics
+syi.CorrelationMatrix(dt, "pearson")         // pairwise correlation matrix
+syi.LinearRegression(dt, "Y", "X1", "X2")    // R²/coeffs table + scatter
+syi.TTest(dt, "A", "B", false)               // two-sample t-test
+
+// Load a file into a DataTable (CSV / Excel / JSON)
+dt := syi.UploadTable("Upload data")         // file uploader → *DataTable
+dt, err := syi.ParseTable(name, bytes)       // parse bytes from any source
+
+// Interactive transforms (non-destructive)
+out := syi.FilterBuilder(dt)                 // column/op/value row filter
+out := syi.CCLBuilder(dt)                    // add a computed column (CCL)
+```
+
+Native interactive charts beyond the built-in Chart.js layer (Sankey, word
+cloud, K-line, gauge, funnel, …) live in a separate opt-in subpackage, because
+they pull in go-echarts and (transitively) chromedp:
+
+```go
+import syiplot "github.com/HazelnutParadise/syralit/integrations/insyra/eplot"
+import "github.com/HazelnutParadise/insyra/plot"
+
+syiplot.WordCloud(dl, "Tags")                       // no Chart.js equivalent
+syiplot.EChart(plot.CreateSankeyChart(cfg, links...)) // any insyra/plot chart
 ```
 
 ## Examples

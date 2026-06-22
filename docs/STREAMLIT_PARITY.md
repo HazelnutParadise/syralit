@@ -62,7 +62,14 @@ scroll), `sidebar`, `popover`(+icon/width/disabled/help), `empty`, `form`(+`Clea
 
 ### Insyra integration (`integrations/insyra`)
 DataTable + DataList helpers (`Table`, `List`, `ListMetrics`, `ListDescribe`,
-charts, `Histogram`, …) — no equivalent in Streamlit; Syralit-specific.
+charts, `Histogram`, …) — no equivalent in Streamlit; Syralit-specific. Deeper
+integration adds in-UI statistics (`Describe`, `Correlation`,
+`CorrelationMatrix`, `LinearRegression`, `TTest`), file upload to a DataTable
+(`UploadTable`/`ParseTable`, CSV/Excel/JSON), interactive transforms
+(`FilterBuilder`, `CCLBuilder`), and native interactive go-echarts charts in the
+opt-in `eplot` subpackage (Sankey, word cloud, K-line, gauge, …) — together
+these give a Go-native equivalent of Streamlit's typical pandas + scipy +
+plotting stack.
 
 ## Beyond Streamlit
 Capabilities with no Streamlit equivalent:

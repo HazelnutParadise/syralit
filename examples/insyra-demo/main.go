@@ -3,8 +3,10 @@ package main
 import (
 	sy "github.com/HazelnutParadise/syralit"
 	syi "github.com/HazelnutParadise/syralit/integrations/insyra"
+	syiplot "github.com/HazelnutParadise/syralit/integrations/insyra/eplot"
 
 	"github.com/HazelnutParadise/insyra"
+	"github.com/HazelnutParadise/insyra/plot"
 )
 
 func main() {
@@ -62,5 +64,70 @@ func main() {
 		sy.Header("Editable Table")
 		sy.Caption("Edit cells directly — changes are reflected on rerun.")
 		syi.EditableTable(dt, sy.Key("edit_dt"))
+
+		sy.Divider()
+
+		// --- Statistical analysis (insyra/stats) -------------------------
+		sy.Header("Statistical Analysis")
+		sy.Caption("Insyra's stats package, surfaced directly in the UI.")
+		stab := sy.Tabs([]string{"Describe", "Correlation", "Regression"})
+		stab("Describe", func() { syi.Describe(dt) })
+		stab("Correlation", func() {
+			syi.Correlation(dt, "Sales", "Revenue", "pearson")
+			syi.CorrelationMatrix(dt, "pearson")
+		})
+		stab("Regression", func() { syi.LinearRegression(dt, "Revenue", "Sales") })
+
+		sy.Divider()
+
+		// --- Interactive transforms (filter / CCL) -----------------------
+		sy.Header("Interactive Transforms")
+		ttab := sy.Tabs([]string{"Filter", "CCL formula"})
+		ttab("Filter", func() {
+			sy.Caption("Filter rows by a column condition; the source table is untouched.")
+			syi.FilterBuilder(dt)
+		})
+		ttab("CCL formula", func() {
+			sy.Caption("Add a computed column with an Excel-like formula (e.g. `Revenue / Sales`), then press Apply.")
+			syi.CCLBuilder(dt)
+		})
+
+		sy.Divider()
+
+		// --- Upload your own data ----------------------------------------
+		sy.Header("Upload Your Data")
+		sy.Caption("Drop a CSV, Excel or JSON file to turn it into a DataTable.")
+		if up := syi.UploadTable("Upload a data file", sy.Key("upload_dt")); up != nil {
+			syi.Describe(up)
+			syi.Table(up, sy.Height(280))
+		}
+
+		sy.Divider()
+
+		// --- Native go-echarts charts (beyond Chart.js) ------------------
+		sy.Header("Native go-echarts Charts")
+		sy.Caption("Interactive chart types the built-in Chart.js layer doesn't have, via syiplot.EChart.")
+		etab := sy.Tabs([]string{"Word Cloud", "Sankey"})
+		etab("Word Cloud", func() {
+			words := insyra.NewDataList(
+				"Go", "Go", "Go", "Go", "Data", "Data", "Data",
+				"Syralit", "Syralit", "Insyra", "Chart", "Stats", "Go", "Data",
+			).SetName("Tags")
+			syiplot.WordCloud(words, "Tag frequency")
+		})
+		etab("Sankey", func() {
+			links := []plot.SankeyLink{
+				{Source: "North", Target: "Alice", Value: 120},
+				{Source: "South", Target: "Bob", Value: 85},
+				{Source: "North", Target: "Carol", Value: 200},
+				{Source: "East", Target: "Dave", Value: 150},
+				{Source: "South", Target: "Eve", Value: 95},
+			}
+			cfg := plot.SankeyChartConfig{
+				Title: "Sales flow: Region → Person",
+				Nodes: []string{"North", "South", "East", "Alice", "Bob", "Carol", "Dave", "Eve"},
+			}
+			syiplot.EChart(plot.CreateSankeyChart(cfg, links...), sy.Height(560))
+		})
 	})
 }

@@ -475,9 +475,38 @@ syi.ListMetrics(dl)                     // count, mean, min, max
 syi.ListDescribe(dl)                    // count/mean/std/min/25%/50%/75%/max
 syi.ListBarChart(dl)                    // also ListLineChart / ListAreaChart
 syi.Histogram(dl, 20)                   // distribution (list-only)
+
+// Statistical analysis (insyra/stats) — rendered in the UI
+syi.Describe(dt)                            // per-column summary table
+syi.Correlation(dt, "X", "Y", "pearson")   // r + p metrics (pearson/spearman/kendall)
+syi.CorrelationMatrix(dt, "pearson")       // correlation matrix
+syi.LinearRegression(dt, "Y", "X1", "X2")  // R²/coeff table (+ scatter if 1 predictor)
+syi.TTest(dt, "A", "B", false)             // two-sample t-test
+
+// File upload → DataTable (CSV / Excel / JSON; NOT parquet)
+dt := syi.UploadTable("Upload data")       // uploader → *DataTable (nil until uploaded)
+dt, err := syi.ParseTable(name, bytes)     // parse bytes from any source
+
+// Interactive transforms (operate on a Clone — source untouched)
+out := syi.FilterBuilder(dt)               // column/operator/value row filter
+out := syi.CCLBuilder(dt)                  // add computed column via CCL; applied on "Apply"
 ```
 Note: name a column/list with `insyra.NewDataList(vals...).SetName("X")` so
 `GetColByName` and table/chart headers work.
+
+### Native go-echarts charts (opt-in subpackage)
+Interactive chart types Chart.js lacks (Sankey, word cloud, K-line, gauge,
+funnel, theme-river, box plot, radar). Separate package because it pulls in
+go-echarts + chromedp:
+```go
+import syiplot "github.com/HazelnutParadise/syralit/integrations/insyra/eplot"
+import "github.com/HazelnutParadise/insyra/plot"
+
+syiplot.WordCloud(dl, "Tags")
+syiplot.EChart(plot.CreateSankeyChart(cfg, links...), sy.Height(560))
+```
+`EChart` renders any `insyra/plot` chart via a sandboxed iframe; go-echarts
+loads its JS from a CDN, so it needs internet at view time.
 
 ## Common Mistakes
 1. **Missing Key in loops/conditionals**: Widgets in `if` blocks or loops need explicit `sy.Key()` for stable identity.

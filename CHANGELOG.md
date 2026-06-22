@@ -4,6 +4,38 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Deeper Insyra integration — turning the adapter from "render Insyra data" into
+"do data science in Go, in the browser". All additions stay inside
+`integrations/insyra/`; the core framework still never imports Insyra.
+
+### Added
+- **Statistical analysis** (`integrations/insyra`, over `insyra/stats`):
+  `Describe` (full per-column summary table), `Correlation` (r + p),
+  `CorrelationMatrix`, `LinearRegression` (R²/adj-R²/p + coefficient table, plus
+  a scatter for a single predictor), `TTest` (two-sample). New
+  `renderTableWithRowNames` renders an Insyra DataTable with row labels.
+- **File upload → DataTable**: `UploadTable` (FileUploader → `*DataTable`) and
+  `ParseTable(name, bytes)` for CSV / Excel (`.xlsx`/`.xls`, via in-memory
+  excelize) / JSON. Parquet is intentionally excluded to avoid forcing Apache
+  Arrow on adapter users.
+- **Interactive transforms**: `FilterBuilder` (column/operator/value row filter)
+  and `CCLBuilder` (add a computed column with Insyra's CCL). Both non-
+  destructive (operate on a `Clone`). CCL is applied only on an explicit Apply
+  and every evaluation is time-bounded in a goroutine, so a malformed formula
+  that runs away in the CCL engine can never hang or crash the app.
+- **Native go-echarts charts** in a new opt-in subpackage
+  `integrations/insyra/eplot` (`syiplot`): `EChart(plot.Renderable)` bridges any
+  `insyra/plot` chart into a sandboxed Component iframe, and `WordCloud`. Unlocks
+  Sankey, word cloud, K-line, gauge, funnel, theme-river, box plot, radar — chart
+  types the built-in Chart.js layer doesn't have. Kept separate because
+  `insyra/plot` drags in go-echarts and (transitively) chromedp; apps using only
+  the core adapter stay free of those deps.
+
+### Changed
+- Bumped Insyra to **v0.2.19**.
+
 ## [0.2.0] - 2026-06-21
 
 Beyond Streamlit — capabilities that lean on Go and have no Streamlit

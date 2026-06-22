@@ -1,12 +1,69 @@
 package syinsyra
 
 import (
+	"strconv"
 	"testing"
 
 	sy "github.com/HazelnutParadise/syralit"
 
 	"github.com/HazelnutParadise/insyra"
 )
+
+func corrData() *insyra.DataTable {
+	x := insyra.NewDataList(1.0, 2, 3, 4, 5, 6, 7, 8, 9, 10).SetName("X")
+	y := insyra.NewDataList(2.1, 3.9, 6.2, 7.8, 10.1, 12.0, 13.9, 16.2, 18.0, 20.1).SetName("Y")
+	return insyra.NewDataTable(x, y)
+}
+
+func metricValue(tree *sy.Node, label string) (string, bool) {
+	for _, m := range tree.Find("metric") {
+		if m.Props["label"] == label {
+			v, _ := m.Props["value"].(string)
+			return v, true
+		}
+	}
+	return "", false
+}
+
+func TestStatsLinearRegression(t *testing.T) {
+	tree := sy.RenderOnce(func() { LinearRegression(corrData(), "Y", "X") })
+	r2, ok := metricValue(tree, "R²")
+	if !ok {
+		t.Fatalf("no R² metric; metrics=%v", tree.Find("metric"))
+	}
+	if f, _ := strconv.ParseFloat(r2, 64); f < 0.9 {
+		t.Fatalf("expected strong fit, R²=%s", r2)
+	}
+	if len(tree.Find("table")) != 1 {
+		t.Fatal("expected a coefficient table")
+	}
+	if len(tree.Find("scatter_chart")) != 1 {
+		t.Fatal("expected a scatter chart for single-predictor regression")
+	}
+}
+
+func TestStatsCorrelationAndMatrix(t *testing.T) {
+	tree := sy.RenderOnce(func() { Correlation(corrData(), "X", "Y", "pearson") })
+	r, ok := metricValue(tree, "r (Pearson)")
+	if !ok {
+		t.Fatalf("no correlation metric; metrics=%v", tree.Find("metric"))
+	}
+	if f, _ := strconv.ParseFloat(r, 64); f < 0.9 {
+		t.Fatalf("expected strong correlation, r=%s", r)
+	}
+
+	mtree := sy.RenderOnce(func() { CorrelationMatrix(corrData(), "pearson") })
+	if len(mtree.Find("dataframe")) != 1 {
+		t.Fatal("expected correlation matrix dataframe")
+	}
+}
+
+func TestStatsDescribe(t *testing.T) {
+	tree := sy.RenderOnce(func() { Describe(corrData()) })
+	if len(tree.Find("dataframe")) != 1 {
+		t.Fatalf("expected describe dataframe, got %d", len(tree.Find("dataframe")))
+	}
+}
 
 func scores() *insyra.DataList {
 	return insyra.NewDataList(72, 88, 91, 65, 79, 84, 95, 60, 77, 83).SetName("Scores")

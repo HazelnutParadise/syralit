@@ -7,6 +7,7 @@ require (
 	github.com/HazelnutParadise/insyra v0.2.19
 	github.com/coder/websocket v1.8.15
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/xuri/excelize/v2 v2.10.1
 	github.com/yuin/goldmark v1.8.2
 )
 
@@ -26,7 +27,6 @@ require (
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
-	github.com/xuri/excelize/v2 v2.10.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect

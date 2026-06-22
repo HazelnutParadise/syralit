@@ -58,4 +58,9 @@ Examples auto-pick the next free port if 8600 is taken (e.g. 8601), and log the 
 ## Workflow notes
 
 - Commit and push automatically when work reaches a sensible checkpoint; no need to ask first.
-- Keep `README.md` and the `syralit-dev` skill in sync with API changes.
+- **Docs are part of "done" for any user-facing change.** Whenever you add, rename, or change the behaviour of a public API (a `sy.*` widget/option, an `integrations/insyra` helper, a CLI command, config key, etc.), update **all** of these in the *same* change — never leave it "for later":
+  1. **`skills/syralit-dev/SKILL.md`** — the agent skill is the canonical API reference; add the new function/option with its signature and a one-line description, in the matching section.
+  2. **`README.md`** — add it to the relevant section/table.
+  3. **`CHANGELOG.md`** — note it under the current unreleased section.
+  4. An **example** under `examples/` when the feature benefits from a runnable demo.
+  Before committing a feature, re-read SKILL.md and confirm it actually lists what you added — a feature the skill doesn't mention is effectively invisible to AI-assisted users.

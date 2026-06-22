@@ -57,6 +57,7 @@ func main() { sy.App(nil) }
 | `Slider(label, min, max, opts...)` | `float64` | Range slider |
 | `RangeSlider(label, min, max, opts...)` | `(float64, float64)` | Two-handle (low, high) range |
 | `DateSlider(label, minDate, maxDate, opts...)` | `string` | Slider over a date range → "YYYY-MM-DD" |
+| `TimeSlider(label, minTime, maxTime, opts...)` | `string` | Slider over a time range → "HH:MM" |
 | `SelectSlider(label, options, opts...)` | `string` | Discrete slider |
 | `Checkbox(label, opts...)` | `bool` | Checkbox |
 | `Toggle(label, opts...)` | `bool` | Toggle switch |
@@ -71,9 +72,9 @@ func main() { sy.App(nil) }
 | `CameraInput(label, opts...)` | `string` | Webcam capture (base64 data URI) |
 | `AudioInput(label, opts...)` | `string` | Microphone recording (base64) |
 | `ChatInput(placeholder, opts...)` | `string` | Chat input box |
-| `Feedback(opts...)` | `string` | Thumbs up/down ("up"/"down"/"") |
-| `SegmentedControl(label, options, opts...)` | `string` | Segmented buttons |
-| `Pills(label, options, opts...)` | `string` | Pill buttons |
+| `Feedback(opts...)` | `string` | Thumbs up/down; `sy.FeedbackStyle("stars"/"faces")` for other styles |
+| `SegmentedControl(label, options, opts...)` | `string` | Segmented buttons (`SegmentedControlMulti` → `[]string`) |
+| `Pills(label, options, opts...)` | `string` | Pill buttons (`PillsMulti` → `[]string`) |
 | `Pagination(totalPages, opts...)` | `int` | Page selector (1-based) |
 | `DownloadButton(label, data, filename, opts...)` | — | File download |
 | `LinkButton(label, url, opts...)` | — | External link button |
@@ -265,6 +266,11 @@ sy.Fragment("counter", func() {
     }
     sy.Textf("Count: %d", count.Get())
 })
+
+// Server-driven live refresh: re-run just this fragment every interval.
+sy.Fragment("clock", func() {
+    sy.Textf("%s", time.Now().Format("15:04:05"))
+}, sy.RunEvery(time.Second))
 ```
 
 ### Status & Feedback
@@ -311,6 +317,10 @@ sy.Session().Get("key")
 // Query parameters
 val := sy.QueryParam("page")
 all := sy.QueryParams()
+
+// Request context (headers, cookies, host, IP, locale) — st.context
+ctx := sy.Context()
+lang := ctx.Locale
 ```
 
 ### Caching

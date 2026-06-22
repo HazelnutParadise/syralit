@@ -68,6 +68,18 @@ go run .
 # Open http://localhost:8600
 ```
 
+## Agent Skills
+
+The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](skills/syralit-dev/SKILL.md) skill provides a complete API reference.
+
+Install it into your project with the [`skills`](https://github.com/vercel-labs/skills) CLI:
+
+```bash
+npx skills add HazelnutParadise/syralit/skills
+```
+
+Or copy the `skills/syralit-dev/` folder into your agent's skills directory manually (e.g. `.claude/skills/`).
+
 ## Screenshots
 
 Real screenshots captured from the runnable examples in [`examples/`](examples/).
@@ -519,18 +531,6 @@ Run any example:
 cd examples/chatbot
 go run .
 ```
-
-## Agent Skills
-
-The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](skills/syralit-dev/SKILL.md) skill provides a complete API reference.
-
-Install it into your project with the [`skills`](https://github.com/vercel-labs/skills) CLI:
-
-```bash
-npx skills add HazelnutParadise/syralit/skills
-```
-
-Or copy the `skills/syralit-dev/` folder into your agent's skills directory manually (e.g. `.claude/skills/`).
 
 ## Streamlit parity
 

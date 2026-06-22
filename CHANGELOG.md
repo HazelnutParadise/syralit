@@ -32,6 +32,17 @@ Deeper Insyra integration — turning the adapter from "render Insyra data" into
   types the built-in Chart.js layer doesn't have. Kept separate because
   `insyra/plot` drags in go-echarts and (transitively) chromedp; apps using only
   the core adapter stay free of those deps.
+- **Offline echarts** — `syiplot.SetOffline(true)` inlines the echarts
+  JavaScript (core, v4, word-cloud extension; bundled via `go:embed`) directly
+  into each chart's iframe, so native charts render with no CDN — air-gapped,
+  strict-CSP, or as a `syralit build` single binary. Default stays CDN (lighter
+  HTML).
+- New example `examples/insyra-charts` — Sankey, gauge, funnel, pie and word
+  cloud with an offline toggle.
+
+### Fixed
+- `Toggle` and `Checkbox` now honor `DefaultValue(true)` — previously they
+  ignored the option and always started unchecked.
 
 ### Changed
 - Bumped Insyra to **v0.2.19**.

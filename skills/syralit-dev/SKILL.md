@@ -504,9 +504,11 @@ import "github.com/HazelnutParadise/insyra/plot"
 
 syiplot.WordCloud(dl, "Tags")
 syiplot.EChart(plot.CreateSankeyChart(cfg, links...), sy.Height(560))
+syiplot.SetOffline(true) // inline echarts JS — no CDN (air-gapped / syralit build)
 ```
-`EChart` renders any `insyra/plot` chart via a sandboxed iframe; go-echarts
-loads its JS from a CDN, so it needs internet at view time.
+`EChart` renders any `insyra/plot` chart via a sandboxed iframe. By default
+go-echarts loads its JS from a CDN; call `syiplot.SetOffline(true)` to embed the
+echarts JavaScript in each chart so it works with no internet (heavier HTML).
 
 ## Common Mistakes
 1. **Missing Key in loops/conditionals**: Widgets in `if` blocks or loops need explicit `sy.Key()` for stable identity.

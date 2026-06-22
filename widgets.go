@@ -269,8 +269,13 @@ func Checkbox(label string, opts ...Option) bool {
 	rc := current()
 	o := applyOpts(opts)
 	id := rc.widgetID("checkbox", o.key)
-	val, _ := rc.sess.widgetValue(id)
+	val, ok := rc.sess.widgetValue(id)
 	b, _ := val.(bool)
+	if !ok {
+		if d, isBool := o.defaultVal.(bool); isBool {
+			b = d
+		}
+	}
 	props := map[string]any{"label": label, "value": b}
 	if o.disabled {
 		props["disabled"] = true
@@ -689,8 +694,13 @@ func Toggle(label string, opts ...Option) bool {
 	rc := current()
 	o := applyOpts(opts)
 	id := rc.widgetID("toggle", o.key)
-	val, _ := rc.sess.widgetValue(id)
+	val, ok := rc.sess.widgetValue(id)
 	b, _ := val.(bool)
+	if !ok {
+		if d, isBool := o.defaultVal.(bool); isBool {
+			b = d
+		}
+	}
 	props := map[string]any{"label": label, "value": b}
 	if o.disabled {
 		props["disabled"] = true

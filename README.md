@@ -421,6 +421,9 @@ import "github.com/HazelnutParadise/insyra/plot"
 
 syiplot.WordCloud(dl, "Tags")                       // no Chart.js equivalent
 syiplot.EChart(plot.CreateSankeyChart(cfg, links...)) // any insyra/plot chart
+
+syiplot.SetOffline(true) // inline echarts JS into each chart — no CDN, runs
+                         // air-gapped / under strict CSP / as a `syralit build` binary
 ```
 
 ## Examples
@@ -436,7 +439,8 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`data-explorer`](examples/data-explorer/) | 3-page sales dashboard with charts, filters, and data editing |
 | [`auth-demo`](examples/auth-demo/) | Authentication with LoginGate and role-based access control |
 | [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
-| [`insyra-demo`](examples/insyra-demo/) | Insyra DataTable integration demo |
+| [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
+| [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
 
 Run any example:
 

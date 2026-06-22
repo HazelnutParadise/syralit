@@ -39,9 +39,13 @@ func EChart(chart plot.Renderable, opts ...sy.Option) {
 		sy.Exception(err)
 		return
 	}
+	html := buf.String()
+	if offline.Load() {
+		html = inlineAssets(html)
+	}
 	// Default to a tall-enough frame; any user-supplied Height overrides it.
 	all := append([]sy.Option{sy.Height(520)}, opts...)
-	sy.Component(buf.String(), all...)
+	sy.Component(html, all...)
 }
 
 // WordCloud renders an interactive word cloud from a DataList whose values are

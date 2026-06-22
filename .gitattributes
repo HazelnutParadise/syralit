@@ -1,0 +1,3 @@
+# Vendored minified echarts assets for offline native charts — treat as binary
+# so Git doesn't normalize line endings or show them in diffs.
+integrations/insyra/eplot/assets/*.js -text -diff linguist-vendored

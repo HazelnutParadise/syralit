@@ -674,6 +674,28 @@ func TestFeedback(t *testing.T) {
 	}
 }
 
+func TestToggleCheckboxDefault(t *testing.T) {
+	tree := RenderOnce(func() {
+		Toggle("t", Key("tg"), DefaultValue(true))
+		Checkbox("c", Key("cb"), DefaultValue(true))
+	})
+	for _, typ := range []string{"toggle", "checkbox"} {
+		ns := tree.Find(typ)
+		if len(ns) != 1 {
+			t.Fatalf("expected 1 %s node, got %d", typ, len(ns))
+		}
+		if ns[0].Props["value"] != true {
+			t.Fatalf("%s with DefaultValue(true) should render value=true, got %v", typ, ns[0].Props["value"])
+		}
+	}
+
+	// Without DefaultValue, a toggle stays false.
+	tree2 := RenderOnce(func() { Toggle("t2", Key("tg2")) })
+	if tree2.Find("toggle")[0].Props["value"] != false {
+		t.Fatal("toggle without a default should render value=false")
+	}
+}
+
 func TestComponent(t *testing.T) {
 	app := func() {
 		val := Component("<button>hi</button>", Key("comp1"), Height(200))

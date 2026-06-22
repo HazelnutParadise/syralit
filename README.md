@@ -34,6 +34,10 @@ func main() {
 go install github.com/HazelnutParadise/syralit/cmd/syralit@latest
 ```
 
+## Requirements
+
+- Go 1.25+
+
 ## Quick Start
 
 ```bash
@@ -85,6 +89,36 @@ Real screenshots captured from the runnable examples in [`examples/`](examples/)
 | Light | Dark |
 |---|---|
 | ![Syralit conference registration form](docs/images/form-app-registration.png) | ![Syralit conference registration form dark mode](docs/images/form-app-registration-dark.png) |
+
+## Beyond Streamlit
+
+Things Syralit does that Streamlit can't, by leaning on Go:
+
+```go
+// Background jobs — run work in a goroutine; the page stays responsive and the
+// server pushes the result when ready (a Streamlit rerun blocks the whole app).
+job := sy.Task("report", func() Report { return buildReport() }) // runs once
+if job.Running() {
+    sy.Spinner("Crunching…")
+} else {
+    render(job.Result())
+}
+```
+
+- **`sy.Task[T]`** — non-blocking background work with auto-push on completion.
+- **`sy.Shared[T]`** — app-wide state shared across all sessions; a `Set`/`Update`
+  pushes a live update to every connected client (real-time collaboration).
+- **`sy.Fragment(key, fn, sy.RunEvery(d))`** — server-driven live refresh.
+- **`syralit build`** — compile the whole app (front-end + backend + your
+  `public/`) into one self-contained executable; no Python, no runtime, no deps.
+- **Fully offline / air-gapped** — `sy.SetAssetURL(name, url)` repoints any
+  third-party lib (Chart.js, Leaflet, KaTeX, Plotly, …) to a self-hosted copy;
+  drop the files in `public/` and `syralit build` bakes everything into one
+  binary that needs no internet or CDN (also satisfies strict CSP).
+- **Automatic SSE fallback** — when a WebSocket can't be established (e.g. a
+  proxy that blocks WS upgrades), the client transparently switches to a plain
+  HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
+- **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
 
 ## Features
 
@@ -309,38 +343,6 @@ db := sy.Connection("mydb")
 rows := sy.SQLQuery(db, "SELECT * FROM users")
 ```
 
-## Configuration
-
-### syralit.toml
-
-```toml
-title = "My App"
-host = "0.0.0.0"
-port = 8600
-
-[theme]
-primary_color = "#ff4b4b"
-background_color = "#0e1117"
-text_color = "#fafafa"
-
-[secrets]
-api_key = "sk-..."
-db_dsn = "postgres://..."
-```
-
-### Runtime Configuration
-
-```go
-sy.SetPageConfig(
-    sy.PageTitle("My App"),
-    sy.PageLayout("wide"),
-    sy.ConfigIcon("🚀"),
-    sy.PrimaryColor("#ff4b4b"),
-)
-
-apiKey := sy.Secrets("api_key")
-```
-
 ## Common Options
 
 ```go
@@ -426,41 +428,37 @@ syiplot.SetOffline(true) // inline echarts JS into each chart — no CDN, runs
                          // air-gapped / under strict CSP / as a `syralit build` binary
 ```
 
-## Examples
+## Configuration
 
-The [`examples/`](examples/) directory contains runnable demo apps:
+### syralit.toml
 
-| Example | Description |
-|---------|-------------|
-| [`hello`](examples/hello/) | Minimal single-page app with basic widgets |
-| [`showcase`](examples/showcase/) | Comprehensive 6-page demo of all features |
-| [`chatbot`](examples/chatbot/) | Chat UI with simulated streaming AI responses |
-| [`form-app`](examples/form-app/) | Conference registration form with validation |
-| [`data-explorer`](examples/data-explorer/) | 3-page sales dashboard with charts, filters, and data editing |
-| [`auth-demo`](examples/auth-demo/) | Authentication with LoginGate and role-based access control |
-| [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
-| [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
-| [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
-| [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
+```toml
+title = "My App"
+host = "0.0.0.0"
+port = 8600
 
-Run any example:
+[theme]
+primary_color = "#ff4b4b"
+background_color = "#0e1117"
+text_color = "#fafafa"
 
-```bash
-cd examples/chatbot
-go run .
+[secrets]
+api_key = "sk-..."
+db_dsn = "postgres://..."
 ```
 
-## Agent Skills
+### Runtime Configuration
 
-The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](skills/syralit-dev/SKILL.md) skill provides a complete API reference.
+```go
+sy.SetPageConfig(
+    sy.PageTitle("My App"),
+    sy.PageLayout("wide"),
+    sy.ConfigIcon("🚀"),
+    sy.PrimaryColor("#ff4b4b"),
+)
 
-Install it into your project with the [`skills`](https://github.com/vercel-labs/skills) CLI:
-
-```bash
-npx skills add HazelnutParadise/syralit/skills
+apiKey := sy.Secrets("api_key")
 ```
-
-Or copy the `skills/syralit-dev/` folder into your agent's skills directory manually (e.g. `.claude/skills/`).
 
 ## CLI Commands
 
@@ -498,39 +496,41 @@ tree := sy.RenderOnce(func() { sy.Metric("Users", "24,891") })
 if len(tree.Find("metric")) != 1 { t.Fatal("expected a metric") }
 ```
 
-## Requirements
+## Examples
 
-- Go 1.25+
+The [`examples/`](examples/) directory contains runnable demo apps:
 
-## Beyond Streamlit
+| Example | Description |
+|---------|-------------|
+| [`hello`](examples/hello/) | Minimal single-page app with basic widgets |
+| [`showcase`](examples/showcase/) | Comprehensive 6-page demo of all features |
+| [`chatbot`](examples/chatbot/) | Chat UI with simulated streaming AI responses |
+| [`form-app`](examples/form-app/) | Conference registration form with validation |
+| [`data-explorer`](examples/data-explorer/) | 3-page sales dashboard with charts, filters, and data editing |
+| [`auth-demo`](examples/auth-demo/) | Authentication with LoginGate and role-based access control |
+| [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
+| [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
+| [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
+| [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 
-Things Syralit does that Streamlit can't, by leaning on Go:
+Run any example:
 
-```go
-// Background jobs — run work in a goroutine; the page stays responsive and the
-// server pushes the result when ready (a Streamlit rerun blocks the whole app).
-job := sy.Task("report", func() Report { return buildReport() }) // runs once
-if job.Running() {
-    sy.Spinner("Crunching…")
-} else {
-    render(job.Result())
-}
+```bash
+cd examples/chatbot
+go run .
 ```
 
-- **`sy.Task[T]`** — non-blocking background work with auto-push on completion.
-- **`sy.Shared[T]`** — app-wide state shared across all sessions; a `Set`/`Update`
-  pushes a live update to every connected client (real-time collaboration).
-- **`sy.Fragment(key, fn, sy.RunEvery(d))`** — server-driven live refresh.
-- **`syralit build`** — compile the whole app (front-end + backend + your
-  `public/`) into one self-contained executable; no Python, no runtime, no deps.
-- **Fully offline / air-gapped** — `sy.SetAssetURL(name, url)` repoints any
-  third-party lib (Chart.js, Leaflet, KaTeX, Plotly, …) to a self-hosted copy;
-  drop the files in `public/` and `syralit build` bakes everything into one
-  binary that needs no internet or CDN (also satisfies strict CSP).
-- **Automatic SSE fallback** — when a WebSocket can't be established (e.g. a
-  proxy that blocks WS upgrades), the client transparently switches to a plain
-  HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
-- **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
+## Agent Skills
+
+The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](skills/syralit-dev/SKILL.md) skill provides a complete API reference.
+
+Install it into your project with the [`skills`](https://github.com/vercel-labs/skills) CLI:
+
+```bash
+npx skills add HazelnutParadise/syralit/skills
+```
+
+Or copy the `skills/syralit-dev/` folder into your agent's skills directory manually (e.g. `.claude/skills/`).
 
 ## Streamlit parity
 

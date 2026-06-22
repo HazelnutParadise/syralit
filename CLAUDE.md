@@ -58,6 +58,9 @@ Examples auto-pick the next free port if 8600 is taken (e.g. 8601), and log the 
 ## Workflow notes
 
 - Commit and push automatically when work reaches a sensible checkpoint; no need to ask first.
+- **Branch model.** Determine the working branch by checking `git branch`:
+  - **If a `dev` branch exists**, all ongoing development happens on `dev` — auto commit-and-push targets `dev`, never `main`. `main` only receives a merge from `dev` at release time (then gets the version tag + GitHub release). Do not commit straight to `main` except for that release merge.
+  - **If there is no `dev` branch yet**, keep working on `main` as usual. The switch is scheduled for *after the next published release*: once that release is tagged on `main`, create `dev` from `main` and do all further work there. (As of v0.3.0 the `dev` branch does not exist yet — stay on `main` until the next release ships.)
 - **Docs are part of "done" for any user-facing change.** Whenever you add, rename, or change the behaviour of a public API (a `sy.*` widget/option, an `integrations/insyra` helper, a CLI command, config key, etc.), update **all** of these in the *same* change — never leave it "for later":
   1. **`skills/syralit-dev/SKILL.md`** — the agent skill is the canonical API reference; add the new function/option with its signature and a one-line description, in the matching section.
   2. **`README.md`** — add it to the relevant section/table.

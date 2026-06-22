@@ -4,7 +4,7 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-06-22
 
 Deeper Insyra integration — turning the adapter from "render Insyra data" into
 "do data science in Go, in the browser". All additions stay inside
@@ -37,12 +37,21 @@ Deeper Insyra integration — turning the adapter from "render Insyra data" into
   into each chart's iframe, so native charts render with no CDN — air-gapped,
   strict-CSP, or as a `syralit build` single binary. Default stays CDN (lighter
   HTML).
-- New example `examples/insyra-charts` — Sankey, gauge, funnel, pie and word
-  cloud with an offline toggle.
+- **Themed scrollbars in embedded iframes** — `Component` and same-origin
+  `IFrame` content now gets a scrollbar matching the page's light/dark theme
+  (thin, rounded, transparent track) instead of the default OS one, injected
+  from the parent's live theme colors.
+- New examples: `examples/insyra-charts` (Sankey, gauge, funnel, pie and word
+  cloud with an offline toggle) and `examples/embed-scroll` (themed embedded
+  scrollbars).
 
 ### Fixed
 - `Toggle` and `Checkbox` now honor `DefaultValue(true)` — previously they
   ignored the option and always started unchecked.
+- Native go-echarts charts now fit their frame and follow the Syralit theme:
+  the rendered chart is made responsive (no fixed-px overflow / horizontal
+  scrollbar), its background is transparent, text recolors to the page's
+  light/dark theme, and Sankey node labels are shown.
 
 ### Changed
 - Bumped Insyra to **v0.2.19**.

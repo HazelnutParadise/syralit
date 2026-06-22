@@ -1918,6 +1918,34 @@
 
   // --- Custom Component / IFrame -----------------------------------------
 
+  // Embedded iframes are separate documents, so the page's themed scrollbars
+  // (runtime.css) don't reach them — a scrolling Component/echarts chart would
+  // show the default OS scrollbar. Inject a matching themed scrollbar using the
+  // parent's current theme colors. Same-origin (srcdoc) only; cross-origin
+  // access throws and is ignored.
+  function injectScrollbarTheme(iframe) {
+    iframe.addEventListener("load", function () {
+      try {
+        var doc = iframe.contentDocument;
+        if (!doc || !doc.head) return;
+        var cs = getComputedStyle(document.documentElement);
+        var border = (cs.getPropertyValue("--sy-border") || "#e5e7eb").trim();
+        var muted = (cs.getPropertyValue("--sy-muted") || "#6b7280").trim();
+        var st = doc.createElement("style");
+        st.setAttribute("data-sy-scrollbar", "");
+        st.textContent =
+          "*{scrollbar-width:thin;scrollbar-color:" + border + " transparent}" +
+          "::-webkit-scrollbar{width:12px;height:12px}" +
+          "::-webkit-scrollbar-track{background:transparent}" +
+          "::-webkit-scrollbar-thumb{background:" + border +
+          ";border-radius:8px;border:3px solid transparent;background-clip:padding-box}" +
+          "::-webkit-scrollbar-thumb:hover{background:" + muted + ";background-clip:padding-box}" +
+          "::-webkit-scrollbar-corner{background:transparent}";
+        doc.head.appendChild(st);
+      } catch (e) {}
+    });
+  }
+
   function componentEl(node, p) {
     var iframe = document.createElement("iframe");
     iframe.className = "sy-component";
@@ -1926,6 +1954,7 @@
     iframe.style.height = (p.height || 300) + "px";
     iframe.srcdoc = p.html || "";
     iframe.sandbox = "allow-scripts allow-same-origin";
+    injectScrollbarTheme(iframe);
 
     window.addEventListener("message", function (ev) {
       if (ev.source === iframe.contentWindow && ev.data && ev.data.syralitValue !== undefined) {
@@ -1942,6 +1971,7 @@
     iframe.style.width = (p.width || 100) + (p.width ? "px" : "%");
     iframe.style.height = (p.height || 400) + "px";
     iframe.src = p.url || "";
+    injectScrollbarTheme(iframe); // same-origin only; cross-origin is ignored
     return iframe;
   }
 

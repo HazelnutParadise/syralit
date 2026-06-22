@@ -39,7 +39,7 @@ func EChart(chart plot.Renderable, opts ...sy.Option) {
 		sy.Exception(err)
 		return
 	}
-	html := buf.String()
+	html := decorate(buf.String())
 	if offline.Load() {
 		html = inlineAssets(html)
 	}

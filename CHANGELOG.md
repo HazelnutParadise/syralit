@@ -4,6 +4,28 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-06-21
+
+Beyond Streamlit — capabilities that lean on Go and have no Streamlit
+equivalent. See `docs/STREAMLIT_PARITY.md`.
+
+### Added
+- **`Task[T]`** — background jobs in a goroutine; the page stays responsive and
+  the server pushes the result when ready (a Streamlit rerun blocks). Typed
+  handle: `Running`/`Done`/`Result`/`Err`.
+- **`Shared[T]`** — app-wide state across all sessions; `Set`/`Update` live-push
+  to every connected client (real-time collaboration).
+- **Offline / air-gapped builds** — `SetAssetURL(name, url)` repoints any
+  third-party library to a self-hosted copy; with `syralit build` the app runs
+  as one binary with no CDN/internet (strict-CSP friendly).
+- **Automatic SSE transport fallback** — when WebSocket can't connect, the
+  client transparently switches to plain HTTP (Server-Sent Events downstream +
+  POST upstream), no app changes.
+
+### Internal
+- Server event loop can push without a client message (session `wake` channel);
+  render output is abstracted behind a `uiSink` (WebSocket or SSE).
+
 ## [0.1.1] - 2026-06-21
 
 A broad Streamlit-parity pass. See `docs/STREAMLIT_PARITY.md` for the full map.

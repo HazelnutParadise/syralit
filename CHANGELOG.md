@@ -4,6 +4,21 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Agent Artifact Canvas**: `ArtifactSpec`, `ArtifactNode`,
+  `NewArtifactStore`, `ArtifactCanvas`, and `HandleArtifactEndpoint` let apps
+  expose an opt-in bearer-token endpoint that replaces a shared, animated
+  canvas from a controlled DSL. The DSL maps only to safe Syralit components
+  (`text`, `markdown`, `metric`, `table`, `dataframe`, line/bar/pie charts,
+  `image`, `progress`, `container`) and supports JSON Pointer data binding.
+- **Agent key hooks**: `AgentAuthenticator`, `AgentKeyStore`,
+  `StaticAgentKey`, and `AgentKeyManager` provide both hardcoded/secrets-backed
+  auth and app-owned key-management UI without making Syralit persist keys.
+- New example: `examples/agent-artifact` demonstrates the artifact canvas,
+  POST updates, static auth, and a user-provided in-memory key store.
+
 ## [0.3.0] - 2026-06-22
 
 Deeper Insyra integration — turning the adapter from "render Insyra data" into

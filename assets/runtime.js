@@ -403,6 +403,7 @@
       case "tabs":      return tabs(node, p);
       case "tab_panel": return tabPanel(node, p);
       case "container": return container(node);
+      case "artifact_canvas": return artifactCanvasEl(node, p);
       case "fragment":  return fragmentEl(node);
       case "form":      return formContainer(node);
       case "form_submit": return formSubmitBtn(node, p);
@@ -1106,6 +1107,81 @@
     if (p.height) { div.style.maxHeight = p.height + "px"; div.style.overflowY = "auto"; }
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
+  }
+
+  function artifactCanvasEl(node, p) {
+    var id = node.id || ("artifact:" + (p.name || "default"));
+    var wrap = root.querySelector('[data-artifact-id="' + cssEscape(id) + '"]');
+    if (!wrap) {
+      wrap = el("section", "sy-artifact-canvas");
+      wrap.setAttribute("data-artifact-id", id);
+      var body = el("div", "sy-artifact-grid");
+      wrap.appendChild(body);
+    }
+    if (p.height) wrap.style.minHeight = p.height + "px";
+    if (p.width) wrap.style.maxWidth = p.width + "px";
+
+    var layout = p.layout || {};
+    var grid = wrap.querySelector(".sy-artifact-grid");
+    var cols = Math.max(1, Number(layout.columns || 1));
+    grid.style.gridTemplateColumns = "repeat(" + cols + ", minmax(0, 1fr))";
+    if (layout.gap) grid.style.gap = layout.gap + "px";
+    else grid.style.gap = "";
+    if (layout.padding) grid.style.padding = layout.padding + "px";
+    else grid.style.padding = "";
+
+    reconcileArtifactChildren(grid, node.children || []);
+    return wrap;
+  }
+
+  function reconcileArtifactChildren(grid, children) {
+    var existing = {};
+    Array.prototype.forEach.call(grid.children, function (el) {
+      var id = el.getAttribute("data-artifact-node-id");
+      if (id) existing[id] = el;
+    });
+
+    children.forEach(function (child) {
+      var id = child.id || "";
+      if (!id) return;
+      var item = existing[id];
+      var isNew = false;
+      if (!item) {
+        item = el("div", "sy-artifact-item sy-artifact-enter");
+        item.setAttribute("data-artifact-node-id", id);
+        isNew = true;
+      } else {
+        item.classList.remove("sy-artifact-exit");
+        item.classList.add("sy-artifact-update");
+      }
+
+      applyArtifactItemLayout(item, child.props || {});
+      item.replaceChildren(buildNode(child));
+      grid.appendChild(item);
+      delete existing[id];
+
+      if (isNew) {
+        requestAnimationFrame(function () { item.classList.remove("sy-artifact-enter"); });
+      } else {
+        setTimeout(function () { item.classList.remove("sy-artifact-update"); }, 650);
+      }
+    });
+
+    Object.keys(existing).forEach(function (id) {
+      var item = existing[id];
+      item.classList.add("sy-artifact-exit");
+      setTimeout(function () {
+        if (item.parentNode) item.parentNode.removeChild(item);
+      }, 260);
+    });
+  }
+
+  function applyArtifactItemLayout(item, props) {
+    var layout = props.artifact_layout || {};
+    if (layout.column_span) item.style.gridColumn = "span " + Math.max(1, Number(layout.column_span));
+    else item.style.gridColumn = "";
+    if (layout.row_span) item.style.gridRow = "span " + Math.max(1, Number(layout.row_span));
+    else item.style.gridRow = "";
   }
 
   function statusContainer(node, p) {

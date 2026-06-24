@@ -120,6 +120,9 @@ if job.Running() {
 - **`sy.Task[T]`** — non-blocking background work with auto-push on completion.
 - **`sy.Shared[T]`** — app-wide state shared across all sessions; a `Set`/`Update`
   pushes a live update to every connected client (real-time collaboration).
+- **`sy.ArtifactCanvas`** — an agent-updatable canvas region rendered from a
+  controlled DSL of reusable Syralit components. Apps opt in to a POST endpoint
+  with bearer-token auth; new specs animate into place for every open session.
 - **`sy.Fragment(key, fn, sy.RunEvery(d))`** — server-driven live refresh.
 - **`syralit build`** — compile the whole app (front-end + backend + your
   `public/`) into one self-contained executable; no Python, no runtime, no deps.
@@ -171,6 +174,53 @@ Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.
 ### Display
 
 Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, Exception (styled Go `error` box).
+
+### Agent Artifacts
+
+`ArtifactCanvas` renders a shared, animated canvas from a safe DSL. The DSL is
+designed for AI agents: it accepts only a curated set of reusable Syralit
+components, supports JSON Pointer data binding, and never exposes raw HTML,
+custom JS, iframes, or the internal Node protocol.
+
+```go
+board := sy.NewArtifactStore("main", sy.ArtifactSpec{
+    Version: "v1",
+    Layout:  sy.ArtifactLayout{Columns: 2, Gap: 14, Padding: 16},
+    Data: map[string]any{
+        "summary": map[string]any{"revenue": "$42k"},
+    },
+    Nodes: []sy.ArtifactNode{{
+        ID:        "revenue",
+        Component: "metric",
+        Props:     map[string]any{"label": "Revenue"},
+        Bind:      map[string]string{"props.value": "/summary/revenue"},
+    }},
+})
+
+sy.HandleArtifactEndpoint(
+    "/api/agent/artifacts/main",
+    board,
+    sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY")),
+)
+
+sy.App(func() {
+    sy.ArtifactCanvas(board, sy.Height(520))
+})
+```
+
+Agent updates are full replacements:
+
+```bash
+curl -X POST http://127.0.0.1:8600/api/agent/artifacts/main \
+  -H "Authorization: Bearer $AGENT_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"spec":{"version":"v1","nodes":[{"id":"msg","component":"text","props":{"text":"Updated"}}]}}'
+```
+
+For user-managed keys, implement `sy.AgentKeyStore` and render
+`sy.AgentKeyManager(store)`. Syralit provides the UI and callback contract; your
+app decides whether keys live in memory, a file, a database, or another secret
+system.
 
 ### Data
 
@@ -520,6 +570,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`form-app`](examples/form-app/) | Conference registration form with validation |
 | [`data-explorer`](examples/data-explorer/) | 3-page sales dashboard with charts, filters, and data editing |
 | [`auth-demo`](examples/auth-demo/) | Authentication with LoginGate and role-based access control |
+| [`agent-artifact`](examples/agent-artifact/) | Agent-updatable artifact canvas with controlled DSL and key-management hooks |
 | [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
 | [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |

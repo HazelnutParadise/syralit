@@ -566,6 +566,72 @@ body {
   margin: .75rem 0;
 }
 
+/* --- Artifact Canvas --------------------------------------------------- */
+
+.sy-artifact-canvas {
+  display: block;
+  width: 100%;
+  margin: .75rem 0;
+  border: 1px solid color-mix(in srgb, var(--sy-border) 86%, transparent);
+  border-radius: var(--sy-radius);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--sy-accent) 7%, transparent), transparent 34%),
+    var(--sy-bg);
+  overflow: hidden;
+}
+
+.sy-artifact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  align-items: stretch;
+}
+
+.sy-artifact-item {
+  min-width: 0;
+  transition: opacity .24s ease, transform .24s ease, box-shadow .32s ease, background-color .32s ease;
+  will-change: opacity, transform;
+}
+
+.sy-artifact-enter {
+  opacity: 0;
+  transform: translateY(10px) scale(.985);
+}
+
+.sy-artifact-update {
+  animation: sy-artifact-pulse .64s ease;
+}
+
+.sy-artifact-exit {
+  opacity: 0;
+  transform: translateY(-8px) scale(.985);
+  pointer-events: none;
+}
+
+@keyframes sy-artifact-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--sy-accent) 24%, transparent);
+    background-color: color-mix(in srgb, var(--sy-accent) 9%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sy-artifact-item {
+    transition: none;
+    animation: none !important;
+  }
+  .sy-artifact-enter,
+  .sy-artifact-exit {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* --- Typography -------------------------------------------------------- */
 
 .sy-title {

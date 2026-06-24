@@ -94,6 +94,7 @@ func (s *server) handler() http.Handler {
 	// SSE fallback transport for environments where WebSocket can't connect.
 	mux.HandleFunc("GET /_syralit/sse", s.handleSSE)
 	mux.HandleFunc("POST /_syralit/msg", s.handleMsg)
+	registerArtifactEndpoints(mux)
 	return mux
 }
 
@@ -120,10 +121,10 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 // inbound message from the browser (SPEC §13). The __dev_* fields are only used
 // in dev child mode, where the supervisor (not a real browser) drives the socket.
 type clientMsg struct {
-	Type     string         `json:"type"`
-	WidgetID string         `json:"widget_id"`
-	Value    any            `json:"value"`
-	IsButton bool           `json:"is_button"`
+	Type        string         `json:"type"`
+	WidgetID    string         `json:"widget_id"`
+	Value       any            `json:"value"`
+	IsButton    bool           `json:"is_button"`
 	Page        string         `json:"page,omitempty"`         // for page_change
 	Changes     []widgetChange `json:"changes,omitempty"`      // for form_submit
 	State       *sessionState  `json:"state,omitempty"`        // for __dev_restore

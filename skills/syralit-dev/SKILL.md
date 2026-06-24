@@ -134,6 +134,7 @@ sy.Progress(0.75)                  // 0.0 to 1.0
 sy.Spinner("Loading...")
 sy.Write(args...)                  // auto-detect: string→markdown, error→error, else→JSON
 sy.WriteStream(id, func(w func(string)) { w("token") })  // streaming text
+sy.ArtifactCanvas(store, opts...)  // shared, animated agent-updatable canvas
 sy.Component(html, opts...)        // custom HTML/JS in iframe
 sy.IFrame(url, opts...)
 ```
@@ -368,6 +369,62 @@ online := sy.Shared("online", 0)
 online.Update(func(v int) int { return v + 1 }) // atomic read-modify-write
 sy.Metric("Online now", fmt.Sprint(online.Get()))
 ```
+
+### Agent Artifact Canvas
+```go
+// Safe DSL for an agent-updatable canvas. The DSL maps to a curated subset of
+// Syralit components, not raw HTML/JS or the internal Node protocol.
+board := sy.NewArtifactStore("main", sy.ArtifactSpec{
+    Version: "v1",
+    Layout:  sy.ArtifactLayout{Columns: 2, Gap: 14, Padding: 16},
+    Data: map[string]any{
+        "summary": map[string]any{"revenue": "$42k"},
+    },
+    Nodes: []sy.ArtifactNode{{
+        ID:        "revenue",
+        Component: "metric",
+        Props:     map[string]any{"label": "Revenue"},
+        Bind:      map[string]string{"props.value": "/summary/revenue"},
+    }},
+})
+
+// Opt-in POST endpoint. Requires Authorization: Bearer <token>.
+sy.HandleArtifactEndpoint(
+    "/api/agent/artifacts/main",
+    board,
+    sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY")),
+)
+
+sy.App(func() {
+    sy.ArtifactCanvas(board, sy.Height(520))
+})
+
+// Full-replace update payload:
+// {"spec":{"version":"v1","nodes":[{"id":"msg","component":"text","props":{"text":"Updated"}}]}}
+```
+Allowed artifact components: `text`, `markdown`, `metric`, `table`,
+`dataframe`, `line_chart`, `bar_chart`, `pie_chart`, `image`, `progress`,
+`container`. Data binding uses JSON Pointer from `ArtifactSpec.Data`, e.g.
+`Bind: map[string]string{"props.value": "/summary/revenue"}`. Every artifact
+node needs a stable `ID` so the browser can animate enter/update/exit states.
+
+For app-owned key storage, implement:
+```go
+type AgentAuthenticator interface {
+    AuthenticateAgent(ctx context.Context, token string) (sy.AgentPrincipal, bool, error)
+}
+
+type AgentKeyStore interface {
+    AgentAuthenticator
+    ListAgentKeys(ctx context.Context) ([]sy.AgentKeyInfo, error)
+    CreateAgentKey(ctx context.Context, name string) (plainToken string, info sy.AgentKeyInfo, err error)
+    RevokeAgentKey(ctx context.Context, id string) error
+}
+
+sy.AgentKeyManager(store, sy.Key("agent-keys"))
+```
+Syralit supplies the UI/callback contract, but does not persist keys for the
+app.
 
 ### Configuration
 ```go

@@ -78,7 +78,7 @@ func main() {
 
 ## 3. 非目標
 
-Syralit 不做：完整 React/Vue 替代品、ORM、資料分析核心、重造 DataFrame、要求使用者寫 HTML/CSS/JS、綁死 Insyra、把 AI agent 當核心必需、多人協作編輯、雲端部署平台。
+Syralit 不做：完整 React/Vue 替代品、ORM、資料分析核心、重造 DataFrame、要求使用者寫 HTML/CSS/JS、綁死 Insyra、把 AI agent 當核心必需、完整 AI agent builder、多人協作編輯、雲端部署平台。
 
 **架構紅線：Syralit core 不得 import Insyra。** Insyra 整合一律走獨立的 adapter package（見 §4、§9）。
 
@@ -718,6 +718,7 @@ GET  /assets/*          靜態資源
 WS   /_syralit/ws       session websocket
 POST /_syralit/upload   file upload
 GET  /_syralit/download file download
+POST /api/...           使用者 opt-in 註冊的 agent artifact endpoint
 ```
 
 每個瀏覽器 tab 一個 session，session id 存 cookie 或 websocket init payload。
@@ -780,6 +781,14 @@ if e := dt.Err(); e != nil {
 預設只跑本機，不設計成公開網路服務。
 
 限制：FileUploader 有大小限制；上傳檔存 temp dir；下載只能下載 Syralit 產生或明確允許的檔案；禁止 path traversal；Markdown 預設 sanitize；Code block 不執行；WebSocket 檢查 session。
+
+Agent Artifact Canvas 的安全邊界：
+
+- endpoint 預設不存在，必須由 app 明確呼叫 `HandleArtifactEndpoint` 才會註冊。
+- endpoint 只接受 `POST` full replace，必須帶 `Authorization: Bearer ...`。
+- Syralit 只提供 `AgentAuthenticator` / `AgentKeyStore` 介面、`StaticAgentKey`、`AgentKeyManager` UI；key 如何保存由 app 自行決定。
+- Artifact DSL 只映射到受控 Syralit 元件，不接受 raw HTML、custom JS、iframe、`Component` 或內部 Node protocol。
+- 所有 artifact node 必須有穩定 ID，供前端做 enter/update/exit 動畫，也避免 agent 生成不穩定樹造成狀態錯位。
 
 ```go
 sy.Config{
@@ -881,7 +890,7 @@ if file != nil {
 
 ### Next（規模與深度）
 
-Hot reload 穩定化、Table 真窗格虛擬化（adapter 內部優化，不改 core API）、Tabs/Expander、`syi.DataFrameExplorer`、`CCLPanel`、`GroupByBuilder`、更多圖表、URL query params、更完整 cache invalidation、App config file。
+Hot reload 穩定化、Table 真窗格虛擬化（adapter 內部優化，不改 core API）、Tabs/Expander、`syi.DataFrameExplorer`、`CCLPanel`、`GroupByBuilder`、更多圖表、URL query params、更完整 cache invalidation、App config file、Agent Artifact Canvas（受控 DSL、共享畫布、opt-in endpoint、app-owned key storage hooks）。
 
 `DataFrameExplorer` 是最重要的 Insyra 賣點：
 
@@ -893,7 +902,7 @@ syi.DataFrameExplorer(dt)
 
 ### Later（打包與部署）
 
-App packaging、single binary build、static assets embed、custom component SDK、auth hooks、background jobs、scheduled refresh、deployment docs、AI assisted dashboard generation。
+App packaging、single binary build、static assets embed、custom component SDK、auth hooks、background jobs、scheduled refresh、deployment docs、AI assisted dashboard generation、完整 agent builder、長期 token 稽核、多使用者 artifact 權限。
 
 ---
 

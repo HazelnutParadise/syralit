@@ -575,7 +575,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`form-app`](examples/form-app/) | Conference registration form with validation |
 | [`data-explorer`](examples/data-explorer/) | 3-page sales dashboard with charts, filters, and data editing |
 | [`auth-demo`](examples/auth-demo/) | Authentication with LoginGate and role-based access control |
-| [`agent-artifact`](examples/agent-artifact/) | Agent-updatable artifact canvas with controlled DSL and key-management hooks |
+| [`agent-artifact`](examples/agent-artifact/) | Artifact Canvas studio with multiple live boards, preset scenarios, local compose controls, and agent endpoints |
 | [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
 | [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |

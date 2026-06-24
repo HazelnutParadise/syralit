@@ -12,7 +12,8 @@ import (
 	sy "github.com/HazelnutParadise/syralit"
 )
 
-var board = sy.NewArtifactStore("main", initialArtifact())
+var mainBoard = sy.NewArtifactStore("main", executiveMainSpec())
+var notesBoard = sy.NewArtifactStore("notes", executiveNotesSpec())
 var keys = newMemoryAgentKeyStore()
 
 func init() {
@@ -20,43 +21,117 @@ func init() {
 	if token == "" {
 		token = "dev-agent-key"
 	}
-	sy.HandleArtifactEndpoint("/api/agent/artifacts/main", board, multiAuth{
+	auth := multiAuth{
 		sy.StaticAgentKey("static-local-agent", token),
 		keys,
-	})
+	}
+	sy.HandleArtifactEndpoint("/api/agent/artifacts/main", mainBoard, auth)
+	sy.HandleArtifactEndpoint("/api/agent/artifacts/notes", notesBoard, auth)
 }
 
 func main() {
 	sy.App(func() {
-		sy.SetPageConfig(sy.PageTitle("Agent Artifact Canvas"), sy.PageLayout("wide"))
-		sy.Title("Agent Artifact Canvas")
-		sy.Markdown("This example renders a shared artifact canvas from a controlled DSL. POST a new spec to the endpoint and every open browser session updates live.")
+		sy.SetPageConfig(sy.PageTitle("Artifact Canvas Studio"), sy.PageLayout("wide"))
+		sy.Title("Artifact Canvas Studio")
+		sy.Markdown("This example app shows how one Syralit page can host multiple live Artifact Canvas regions. You can update them from local controls or from an external agent through opt-in bearer-token endpoints.")
 
-		cols := sy.WeightedColumns(2, 1)
+		cols := sy.WeightedColumns(2.2, 1)
 		cols[0](func() {
-			sy.ArtifactCanvas(board, sy.Height(520))
+			sy.Header("Main board")
+			sy.ArtifactCanvas(mainBoard, sy.Height(430))
+
+			sy.Header("Agent notes")
+			sy.ArtifactCanvas(notesBoard, sy.Height(210))
 		})
 		cols[1](func() {
-			sy.Header("Agent endpoint")
-			sy.Code(`curl -X POST http://127.0.0.1:8600/api/agent/artifacts/main \
-  -H "Authorization: Bearer dev-agent-key" \
-  -H "Content-Type: application/json" \
-  -d '{"spec":{"version":"v1","layout":{"columns":2,"gap":14,"padding":16},"data":{"summary":{"revenue":"$58k","delta":"+18%","rows":[["North",22],["South",15],["West",19]]}},"nodes":[{"id":"title","component":"markdown","props":{"text":"## Agent-updated board\nGenerated from a safe DSL."},"layout":{"column_span":2}},{"id":"revenue","component":"metric","props":{"label":"Revenue"},"bind":{"props.value":"/summary/revenue","props.delta":"/summary/delta"}},{"id":"progress","component":"progress","props":{"value":0.72,"text":"Plan confidence"}},{"id":"table","component":"table","props":{"headers":["Region","Deals"]},"bind":{"props.rows":"/summary/rows"},"layout":{"column_span":2}}]}}'`)
+			renderControls()
+		})
 
-			sy.Header("Managed keys")
-			sy.AgentKeyManager(keys, sy.Key("agent-key-manager"))
+		sy.Divider()
+		sy.Header("Current DSL")
+		tabs := sy.Tabs([]string{"Main spec", "Notes spec"})
+		tabs("Main spec", func() {
+			sy.JSON(mainBoard.Spec())
+		})
+		tabs("Notes spec", func() {
+			sy.JSON(notesBoard.Spec())
 		})
 	})
 }
 
-func initialArtifact() sy.ArtifactSpec {
+func renderControls() {
+	sy.Header("Scenario presets")
+	if sy.Button("Executive brief", sy.Key("preset-exec")) {
+		if err := applyPreset(executiveMainSpec(), executiveNotesSpec()); err != nil {
+			sy.Error(err.Error())
+		} else {
+			sy.Rerun()
+		}
+	}
+	if sy.Button("Pipeline review", sy.Key("preset-pipeline"), sy.ButtonType("secondary")) {
+		if err := applyPreset(pipelineMainSpec(), pipelineNotesSpec()); err != nil {
+			sy.Error(err.Error())
+		} else {
+			sy.Rerun()
+		}
+	}
+	if sy.Button("Incident room", sy.Key("preset-incident"), sy.ButtonType("secondary")) {
+		if err := applyPreset(incidentMainSpec(), incidentNotesSpec()); err != nil {
+			sy.Error(err.Error())
+		} else {
+			sy.Rerun()
+		}
+	}
+
+	sy.Header("Compose a quick update")
+	sy.Form("compose-update", func() {
+		headline := sy.TextInput("Headline", sy.Key("compose-headline"), sy.DefaultValue("## Agent update\nA safe DSL can still feel alive."))
+		kpiLabel := sy.TextInput("KPI label", sy.Key("compose-kpi-label"), sy.DefaultValue("Confidence"))
+		kpiValue := sy.TextInput("KPI value", sy.Key("compose-kpi-value"), sy.DefaultValue("82%"))
+		progress := sy.NumberInput("Progress", sy.Key("compose-progress"), sy.DefaultValue(0.82), sy.Min(0), sy.Max(1), sy.Step(0.01))
+		note := sy.TextArea("Agent note", sy.Key("compose-note"), sy.DefaultValue("Shift the board toward risks, blockers, and decisions."), sy.Height(110))
+		if sy.FormSubmitButton("Apply local update", sy.Key("compose-submit")) {
+			if err := applyPreset(customMainSpec(headline, kpiLabel, kpiValue, progress), customNotesSpec(note)); err != nil {
+				sy.Error(err.Error())
+			} else {
+				sy.Rerun()
+			}
+		}
+	})
+
+	sy.Header("Agent endpoints")
+	sy.Code(`curl -X POST http://127.0.0.1:8600/api/agent/artifacts/main \
+  -H "Authorization: Bearer dev-agent-key" \
+  -H "Content-Type: application/json" \
+  -d '{"spec":{"version":"v1","layout":{"columns":2,"gap":14,"padding":16},"data":{"summary":{"headline":"## Board refresh\nShifted by an agent.","revenue":"$58k","delta":"+18%","rows":[["North",22],["South",15],["West",19]]}},"nodes":[{"id":"headline","component":"markdown","props":{"text":"placeholder"},"bind":{"props.text":"/summary/headline"},"layout":{"column_span":2}},{"id":"revenue","component":"metric","props":{"label":"Revenue"},"bind":{"props.value":"/summary/revenue","props.delta":"/summary/delta"}},{"id":"progress","component":"progress","props":{"value":0.72,"text":"Plan confidence"}},{"id":"table","component":"table","props":{"headers":["Region","Deals"]},"bind":{"props.rows":"/summary/rows"},"layout":{"column_span":2}}]}}'`)
+	sy.Code(`curl -X POST http://127.0.0.1:8600/api/agent/artifacts/notes \
+  -H "Authorization: Bearer dev-agent-key" \
+  -H "Content-Type: application/json" \
+  -d '{"spec":{"version":"v1","nodes":[{"id":"note","component":"markdown","props":{"text":"### Agent note\nFocus on the next decision, not just the latest metric."}}]}}'`)
+
+	sy.Header("Managed keys")
+	sy.AgentKeyManager(keys, sy.Key("agent-key-manager"))
+}
+
+func applyPreset(mainSpec, noteSpec sy.ArtifactSpec) error {
+	if err := mainBoard.Set(mainSpec); err != nil {
+		return err
+	}
+	if err := notesBoard.Set(noteSpec); err != nil {
+		return err
+	}
+	return nil
+}
+
+func executiveMainSpec() sy.ArtifactSpec {
 	return sy.ArtifactSpec{
 		Version: "v1",
 		Layout:  sy.ArtifactLayout{Columns: 2, Gap: 14, Padding: 16},
 		Data: map[string]any{
 			"summary": map[string]any{
-				"revenue": "$42k",
-				"delta":   "+9%",
+				"headline": "## Executive brief\nRevenue is ahead of plan and the conversion gap is narrowing.",
+				"revenue":  "$42k",
+				"delta":    "+9%",
 				"rows": []any{
 					[]any{"North", 12},
 					[]any{"South", 18},
@@ -66,12 +141,11 @@ func initialArtifact() sy.ArtifactSpec {
 		},
 		Nodes: []sy.ArtifactNode{
 			{
-				ID:        "intro",
+				ID:        "headline",
 				Component: "markdown",
-				Props: map[string]any{
-					"text": "## Live agent artifact\nThe board below is composed from reusable Syralit components.",
-				},
-				Layout: sy.ArtifactLayoutItem{ColumnSpan: 2},
+				Props:     map[string]any{"text": "placeholder"},
+				Bind:      map[string]string{"props.text": "/summary/headline"},
+				Layout:    sy.ArtifactLayoutItem{ColumnSpan: 2},
 			},
 			{
 				ID:        "revenue",
@@ -96,6 +170,196 @@ func initialArtifact() sy.ArtifactSpec {
 				Props:     map[string]any{"headers": []any{"Region", "Deals"}},
 				Bind:      map[string]string{"props.rows": "/summary/rows"},
 				Layout:    sy.ArtifactLayoutItem{ColumnSpan: 2},
+			},
+		},
+	}
+}
+
+func executiveNotesSpec() sy.ArtifactSpec {
+	return singleNoteSpec("### Agent note\nThe brief is strong enough for a leadership sync. Next best improvement is a second KPI block for margin or pipeline risk.")
+}
+
+func pipelineMainSpec() sy.ArtifactSpec {
+	return sy.ArtifactSpec{
+		Version: "v1",
+		Layout:  sy.ArtifactLayout{Columns: 3, Gap: 14, Padding: 16},
+		Data: map[string]any{
+			"summary": map[string]any{
+				"qualified": "31",
+				"delta":     "+6",
+				"coverage":  "3.4x",
+			},
+		},
+		Nodes: []sy.ArtifactNode{
+			{
+				ID:        "headline",
+				Component: "markdown",
+				Props: map[string]any{
+					"text": "## Pipeline review\nCoverage is healthy, but the top funnel is uneven across regions.",
+				},
+				Layout: sy.ArtifactLayoutItem{ColumnSpan: 3},
+			},
+			{
+				ID:        "qualified",
+				Component: "metric",
+				Props: map[string]any{
+					"label": "Qualified deals",
+				},
+				Bind: map[string]string{
+					"props.value": "/summary/qualified",
+					"props.delta": "/summary/delta",
+				},
+			},
+			{
+				ID:        "coverage",
+				Component: "metric",
+				Props: map[string]any{
+					"label": "Coverage",
+					"value": "3.4x",
+				},
+				Bind: map[string]string{
+					"props.value": "/summary/coverage",
+				},
+			},
+			{
+				ID:        "health",
+				Component: "progress",
+				Props: map[string]any{
+					"value": 0.74,
+					"text":  "Pipeline health",
+				},
+			},
+			{
+				ID:        "mix",
+				Component: "bar_chart",
+				Props: map[string]any{
+					"title":    "Regional mix",
+					"x_labels": []any{"North", "South", "West", "APAC"},
+					"series": map[string]any{
+						"Deals": []any{14, 9, 5, 3},
+					},
+				},
+				Layout: sy.ArtifactLayoutItem{ColumnSpan: 2},
+			},
+			{
+				ID:        "stages",
+				Component: "table",
+				Props: map[string]any{
+					"headers": []any{"Stage", "Count"},
+					"rows": []any{
+						[]any{"Qualified", 31},
+						[]any{"Proposal", 18},
+						[]any{"Commit", 7},
+					},
+				},
+			},
+		},
+	}
+}
+
+func pipelineNotesSpec() sy.ArtifactSpec {
+	return singleNoteSpec("### Agent note\nTop-of-funnel softness is the real story. The board should steer the team toward regional sourcing, not just celebrate overall coverage.")
+}
+
+func incidentMainSpec() sy.ArtifactSpec {
+	return sy.ArtifactSpec{
+		Version: "v1",
+		Layout:  sy.ArtifactLayout{Columns: 2, Gap: 14, Padding: 16},
+		Nodes: []sy.ArtifactNode{
+			{
+				ID:        "headline",
+				Component: "markdown",
+				Props: map[string]any{
+					"text": "## Incident room\nCheckout latency is elevated. The artifact should bias toward decisions, owners, and mitigation confidence.",
+				},
+				Layout: sy.ArtifactLayoutItem{ColumnSpan: 2},
+			},
+			{
+				ID:        "severity",
+				Component: "metric",
+				Props: map[string]any{
+					"label": "Severity",
+					"value": "SEV-2",
+					"delta": "mitigating",
+				},
+			},
+			{
+				ID:        "confidence",
+				Component: "progress",
+				Props: map[string]any{
+					"value": 0.43,
+					"text":  "Mitigation confidence",
+				},
+			},
+			{
+				ID:        "owners",
+				Component: "table",
+				Props: map[string]any{
+					"headers": []any{"Workstream", "Owner", "Status"},
+					"rows": []any{
+						[]any{"Traffic shaping", "Mina", "Running"},
+						[]any{"DB telemetry", "Chris", "Watching"},
+						[]any{"Rollback window", "Dana", "Prepared"},
+					},
+				},
+				Layout: sy.ArtifactLayoutItem{ColumnSpan: 2},
+			},
+		},
+	}
+}
+
+func incidentNotesSpec() sy.ArtifactSpec {
+	return singleNoteSpec("### Agent note\nThis view is intentionally simpler. During an incident, fewer components with sharper ownership usually read better than a dense dashboard.")
+}
+
+func customMainSpec(headline, label, value string, progress float64) sy.ArtifactSpec {
+	return sy.ArtifactSpec{
+		Version: "v1",
+		Layout:  sy.ArtifactLayout{Columns: 2, Gap: 14, Padding: 16},
+		Nodes: []sy.ArtifactNode{
+			{
+				ID:        "headline",
+				Component: "markdown",
+				Props: map[string]any{
+					"text": headline,
+				},
+				Layout: sy.ArtifactLayoutItem{ColumnSpan: 2},
+			},
+			{
+				ID:        "metric",
+				Component: "metric",
+				Props: map[string]any{
+					"label": label,
+					"value": value,
+				},
+			},
+			{
+				ID:        "progress",
+				Component: "progress",
+				Props: map[string]any{
+					"value": progress,
+					"text":  "Local update confidence",
+				},
+			},
+		},
+	}
+}
+
+func customNotesSpec(note string) sy.ArtifactSpec {
+	return singleNoteSpec("### Agent note\n" + note)
+}
+
+func singleNoteSpec(text string) sy.ArtifactSpec {
+	return sy.ArtifactSpec{
+		Version: "v1",
+		Layout:  sy.ArtifactLayout{Columns: 1, Gap: 12, Padding: 16},
+		Nodes: []sy.ArtifactNode{
+			{
+				ID:        "note",
+				Component: "markdown",
+				Props: map[string]any{
+					"text": text,
+				},
 			},
 		},
 	}

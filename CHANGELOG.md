@@ -13,6 +13,9 @@ All notable changes to Syralit are documented here. The format is based on
   canvas from a controlled DSL. The DSL maps only to safe Syralit components
   (`text`, `markdown`, `metric`, `table`, `dataframe`, line/bar/pie charts,
   `image`, `progress`, `container`) and supports JSON Pointer data binding.
+- **Artifact DSL documentation and skill**: added `docs/artifact-dsl.md` as the
+  formal schema reference and a dedicated `skills/syralit-artifact-dsl`
+  generator skill for agents that need to output valid DSL payloads.
 - **Agent key hooks**: `AgentAuthenticator`, `AgentKeyStore`,
   `StaticAgentKey`, and `AgentKeyManager` provide both hardcoded/secrets-backed
   auth and app-owned key-management UI without making Syralit persist keys.

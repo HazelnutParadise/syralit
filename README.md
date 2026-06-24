@@ -70,7 +70,10 @@ go run .
 
 ## Agent Skills
 
-The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants. The [`syralit-dev`](skills/syralit-dev/SKILL.md) skill provides a complete API reference.
+The [`skills/`](skills/) directory contains [Agent Skills](https://docs.claude.com/en/docs/claude-code/skills) for building Syralit apps with AI coding assistants.
+
+- [`syralit-dev`](skills/syralit-dev/SKILL.md): complete Syralit API reference
+- [`syralit-artifact-dsl`](skills/syralit-artifact-dsl/SKILL.md): specialized guide for generating valid Artifact DSL JSON
 
 Install it into your project with the [`skills`](https://github.com/vercel-labs/skills) CLI:
 
@@ -221,6 +224,8 @@ For user-managed keys, implement `sy.AgentKeyStore` and render
 `sy.AgentKeyManager(store)`. Syralit provides the UI and callback contract; your
 app decides whether keys live in memory, a file, a database, or another secret
 system.
+
+Full DSL reference: [`docs/artifact-dsl.md`](docs/artifact-dsl.md)
 
 ### Data
 

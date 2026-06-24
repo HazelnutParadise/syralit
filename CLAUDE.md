@@ -53,7 +53,7 @@ Examples auto-pick the next free port if 8600 is taken (e.g. 8601), and log the 
 - Match existing file/style: option-pattern constructors (`type Option func(*widgetOpts)`, e.g. `sy.Key`, `sy.DefaultValue`, `sy.Height`, `sy.ChartTitle`). New widgets follow the same shape.
 - Built-in charts go through `chartProps` in `chart.go` (Chart.js). External chart libs (Vega-Lite, Plotly, Bokeh, deck.gl) are CDN-lazy-loaded from a JSON spec — follow the existing pattern when adding more.
 - Keep the public API Streamlit-flavored where a clear equivalent exists.
-- Examples live in `examples/`; the agent skill lives in `skills/syralit-dev/SKILL.md`. Update both when adding user-facing features.
+- Examples live in `examples/`; agent skills live under `skills/` (with `skills/syralit-dev/SKILL.md` as the canonical API reference). Update the relevant skill docs too when adding user-facing features.
 
 ## Workflow notes
 
@@ -62,8 +62,8 @@ Examples auto-pick the next free port if 8600 is taken (e.g. 8601), and log the 
   - **If a `dev` branch exists**, all ongoing development happens on `dev` — auto commit-and-push targets `dev`, never `main`. `main` only receives a merge from `dev` at release time (then gets the version tag + GitHub release). Do not commit straight to `main` except for that release merge.
   - **If there is no `dev` branch yet**, keep working on `main` as usual. The switch is scheduled for *after the next published release*: once that release is tagged on `main`, create `dev` from `main` and do all further work there. (As of v0.3.0 the `dev` branch does not exist yet — stay on `main` until the next release ships.)
 - **Docs are part of "done" for any user-facing change.** Whenever you add, rename, or change the behaviour of a public API (a `sy.*` widget/option, an `integrations/insyra` helper, a CLI command, config key, etc.), update **all** of these in the *same* change — never leave it "for later":
-  1. **`skills/syralit-dev/SKILL.md`** — the agent skill is the canonical API reference; add the new function/option with its signature and a one-line description, in the matching section.
+  1. **`skills/syralit-dev/SKILL.md`** — the canonical API reference; add the new function/option with its signature and a one-line description, in the matching section.
   2. **`README.md`** — add it to the relevant section/table.
   3. **`CHANGELOG.md`** — note it under the current unreleased section.
   4. An **example** under `examples/` when the feature benefits from a runnable demo.
-  Before committing a feature, re-read SKILL.md and confirm it actually lists what you added — a feature the skill doesn't mention is effectively invisible to AI-assisted users.
+  Before committing a feature, re-read the relevant skill docs and confirm they actually list what you added — a feature the skills don't mention is effectively invisible to AI-assisted users.

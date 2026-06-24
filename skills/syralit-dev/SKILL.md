@@ -426,6 +426,11 @@ sy.AgentKeyManager(store, sy.Key("agent-keys"))
 Syralit supplies the UI/callback contract, but does not persist keys for the
 app.
 
+For agents that need to generate Artifact DSL JSON directly, use the dedicated
+`skills/syralit-artifact-dsl/SKILL.md` skill. Keep `syralit-dev` for framework
+API usage and app wiring, and use the artifact skill when the task is "return a
+valid payload" rather than "build a whole app".
+
 ### Configuration
 ```go
 sy.SetPageConfig(

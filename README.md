@@ -217,7 +217,8 @@ sy.App(func() {
 })
 ```
 
-Agents first discover the available canvases, then update one by ID:
+Set `SYRALIT_URL` to the public URL printed by `syralit run` or `syralit dev`.
+Agents then discover the available canvases and update one by ID:
 
 ```bash
 curl "$SYRALIT_URL/api/agent/artifacts" \
@@ -237,6 +238,8 @@ than taking a screenshot mid-animation.
 `expected_revision` must match the latest discovery/current-spec response;
 stale writes receive `409 Conflict` instead of silently overwriting a newer
 agent update.
+In hot-reload mode, the public dev server proxies `/api/` to its current child;
+never use the ephemeral child port shown in internal diagnostics.
 
 `HandleArtifactEndpoint` remains available when each canvas needs its own route
 or authenticator. `ArtifactAPIHandler` and `ArtifactHandler` return ordinary

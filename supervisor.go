@@ -8,6 +8,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -109,6 +111,9 @@ func startSupervisor(opts DevOptions) (*supervisor, http.Handler, error) {
 	mux.HandleFunc("GET /", s.handleIndex)
 	mux.Handle("GET /_syralit/assets/", s.assetsHandler())
 	mux.HandleFunc("GET /_syralit/ws", s.handleBrowserWS)
+	apiProxy := s.childHTTPProxy()
+	mux.Handle("GET /api/", apiProxy)
+	mux.Handle("POST /api/", apiProxy)
 	return s, mux, nil
 }
 
@@ -385,6 +390,23 @@ func (s *supervisor) assetsHandler() http.Handler {
 	}
 	sub, _ := fs.Sub(assetsFS, "assets")
 	return http.StripPrefix("/_syralit/assets/", http.FileServer(http.FS(sub)))
+}
+
+func (s *supervisor) childHTTPProxy() http.Handler {
+	target := &url.URL{Scheme: "http", Host: s.childAddr}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"ok": false,
+			"error": map[string]string{
+				"code":    "dev_child_unavailable",
+				"message": "Syralit dev child is rebuilding or unavailable",
+			},
+		})
+	}
+	return proxy
 }
 
 // --- file watching ---

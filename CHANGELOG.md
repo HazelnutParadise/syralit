@@ -17,6 +17,8 @@ All notable changes to Syralit are documented here. The format is based on
   selected stores through one authenticated GET/POST route, while
   `ArtifactAPIHandler` and `ArtifactHandler` allow the same APIs to run on a
   separate mux or port. Discovery reports observed pages and stable selectors.
+  The hot-reload supervisor proxies `/api/` to its child, so the public dev App
+  URL works without exposing or documenting the internal child port.
 - **Deterministic artifact previews**: every successful update returns a
   revision and preview metadata. Artifact canvases now expose
   `transitioning`/`settled` DOM states after keyed layout transitions, charts,

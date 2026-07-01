@@ -49,6 +49,8 @@ cd examples/hello && go run .   # run an example (defaults to http://localhost:8
 Examples default to port 8600 unless config or CLI flags choose another port.
 Do not hardcode 8600 into agent/API examples; use the actual app URL or request
 Origin because the configured or proxied port may differ.
+Under `syralit dev`, the supervisor proxies `GET/POST /api/` to the hot-reload
+child; examples should use `$SYRALIT_URL` rather than the child's internal port.
 
 ## Conventions
 

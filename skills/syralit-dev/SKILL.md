@@ -427,6 +427,10 @@ The unified API uses one URL:
 - `POST /api/agent/artifacts` accepts
   `{"artifact":"main","expected_revision":3,"spec":{...}}`.
 
+Use the public Syralit App URL for these routes. Under `syralit dev`, `/api/`
+is proxied to the hot-reload child; never expose or call the ephemeral child
+port printed in internal diagnostics.
+
 Successful updates return a monotonically increasing `revision`, `placements`,
 and a `preview` with the page URL and a server-generated selector. A
 browser-capable agent must wait until that element has both the returned

@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -101,7 +100,7 @@ func renderControls() {
 	})
 
 	sy.Header("Agent endpoints")
-	endpoint := appOrigin() + "/api/agent/artifacts"
+	endpoint := "${SYRALIT_URL}/api/agent/artifacts"
 	sy.Code(`curl ` + endpoint + ` \
   -H "Authorization: Bearer dev-agent-key"`)
 	revision := strconv.FormatUint(mainBoard.Revision(), 10)
@@ -112,21 +111,6 @@ func renderControls() {
 
 	sy.Header("Managed keys")
 	sy.AgentKeyManager(keys, sy.Key("agent-key-manager"))
-}
-
-func appOrigin() string {
-	ctx := sy.Context()
-	if origin := strings.TrimRight(ctx.Headers["Origin"], "/"); strings.HasPrefix(origin, "http://") || strings.HasPrefix(origin, "https://") {
-		return origin
-	}
-	scheme := "http"
-	if strings.EqualFold(strings.TrimSpace(strings.Split(ctx.Headers["X-Forwarded-Proto"], ",")[0]), "https") {
-		scheme = "https"
-	}
-	if ctx.Host == "" {
-		return "${SYRALIT_URL}"
-	}
-	return scheme + "://" + ctx.Host
 }
 
 func applyPreset(mainSpec, noteSpec sy.ArtifactSpec) error {

@@ -2,6 +2,8 @@ package syralit
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -16,6 +18,22 @@ const devAppV1 = `package main
 
 import sy "github.com/HazelnutParadise/syralit"
 
+var board = sy.NewArtifactStore("main", sy.ArtifactSpec{
+	Version: "v1",
+	Nodes: []sy.ArtifactNode{{
+		ID: "message", Component: "text",
+		Props: map[string]any{"text": "Dev artifact"},
+	}},
+})
+
+func init() {
+	sy.HandleArtifactAPI(
+		"/api/agent/artifacts",
+		sy.StaticAgentKey("dev-test", "secret"),
+		board,
+	)
+}
+
 func main() {
 	sy.App(func() {
 		sy.Title("V1")
@@ -24,6 +42,7 @@ func main() {
 			c.Set(c.Get() + 1)
 		}
 		sy.Textf("Count: %d", c.Get())
+		sy.ArtifactCanvas(board)
 	})
 }
 `
@@ -111,23 +130,39 @@ func TestHotReload(t *testing.T) {
 	// 1. Initial render: V1, count 0.
 	readUntil(t, c, 15*time.Second, "V1")
 
-	// 2. Click Add twice -> count 2.
+	// 2. The outward dev server proxies artifact APIs to the child.
+	req, err := http.NewRequest(http.MethodGet, srv.URL+"/api/agent/artifacts", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer secret")
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("artifact API through supervisor: %v", err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	_ = res.Body.Close()
+	if res.StatusCode != http.StatusOK || !strings.Contains(string(body), `"id":"main"`) {
+		t.Fatalf("artifact API through supervisor: status=%d body=%s", res.StatusCode, body)
+	}
+
+	// 3. Click Add twice -> count 2.
 	addClick := `{"type":"widget_change","widget_id":"add","value":true,"is_button":true}`
 	sendWS(t, c, addClick)
 	readUntil(t, c, 10*time.Second, "Count: 1")
 	sendWS(t, c, addClick)
 	readUntil(t, c, 10*time.Second, "Count: 2")
 
-	// 3. Edit source -> rebuild -> V2 appears AND count is preserved at 2
+	// 4. Edit source -> rebuild -> V2 appears AND count is preserved at 2
 	//    (both must be in the same frame: the post-restore render).
 	writeApp(strings.Replace(devAppV1, `"V1"`, `"V2"`, 1))
 	readUntil(t, c, 30*time.Second, "V2", "Count: 2")
 
-	// 4. Introduce a compile error -> build_error overlay, old app keeps running.
+	// 5. Introduce a compile error -> build_error overlay, old app keeps running.
 	writeApp(devAppV1 + "\nfunc broken() { this is not go }\n")
 	readUntil(t, c, 30*time.Second, "__dev_build_error")
 
-	// 5. Fix it (V3) -> recovers, state still preserved at 2.
+	// 6. Fix it (V3) -> recovers, state still preserved at 2.
 	writeApp(strings.Replace(devAppV1, `"V1"`, `"V3"`, 1))
 	readUntil(t, c, 30*time.Second, "V3", "Count: 2")
 }

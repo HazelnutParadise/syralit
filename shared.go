@@ -23,6 +23,7 @@ func deregisterSession(s *session) {
 	sessionsMu.Lock()
 	delete(activeSessions, s)
 	sessionsMu.Unlock()
+	clearArtifactPlacements(s.id)
 }
 
 // broadcastRerun wakes every active session so they re-render and pick up new

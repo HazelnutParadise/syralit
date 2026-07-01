@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,18 +54,19 @@ type ArtifactNode struct {
 // ArtifactStore holds one shared artifact. A Set broadcasts a rerun so every
 // active browser session sees the latest canvas.
 type ArtifactStore struct {
-	name    string
-	mu      sync.RWMutex
-	spec    ArtifactSpec
-	nodes   []*Node
-	updated time.Time
+	name     string
+	mu       sync.RWMutex
+	spec     ArtifactSpec
+	nodes    []*Node
+	updated  time.Time
+	revision uint64
 }
 
 // NewArtifactStore creates a shared artifact store. Invalid initial specs are
 // represented as an error node so app startup remains recoverable.
 func NewArtifactStore(name string, initial ArtifactSpec) *ArtifactStore {
 	st := &ArtifactStore{name: name}
-	if err := st.set(initial, false); err != nil {
+	if _, err := st.set(initial, false); err != nil {
 		st.mu.Lock()
 		st.spec = initial
 		st.nodes = []*Node{{Type: "status", Props: map[string]any{
@@ -74,6 +74,7 @@ func NewArtifactStore(name string, initial ArtifactSpec) *ArtifactStore {
 			"text":  "Artifact error: " + err.Error(),
 		}}}
 		st.updated = time.Now()
+		st.revision = 1
 		st.mu.Unlock()
 	}
 	return st
@@ -89,26 +90,47 @@ func (s *ArtifactStore) Name() string {
 
 // Set replaces the artifact with a validated spec and broadcasts a live rerun.
 func (s *ArtifactStore) Set(spec ArtifactSpec) error {
-	return s.set(spec, true)
+	_, err := s.set(spec, true)
+	return err
 }
 
-func (s *ArtifactStore) set(spec ArtifactSpec, broadcast bool) error {
+func (s *ArtifactStore) set(spec ArtifactSpec, broadcast bool) (uint64, error) {
+	return s.setExpected(spec, broadcast, nil)
+}
+
+func (s *ArtifactStore) setExpected(spec ArtifactSpec, broadcast bool, expected *uint64) (uint64, error) {
 	if s == nil {
-		return errors.New("nil artifact store")
+		return 0, errors.New("nil artifact store")
 	}
 	nodes, err := compileArtifactSpec(spec)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	s.mu.Lock()
+	if expected != nil && s.revision != *expected {
+		current := s.revision
+		s.mu.Unlock()
+		return current, artifactRevisionConflictError{expected: *expected, current: current}
+	}
 	s.spec = cloneArtifactSpec(spec)
 	s.nodes = cloneNodes(nodes)
 	s.updated = time.Now()
+	s.revision++
+	revision := s.revision
 	s.mu.Unlock()
 	if broadcast {
 		broadcastRerun()
 	}
-	return nil
+	return revision, nil
+}
+
+type artifactRevisionConflictError struct {
+	expected uint64
+	current  uint64
+}
+
+func (e artifactRevisionConflictError) Error() string {
+	return fmt.Sprintf("artifact revision conflict: expected %d, current %d", e.expected, e.current)
 }
 
 // Spec returns a copy of the current artifact spec.
@@ -119,6 +141,26 @@ func (s *ArtifactStore) Spec() ArtifactSpec {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return cloneArtifactSpec(s.spec)
+}
+
+// Revision returns the monotonically increasing revision of the current spec.
+// Agents can use it to wait until the browser has finished rendering an update.
+func (s *ArtifactStore) Revision() uint64 {
+	if s == nil {
+		return 0
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.revision
+}
+
+func (s *ArtifactStore) snapshot() (ArtifactSpec, uint64) {
+	if s == nil {
+		return ArtifactSpec{}, 0
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return cloneArtifactSpec(s.spec), s.revision
 }
 
 func (s *ArtifactStore) nodesSnapshot() []*Node {
@@ -148,6 +190,7 @@ func ArtifactCanvas(store *ArtifactStore, opts ...Option) {
 	if store != nil {
 		id = "artifact:" + store.Name()
 		props["name"] = store.Name()
+		props["revision"] = store.Revision()
 		layout := store.layoutSnapshot()
 		props["layout"] = map[string]any{
 			"columns": layout.Columns,
@@ -520,97 +563,4 @@ func AgentKeyManager(store AgentKeyStore, opts ...Option) string {
 		}
 	}, Border())
 	return created
-}
-
-type artifactEndpoint struct {
-	path  string
-	store *ArtifactStore
-	auth  AgentAuthenticator
-}
-
-var (
-	artifactEndpointMu sync.RWMutex
-	artifactEndpoints  = map[string]artifactEndpoint{}
-)
-
-// HandleArtifactEndpoint registers an opt-in agent endpoint that replaces an
-// ArtifactStore from a POSTed DSL payload.
-func HandleArtifactEndpoint(path string, store *ArtifactStore, auth AgentAuthenticator) {
-	if !strings.HasPrefix(path, "/") {
-		panic("syralit: artifact endpoint path must start with /")
-	}
-	if store == nil {
-		panic("syralit: artifact endpoint requires a store")
-	}
-	if auth == nil {
-		panic("syralit: artifact endpoint requires an authenticator")
-	}
-	artifactEndpointMu.Lock()
-	artifactEndpoints[path] = artifactEndpoint{path: path, store: store, auth: auth}
-	artifactEndpointMu.Unlock()
-}
-
-func registerArtifactEndpoints(mux *http.ServeMux) {
-	artifactEndpointMu.RLock()
-	defer artifactEndpointMu.RUnlock()
-	for path, ep := range artifactEndpoints {
-		ep := ep
-		mux.HandleFunc("POST "+path, func(w http.ResponseWriter, r *http.Request) {
-			handleArtifactEndpoint(w, r, ep)
-		})
-	}
-}
-
-func handleArtifactEndpoint(w http.ResponseWriter, r *http.Request, ep artifactEndpoint) {
-	token := bearerToken(r.Header.Get("Authorization"))
-	if token == "" {
-		writeArtifactError(w, http.StatusUnauthorized, "unauthorized", "missing bearer token")
-		return
-	}
-	if _, ok, err := ep.auth.AuthenticateAgent(r.Context(), token); err != nil {
-		writeArtifactError(w, http.StatusInternalServerError, "auth_error", err.Error())
-		return
-	} else if !ok {
-		writeArtifactError(w, http.StatusUnauthorized, "unauthorized", "invalid bearer token")
-		return
-	}
-
-	var req struct {
-		Spec ArtifactSpec `json:"spec"`
-	}
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxArtifactEndpointBody))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&req); err != nil {
-		writeArtifactError(w, http.StatusBadRequest, "bad_request", err.Error())
-		return
-	}
-	if err := ep.store.Set(req.Spec); err != nil {
-		writeArtifactError(w, http.StatusUnprocessableEntity, "invalid_artifact", err.Error())
-		return
-	}
-	writeArtifactJSON(w, http.StatusOK, map[string]any{"ok": true, "artifact": ep.store.Name()})
-}
-
-func bearerToken(header string) string {
-	const prefix = "Bearer "
-	if !strings.HasPrefix(header, prefix) {
-		return ""
-	}
-	return strings.TrimSpace(strings.TrimPrefix(header, prefix))
-}
-
-func writeArtifactError(w http.ResponseWriter, status int, code, message string) {
-	writeArtifactJSON(w, status, map[string]any{
-		"ok": false,
-		"error": map[string]any{
-			"code":    code,
-			"message": message,
-		},
-	})
-}
-
-func writeArtifactJSON(w http.ResponseWriter, status int, data any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(data)
 }

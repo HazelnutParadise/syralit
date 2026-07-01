@@ -186,7 +186,7 @@ components, supports JSON Pointer data binding, and never exposes raw HTML,
 custom JS, iframes, or the internal Node protocol.
 
 ```go
-board := sy.NewArtifactStore("main", sy.ArtifactSpec{
+mainBoard := sy.NewArtifactStore("main", sy.ArtifactSpec{
     Version: "v1",
     Layout:  sy.ArtifactLayout{Columns: 2, Gap: 14, Padding: 16},
     Data: map[string]any{
@@ -200,25 +200,47 @@ board := sy.NewArtifactStore("main", sy.ArtifactSpec{
     }},
 })
 
-sy.HandleArtifactEndpoint(
-    "/api/agent/artifacts/main",
-    board,
-    sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY")),
+notesBoard := sy.NewArtifactStore("notes", notesSpec)
+auth := sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY"))
+
+// One discoverable endpoint for every explicitly exposed canvas.
+sy.HandleArtifactAPI(
+    "/api/agent/artifacts",
+    auth,
+    mainBoard,
+    notesBoard,
 )
 
 sy.App(func() {
-    sy.ArtifactCanvas(board, sy.Height(520))
+    sy.ArtifactCanvas(mainBoard, sy.Height(520))
+    sy.ArtifactCanvas(notesBoard, sy.Height(240))
 })
 ```
 
-Agent updates are full replacements:
+Agents first discover the available canvases, then update one by ID:
 
 ```bash
-curl -X POST http://127.0.0.1:8600/api/agent/artifacts/main \
+curl "$SYRALIT_URL/api/agent/artifacts" \
+  -H "Authorization: Bearer $AGENT_KEY"
+
+curl -X POST "$SYRALIT_URL/api/agent/artifacts" \
   -H "Authorization: Bearer $AGENT_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"spec":{"version":"v1","nodes":[{"id":"msg","component":"text","props":{"text":"Updated"}}]}}'
+  -d '{"artifact":"main","expected_revision":1,"spec":{"version":"v1","nodes":[{"id":"msg","component":"text","props":{"text":"Updated"}}]}}'
 ```
+
+The update response includes a revision plus page/selector preview metadata.
+Browser-capable agents wait until the selected canvas has the returned
+`data-artifact-revision` and `data-artifact-state="settled"`, then capture that
+element. This waits for the keyed transition, charts, images, and fonts rather
+than taking a screenshot mid-animation.
+`expected_revision` must match the latest discovery/current-spec response;
+stale writes receive `409 Conflict` instead of silently overwriting a newer
+agent update.
+
+`HandleArtifactEndpoint` remains available when each canvas needs its own route
+or authenticator. `ArtifactAPIHandler` and `ArtifactHandler` return ordinary
+`http.Handler` values for mounting the API on another mux or port.
 
 For user-managed keys, implement `sy.AgentKeyStore` and render
 `sy.AgentKeyManager(store)`. Syralit provides the UI and callback contract; your

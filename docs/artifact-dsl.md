@@ -361,26 +361,56 @@ Validation fails when any of these happen:
 
 ## Endpoint Usage
 
-Apps opt in to an update endpoint explicitly:
+Apps can expose several stores through one discoverable endpoint:
 
 ```go
-board := sy.NewArtifactStore("main", initialSpec)
+mainBoard := sy.NewArtifactStore("main", initialSpec)
+notesBoard := sy.NewArtifactStore("notes", notesSpec)
+auth := sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY"))
 
-sy.HandleArtifactEndpoint(
-    "/api/agent/artifacts/main",
-    board,
-    sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY")),
+sy.HandleArtifactAPI(
+    "/api/agent/artifacts",
+    auth,
+    mainBoard,
+    notesBoard,
 )
 
 sy.App(func() {
-    sy.ArtifactCanvas(board, sy.Height(520))
+    sy.ArtifactCanvas(mainBoard, sy.Height(520))
+    sy.ArtifactCanvas(notesBoard, sy.Height(240))
 })
+```
+
+Discovery:
+
+```http
+GET /api/agent/artifacts
+Authorization: Bearer <token>
+```
+
+The response includes each artifact ID, revision, and every placement observed
+in an actual browser session. A placement contains its Syralit page, app URL,
+canvas ID, and a stable selector. On multi-page apps, visit each navigation page
+once before relying on a complete placement list; the API does not execute
+arbitrary page functions just to discover their UI.
+
+When no page has rendered a store yet, `placements` is empty. Same-port APIs
+return a separate top-level `app_url` as the exploration entry point; they do
+not invent a canvas placement.
+
+Read one artifact's current full-replace base:
+
+```http
+GET /api/agent/artifacts?artifact=main
+Authorization: Bearer <token>
 ```
 
 Update payload:
 
 ```json
 {
+  "artifact": "main",
+  "expected_revision": 1,
   "spec": {
     "version": "v1",
     "nodes": [
@@ -395,6 +425,29 @@ Update payload:
   }
 }
 ```
+
+Successful updates return the new `revision`, all known `placements`, and the
+first placement as `preview`. The browser marks the selected canvas
+`data-artifact-state="transitioning"` during its keyed layout/content
+transition. It changes to `settled` only after transitions, Chart.js charts,
+images, and document fonts are ready. Agents must wait for both the returned
+revision and `settled` before capturing the selected element.
+
+`expected_revision` is mandatory and comes from the latest discovery/detail
+response. If another update wins first, Syralit returns `409 Conflict` with the
+current revision. The agent must fetch and reconcile the current spec rather
+than repeat a stale full replacement.
+
+`data-artifact-readiness` is `complete`, `partial`, or `timeout`. `partial`
+means at least one image, chart, or font failed; the canvas is settled but must
+not be reported as fully visually verified.
+
+For separate permissions, `HandleArtifactEndpoint(path, store, auth)` still
+provides one route per store. `ArtifactAPIHandler(auth, stores...)` and
+`ArtifactHandler(store, auth)` return standard `http.Handler` values that can be
+mounted on a different server or port. Cross-port handlers report only
+pages/selectors observed from the Syralit app and omit URLs they cannot safely
+infer, so they do not guess that the API origin is also the UI origin.
 
 ## Non-Goals
 

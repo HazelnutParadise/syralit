@@ -388,25 +388,57 @@ board := sy.NewArtifactStore("main", sy.ArtifactSpec{
     }},
 })
 
-// Opt-in POST endpoint. Requires Authorization: Bearer <token>.
-sy.HandleArtifactEndpoint(
-    "/api/agent/artifacts/main",
-    board,
-    sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY")),
-)
+notes := sy.NewArtifactStore("notes", notesSpec)
+auth := sy.StaticAgentKey("local-agent", sy.Secrets("AGENT_KEY"))
+
+// Default: one authenticated discovery/update API for selected stores.
+sy.HandleArtifactAPI("/api/agent/artifacts", auth, board, notes)
 
 sy.App(func() {
     sy.ArtifactCanvas(board, sy.Height(520))
+    sy.ArtifactCanvas(notes, sy.Height(240))
 })
 
-// Full-replace update payload:
-// {"spec":{"version":"v1","nodes":[{"id":"msg","component":"text","props":{"text":"Updated"}}]}}
+// Unified full-replace update payload:
+// {"artifact":"main","expected_revision":1,"spec":{"version":"v1","nodes":[{"id":"msg","component":"text","props":{"text":"Updated"}}]}}
 ```
 Allowed artifact components: `text`, `markdown`, `metric`, `table`,
 `dataframe`, `line_chart`, `bar_chart`, `pie_chart`, `image`, `progress`,
 `container`. Data binding uses JSON Pointer from `ArtifactSpec.Data`, e.g.
 `Bind: map[string]string{"props.value": "/summary/revenue"}`. Every artifact
 node needs a stable `ID` so the browser can animate enter/update/exit states.
+
+Artifact API choices:
+
+```go
+// One route per store, useful for separate authenticators or permissions.
+sy.HandleArtifactEndpoint("/api/private/report", board, auth)
+
+// Mount on another http.Server, mux, or port.
+apiHandler := sy.ArtifactAPIHandler(auth, board, notes)
+singleHandler := sy.ArtifactHandler(board, auth)
+```
+
+The unified API uses one URL:
+
+- `GET /api/agent/artifacts` discovers exposed stores and observed page
+  placements.
+- `GET /api/agent/artifacts?artifact=main` returns the current spec.
+- `POST /api/agent/artifacts` accepts
+  `{"artifact":"main","expected_revision":3,"spec":{...}}`.
+
+Successful updates return a monotonically increasing `revision`, `placements`,
+and a `preview` with the page URL and a server-generated selector. A
+browser-capable agent must wait until that element has both the returned
+`data-artifact-revision` and `data-artifact-state="settled"` before taking and
+returning a screenshot. Do not use the selector as the update target; updates
+select a store by artifact ID.
+
+`expected_revision` is required. A stale update receives `409 Conflict`; fetch
+the current spec again, reconcile the intended change, and submit against the
+new revision instead of blindly retrying. `data-artifact-readiness` is
+`complete`, `partial`, or `timeout`; only `complete` proves all visual resources
+loaded.
 
 For app-owned key storage, implement:
 ```go

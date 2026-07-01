@@ -1112,12 +1112,14 @@
   function artifactCanvasEl(node, p) {
     var id = node.id || ("artifact:" + (p.name || "default"));
     var wrap = root.querySelector('[data-artifact-id="' + cssEscape(id) + '"]');
+    var isNewCanvas = !wrap;
     if (!wrap) {
       wrap = el("section", "sy-artifact-canvas");
       wrap.setAttribute("data-artifact-id", id);
       var body = el("div", "sy-artifact-grid");
       wrap.appendChild(body);
     }
+    wrap.setAttribute("data-artifact-name", p.name || "");
     if (p.height) wrap.style.minHeight = p.height + "px";
     if (p.width) wrap.style.maxWidth = p.width + "px";
 
@@ -1130,49 +1132,215 @@
     if (layout.padding) grid.style.padding = layout.padding + "px";
     else grid.style.padding = "";
 
-    reconcileArtifactChildren(grid, node.children || []);
+    var revision = String(p.revision || 0);
+    var revisionChanged = isNewCanvas || wrap.dataset.artifactRevision !== revision;
+    if (revisionChanged) {
+      if (typeof wrap.getAnimations === "function") {
+        try {
+          wrap.getAnimations({ subtree: true }).forEach(function (animation) {
+            animation.cancel();
+          });
+        } catch (e) {}
+      }
+      wrap.dataset.artifactRevision = revision;
+      wrap.dataset.artifactState = "transitioning";
+      wrap.dataset.artifactReadiness = "pending";
+      var token = String((Number(wrap.dataset.artifactTransitionToken || 0) + 1));
+      wrap.dataset.artifactTransitionToken = token;
+      var transition = reconcileArtifactChildren(grid, node.children || []);
+      settleArtifactCanvas(wrap, p.name || "", id, revision, token, transition);
+    }
     return wrap;
   }
 
   function reconcileArtifactChildren(grid, children) {
     var existing = {};
+    var oldRects = {};
+    var animations = [];
+    var oldGridHeight = grid.getBoundingClientRect().height;
     Array.prototype.forEach.call(grid.children, function (el) {
       var id = el.getAttribute("data-artifact-node-id");
-      if (id) existing[id] = el;
+      if (id) {
+        existing[id] = el;
+        oldRects[id] = el.getBoundingClientRect();
+      }
     });
 
     children.forEach(function (child) {
       var id = child.id || "";
       if (!id) return;
       var item = existing[id];
-      var isNew = false;
       if (!item) {
-        item = el("div", "sy-artifact-item sy-artifact-enter");
+        item = el("div", "sy-artifact-item");
         item.setAttribute("data-artifact-node-id", id);
-        isNew = true;
-      } else {
-        item.classList.remove("sy-artifact-exit");
-        item.classList.add("sy-artifact-update");
       }
 
       applyArtifactItemLayout(item, child.props || {});
       item.replaceChildren(buildNode(child));
       grid.appendChild(item);
       delete existing[id];
-
-      if (isNew) {
-        requestAnimationFrame(function () { item.classList.remove("sy-artifact-enter"); });
-      } else {
-        setTimeout(function () { item.classList.remove("sy-artifact-update"); }, 650);
-      }
     });
 
     Object.keys(existing).forEach(function (id) {
       var item = existing[id];
-      item.classList.add("sy-artifact-exit");
-      setTimeout(function () {
-        if (item.parentNode) item.parentNode.removeChild(item);
-      }, 260);
+      var rect = oldRects[id];
+      var gridRect = grid.getBoundingClientRect();
+      var ghost = item.cloneNode(true);
+      copyArtifactCanvases(item, ghost);
+      ghost.removeAttribute("data-artifact-node-id");
+      ghost.classList.add("sy-artifact-ghost");
+      ghost.style.left = (rect.left - gridRect.left) + "px";
+      ghost.style.top = (rect.top - gridRect.top) + "px";
+      ghost.style.width = rect.width + "px";
+      ghost.style.height = rect.height + "px";
+      item.remove();
+      grid.appendChild(ghost);
+      animations.push(runArtifactAnimation(ghost, [
+        { opacity: 1, transform: "translateY(0) scale(1)" },
+        { opacity: 0, transform: "translateY(-10px) scale(.975)" },
+      ], 280, function () { ghost.remove(); }));
+    });
+
+    return nextArtifactFrame().then(function () {
+      Array.prototype.forEach.call(grid.children, function (item) {
+        var id = item.getAttribute("data-artifact-node-id");
+        if (!id) return;
+        var oldRect = oldRects[id];
+        if (!oldRect) {
+          animations.push(runArtifactAnimation(item, [
+            { opacity: 0, transform: "translateY(14px) scale(.975)" },
+            { opacity: 1, transform: "translateY(0) scale(1)" },
+          ], 460));
+          return;
+        }
+        var nextRect = item.getBoundingClientRect();
+        var dx = oldRect.left - nextRect.left;
+        var dy = oldRect.top - nextRect.top;
+        var sx = nextRect.width ? oldRect.width / nextRect.width : 1;
+        var sy = nextRect.height ? oldRect.height / nextRect.height : 1;
+        animations.push(runArtifactAnimation(item, [
+          {
+            opacity: .72,
+            transform: "translate(" + dx + "px," + dy + "px) scale(" + sx + "," + sy + ")",
+            boxShadow: "0 0 0 0 color-mix(in srgb, var(--sy-accent) 28%, transparent)",
+          },
+          {
+            opacity: 1,
+            transform: "translate(0,0) scale(1,1)",
+            boxShadow: "0 0 0 14px transparent",
+          },
+        ], 520));
+      });
+
+      var nextGridHeight = grid.getBoundingClientRect().height;
+      if (Math.abs(oldGridHeight - nextGridHeight) > 1) {
+        animations.push(runArtifactAnimation(grid, [
+          { minHeight: oldGridHeight + "px" },
+          { minHeight: nextGridHeight + "px" },
+        ], 460));
+      }
+      return Promise.all(animations);
+    });
+  }
+
+  function copyArtifactCanvases(source, clone) {
+    var sourceCanvases = source.querySelectorAll("canvas");
+    var cloneCanvases = clone.querySelectorAll("canvas");
+    Array.prototype.forEach.call(sourceCanvases, function (canvas, i) {
+      var target = cloneCanvases[i];
+      if (!target) return;
+      target.width = canvas.width;
+      target.height = canvas.height;
+      try { target.getContext("2d").drawImage(canvas, 0, 0); } catch (e) {}
+    });
+  }
+
+  function runArtifactAnimation(target, frames, duration, done) {
+    if (!target || typeof target.animate !== "function" ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (done) done();
+      return Promise.resolve();
+    }
+    var animation = target.animate(frames, {
+      duration: duration,
+      easing: "cubic-bezier(.22,1,.36,1)",
+      fill: "both",
+    });
+    return animation.finished.catch(function () {}).then(function () {
+      animation.cancel();
+      if (done) done();
+    });
+  }
+
+  function nextArtifactFrame() {
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+    });
+  }
+
+  function settleArtifactCanvas(wrap, name, canvasID, revision, token, transition) {
+    var readiness = Promise.resolve(transition)
+      .then(function () { return waitForArtifactResources(wrap); })
+      .then(function (result) {
+        return nextArtifactFrame().then(function () { return result; });
+      });
+    Promise.race([
+      readiness,
+      new Promise(function (resolve) {
+        setTimeout(function () { resolve("timeout"); }, 6000);
+      }),
+    ]).then(function (result) {
+      if (wrap.dataset.artifactTransitionToken !== token) return;
+      wrap.dataset.artifactReadiness = result;
+      wrap.dataset.artifactState = "settled";
+      wrap.dispatchEvent(new CustomEvent("syralit:artifact-settled", {
+        bubbles: true,
+        detail: {
+          artifact: name,
+          canvas_id: canvasID,
+          revision: Number(revision),
+          readiness: result,
+        },
+      }));
+    });
+  }
+
+  function waitForArtifactResources(wrap) {
+    var pending = [];
+    Array.prototype.forEach.call(wrap.querySelectorAll("img"), function (img) {
+      if (img.complete) {
+        if (!img.naturalWidth) {
+          pending.push(Promise.resolve(false));
+        } else if (typeof img.decode === "function") {
+          pending.push(img.decode().then(function () { return true; }).catch(function () { return false; }));
+        }
+        return;
+      }
+      pending.push(new Promise(function (resolve) {
+        img.addEventListener("load", function () { resolve(true); }, { once: true });
+        img.addEventListener("error", function () { resolve(false); }, { once: true });
+      }));
+    });
+    Array.prototype.forEach.call(wrap.querySelectorAll("[data-chart-state]"), function (chart) {
+      if (chart.dataset.chartState === "settled") {
+        pending.push(Promise.resolve(true));
+        return;
+      }
+      if (chart.dataset.chartState === "error") {
+        pending.push(Promise.resolve(false));
+        return;
+      }
+      pending.push(new Promise(function (resolve) {
+        chart.addEventListener("syralit:chart-settled", function () {
+          resolve(chart.dataset.chartState === "settled");
+        }, { once: true });
+      }));
+    });
+    if (document.fonts && document.fonts.ready) {
+      pending.push(document.fonts.ready.then(function () { return true; }).catch(function () { return false; }));
+    }
+    return Promise.all(pending).then(function (results) {
+      return results.every(function (ok) { return ok; }) ? "complete" : "partial";
     });
   }
 
@@ -2458,6 +2626,7 @@
 
   function loadChartJS(cb) {
     if (chartjsState === "ready") { cb(); return; }
+    if (chartjsState === "error") { cb(new Error("Chart.js failed to load")); return; }
     chartjsQueue.push(cb);
     if (chartjsState === "loading") return;
     chartjsState = "loading";
@@ -2468,18 +2637,52 @@
       chartjsQueue.forEach(function (fn) { fn(); });
       chartjsQueue = [];
     };
+    s.onerror = function () {
+      chartjsState = "error";
+      var err = new Error("Chart.js failed to load");
+      chartjsQueue.forEach(function (fn) { fn(err); });
+      chartjsQueue = [];
+    };
     document.head.appendChild(s);
   }
 
   function makeChartJS(type, p, configFn) {
     var wrap = el("div", "sy-chart-wrap");
+    wrap.dataset.chartState = "loading";
     var canvas = document.createElement("canvas");
     wrap.style.maxWidth = (p.width || 600) + "px";
     wrap.style.height = (p.height || 300) + "px";
     wrap.appendChild(canvas);
-    loadChartJS(function () {
+    loadChartJS(function (loadErr) {
+      if (loadErr) {
+        wrap.dataset.chartState = "error";
+        wrap.dispatchEvent(new CustomEvent("syralit:chart-settled"));
+        return;
+      }
       var cfg = configFn();
-      new Chart(canvas, cfg);
+      cfg.options = cfg.options || {};
+      var animation = cfg.options.animation;
+      if (animation === false) {
+        wrap.dataset.chartState = "settled";
+      } else {
+        if (!animation || typeof animation !== "object") animation = {};
+        var originalComplete = animation.onComplete;
+        animation.onComplete = function (ctx) {
+          wrap.dataset.chartState = "settled";
+          wrap.dispatchEvent(new CustomEvent("syralit:chart-settled"));
+          if (typeof originalComplete === "function") originalComplete(ctx);
+        };
+        cfg.options.animation = animation;
+      }
+      try {
+        new Chart(canvas, cfg);
+        if (cfg.options.animation === false) {
+          wrap.dispatchEvent(new CustomEvent("syralit:chart-settled"));
+        }
+      } catch (e) {
+        wrap.dataset.chartState = "error";
+        wrap.dispatchEvent(new CustomEvent("syralit:chart-settled"));
+      }
     });
     return wrap;
   }

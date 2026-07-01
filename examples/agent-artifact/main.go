@@ -6,6 +6,8 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,8 +27,7 @@ func init() {
 		sy.StaticAgentKey("static-local-agent", token),
 		keys,
 	}
-	sy.HandleArtifactEndpoint("/api/agent/artifacts/main", mainBoard, auth)
-	sy.HandleArtifactEndpoint("/api/agent/artifacts/notes", notesBoard, auth)
+	sy.HandleArtifactAPI("/api/agent/artifacts", auth, mainBoard, notesBoard)
 }
 
 func main() {
@@ -100,17 +101,32 @@ func renderControls() {
 	})
 
 	sy.Header("Agent endpoints")
-	sy.Code(`curl -X POST http://127.0.0.1:8600/api/agent/artifacts/main \
+	endpoint := appOrigin() + "/api/agent/artifacts"
+	sy.Code(`curl ` + endpoint + ` \
+  -H "Authorization: Bearer dev-agent-key"`)
+	revision := strconv.FormatUint(mainBoard.Revision(), 10)
+	sy.Code(`curl -X POST ` + endpoint + ` \
   -H "Authorization: Bearer dev-agent-key" \
   -H "Content-Type: application/json" \
-  -d '{"spec":{"version":"v1","layout":{"columns":2,"gap":14,"padding":16},"data":{"summary":{"headline":"## Board refresh\nShifted by an agent.","revenue":"$58k","delta":"+18%","rows":[["North",22],["South",15],["West",19]]}},"nodes":[{"id":"headline","component":"markdown","props":{"text":"placeholder"},"bind":{"props.text":"/summary/headline"},"layout":{"column_span":2}},{"id":"revenue","component":"metric","props":{"label":"Revenue"},"bind":{"props.value":"/summary/revenue","props.delta":"/summary/delta"}},{"id":"progress","component":"progress","props":{"value":0.72,"text":"Plan confidence"}},{"id":"table","component":"table","props":{"headers":["Region","Deals"]},"bind":{"props.rows":"/summary/rows"},"layout":{"column_span":2}}]}}'`)
-	sy.Code(`curl -X POST http://127.0.0.1:8600/api/agent/artifacts/notes \
-  -H "Authorization: Bearer dev-agent-key" \
-  -H "Content-Type: application/json" \
-  -d '{"spec":{"version":"v1","nodes":[{"id":"note","component":"markdown","props":{"text":"### Agent note\nFocus on the next decision, not just the latest metric."}}]}}'`)
+  -d '{"artifact":"main","expected_revision":` + revision + `,"spec":{"version":"v1","layout":{"columns":2,"gap":14,"padding":16},"data":{"summary":{"headline":"## Board refresh\nShifted by an agent.","revenue":"$58k","delta":"+18%","rows":[["North",22],["South",15],["West",19]]}},"nodes":[{"id":"headline","component":"markdown","props":{"text":"placeholder"},"bind":{"props.text":"/summary/headline"},"layout":{"column_span":2}},{"id":"revenue","component":"metric","props":{"label":"Revenue"},"bind":{"props.value":"/summary/revenue","props.delta":"/summary/delta"}},{"id":"progress","component":"progress","props":{"value":0.72,"text":"Plan confidence"}},{"id":"table","component":"table","props":{"headers":["Region","Deals"]},"bind":{"props.rows":"/summary/rows"},"layout":{"column_span":2}}]}}'`)
 
 	sy.Header("Managed keys")
 	sy.AgentKeyManager(keys, sy.Key("agent-key-manager"))
+}
+
+func appOrigin() string {
+	ctx := sy.Context()
+	if origin := strings.TrimRight(ctx.Headers["Origin"], "/"); strings.HasPrefix(origin, "http://") || strings.HasPrefix(origin, "https://") {
+		return origin
+	}
+	scheme := "http"
+	if strings.EqualFold(strings.TrimSpace(strings.Split(ctx.Headers["X-Forwarded-Proto"], ",")[0]), "https") {
+		scheme = "https"
+	}
+	if ctx.Host == "" {
+		return "${SYRALIT_URL}"
+	}
+	return scheme + "://" + ctx.Host
 }
 
 func applyPreset(mainSpec, noteSpec sy.ArtifactSpec) error {

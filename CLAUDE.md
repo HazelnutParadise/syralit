@@ -46,7 +46,9 @@ go vet ./...            # vet
 cd examples/hello && go run .   # run an example (defaults to http://localhost:8600)
 ```
 
-Examples auto-pick the next free port if 8600 is taken (e.g. 8601), and log the actual URL on startup.
+Examples default to port 8600 unless config or CLI flags choose another port.
+Do not hardcode 8600 into agent/API examples; use the actual app URL or request
+Origin because the configured or proxied port may differ.
 
 ## Conventions
 

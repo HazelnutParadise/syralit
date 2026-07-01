@@ -718,7 +718,8 @@ GET  /assets/*          靜態資源
 WS   /_syralit/ws       session websocket
 POST /_syralit/upload   file upload
 GET  /_syralit/download file download
-POST /api/...           使用者 opt-in 註冊的 agent artifact endpoint
+GET  /api/...           使用者 opt-in 的 artifact discovery / current spec
+POST /api/...           使用者 opt-in 的 agent artifact update
 ```
 
 每個瀏覽器 tab 一個 session，session id 存 cookie 或 websocket init payload。
@@ -784,11 +785,24 @@ if e := dt.Err(); e != nil {
 
 Agent Artifact Canvas 的安全邊界：
 
-- endpoint 預設不存在，必須由 app 明確呼叫 `HandleArtifactEndpoint` 才會註冊。
-- endpoint 只接受 `POST` full replace，必須帶 `Authorization: Bearer ...`。
+- endpoint 預設不存在，必須由 app 明確呼叫 `HandleArtifactAPI` 或
+  `HandleArtifactEndpoint` 才會註冊。
+- 統一 API 只公開 app 明確傳入的 Store。`GET` 提供 discovery/current spec，
+  `POST` 以 artifact ID 做 full replace；兩者都必須帶
+  `Authorization: Bearer ...`。
+- `POST` 必須帶最新的 `expected_revision`，revision 不符回 `409 Conflict`，
+  避免多個 agent 的 full replace 靜默互相覆蓋。
+- `ArtifactAPIHandler` / `ArtifactHandler` 可掛到其他 mux 或 port；這不會
+  改變 Store 對 Syralit sessions 廣播更新的行為。
 - Syralit 只提供 `AgentAuthenticator` / `AgentKeyStore` 介面、`StaticAgentKey`、`AgentKeyManager` UI；key 如何保存由 app 自行決定。
 - Artifact DSL 只映射到受控 Syralit 元件，不接受 raw HTML、custom JS、iframe、`Component` 或內部 Node protocol。
 - 所有 artifact node 必須有穩定 ID，供前端做 enter/update/exit 動畫，也避免 agent 生成不穩定樹造成狀態錯位。
+- 每次成功更新會產生遞增 revision。前端必須在 keyed layout transition、
+  圖表、圖片與字型完成後才把畫布標記為 `settled`；agent 必須等指定
+  revision settled 後才能截圖並宣稱完成視覺驗證。
+- placement 必須來自實際 render，不能為尚未出現的畫布虛構 page/selector。
+  preview URL 只能來自已認證的同 origin API request 或 app 明確設定，
+  不可信任任意 WebSocket `Origin`。
 
 ```go
 sy.Config{

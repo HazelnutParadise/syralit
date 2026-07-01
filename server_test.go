@@ -2079,3 +2079,29 @@ func TestDateSlider(t *testing.T) {
 		t.Fatal("expected date slider change to round-trip")
 	}
 }
+
+func TestWebSocketRejectsCrossOriginHandshake(t *testing.T) {
+	srv := httptest.NewServer((&server{cfg: Config{}, appFn: func() {
+		Text("secure")
+	}}).handler())
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	hdr := http.Header{}
+	hdr.Set("Origin", "https://evil.example")
+	conn, res, err := websocket.Dial(
+		ctx,
+		"ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws",
+		&websocket.DialOptions{HTTPHeader: hdr},
+	)
+	if conn != nil {
+		conn.CloseNow()
+	}
+	if err == nil {
+		t.Fatal("expected cross-origin WebSocket handshake to fail")
+	}
+	if res == nil || res.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403 response, got %#v", res)
+	}
+}

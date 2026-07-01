@@ -13,6 +13,17 @@ All notable changes to Syralit are documented here. The format is based on
   canvas from a controlled DSL. The DSL maps only to safe Syralit components
   (`text`, `markdown`, `metric`, `table`, `dataframe`, line/bar/pie charts,
   `image`, `progress`, `container`) and supports JSON Pointer data binding.
+- **Unified artifact discovery API**: `HandleArtifactAPI` exposes explicitly
+  selected stores through one authenticated GET/POST route, while
+  `ArtifactAPIHandler` and `ArtifactHandler` allow the same APIs to run on a
+  separate mux or port. Discovery reports observed pages and stable selectors.
+- **Deterministic artifact previews**: every successful update returns a
+  revision and preview metadata. Artifact canvases now expose
+  `transitioning`/`settled` DOM states after keyed layout transitions, charts,
+  images, and fonts finish so agents can capture the final rendered result.
+  Full-replace writes require `expected_revision` and return `409 Conflict`
+  instead of losing concurrent updates; failed visual resources produce
+  `partial` readiness rather than a false `complete`.
 - **Artifact DSL documentation and skill**: added `docs/artifact-dsl.md` as the
   formal schema reference and a dedicated `skills/syralit-artifact-dsl`
   generator skill for agents that need to output valid DSL payloads.

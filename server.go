@@ -138,8 +138,9 @@ type widgetChange struct {
 }
 
 func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
-	// InsecureSkipVerify is acceptable here: MVP binds to localhost only (SPEC §15).
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+	// coder/websocket authorizes the request host and rejects cross-origin
+	// browser handshakes by default.
+	c, err := websocket.Accept(w, r, nil)
 	if err != nil {
 		return
 	}
@@ -286,6 +287,7 @@ func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 	for _, tf := range transforms {
 		tf(root)
 	}
+	updateArtifactPlacements(sess, root)
 
 	var mainNodes, sidebarNodes []*Node
 	for _, n := range root.Children {

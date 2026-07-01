@@ -11,6 +11,96 @@ valid Artifact DSL payload" for `ArtifactCanvas` / `HandleArtifactEndpoint`.
 This skill is narrower than `syralit-dev` on purpose. It should help an agent
 generate safe, valid JSON instead of freeform UI descriptions.
 
+## Agent Connection Workflow
+
+When an endpoint URL and bearer token are available, do not ask the user for
+canvas names. Discover them:
+
+```http
+GET /api/agent/artifacts
+Authorization: Bearer <token>
+```
+
+The response lists every store explicitly exposed by the app:
+
+```json
+{
+  "artifacts": [
+    {
+      "id": "main",
+      "revision": 3,
+      "placements": [
+        {
+          "page": "Home",
+          "url": "http://localhost:8600/",
+          "canvas_id": "artifact:main",
+          "selector": "[data-artifact-id=\"artifact:main\"]"
+        }
+      ]
+    }
+  ]
+}
+```
+
+If a multi-page app has not rendered every page yet, open top-level `app_url`,
+visit its navigation pages once, and repeat discovery. Placement metadata comes
+from actual renders so it does not invent pages by executing application code
+inside the API request. A separately mounted API may omit placement URLs because
+it cannot safely infer the Syralit UI origin; use the app URL supplied by the
+app owner instead of guessing from the API port.
+
+Before replacing an existing artifact, read its current DSL:
+
+```http
+GET /api/agent/artifacts?artifact=main
+Authorization: Bearer <token>
+```
+
+Update through the same unified URL:
+
+```json
+{
+  "artifact": "main",
+  "expected_revision": 3,
+  "spec": {
+    "version": "v1",
+    "nodes": []
+  }
+}
+```
+
+Use the `artifact` ID as the update target. Never send or invent a CSS selector
+to choose what the API modifies. Selectors returned by the server are read-only
+preview locators.
+
+`expected_revision` is required and must come from the latest discovery/detail
+response. On `409 revision_conflict`, fetch the current spec again and merge the
+user's intended change into that version. Never retry a stale full replacement
+unchanged.
+
+After a successful update:
+
+1. Read `revision` and `preview` from the response.
+2. Open `preview.url` and navigate to `preview.page` when present.
+3. Locate `preview.selector`.
+4. Wait until `data-artifact-revision` equals the returned revision.
+5. Wait until `data-artifact-state` is `settled`.
+6. Require `data-artifact-readiness="complete"` for full visual verification.
+   Report `partial` (failed image/chart/font) or `timeout` honestly.
+7. Capture that element and return the screenshot with the result.
+8. Inspect the screenshot. If content overlaps, clips, fails to render, or does
+   not answer the user's request, revise the DSL and repeat the cycle.
+
+Do not claim visual verification when no browser/screenshot capability is
+available. In that case, report that the API update succeeded but visual
+verification was not performed.
+
+Per-store endpoints created with `HandleArtifactEndpoint` use
+`GET/POST /configured/path` and omit the top-level `artifact` field. The app may
+also mount `ArtifactAPIHandler` or `ArtifactHandler` on a different port; always
+use the URL supplied by the app or discovery response instead of assuming port
+8600.
+
 ## What This DSL Is
 
 Artifact DSL is a JSON-shaped spec that compiles into a controlled subset of
@@ -41,10 +131,12 @@ Always produce JSON matching this shape:
 }
 ```
 
-When returning an endpoint payload, wrap it as:
+When returning a unified API payload, wrap it as:
 
 ```json
 {
+  "artifact": "main",
+  "expected_revision": 1,
   "spec": {
     "version": "v1",
     "nodes": []
@@ -337,6 +429,10 @@ When the task is "give me the DSL", output only:
 
 - the JSON spec, or
 - the wrapped endpoint payload JSON
+
+When the task includes applying the DSL, also perform discovery, update,
+settled-state waiting, screenshot capture, and visual inspection as described
+above.
 
 Keep explanation short unless the user explicitly asks for reasoning.
 

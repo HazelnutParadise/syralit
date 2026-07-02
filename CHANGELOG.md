@@ -6,6 +6,11 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-02
+
+Agent Artifacts turn Syralit apps into safe, live canvases that AI agents can
+discover, update, and visually verify.
+
 ### Added
 - **Agent Artifact Canvas**: `ArtifactSpec`, `ArtifactNode`,
   `NewArtifactStore`, `ArtifactCanvas`, and `HandleArtifactEndpoint` let apps

@@ -58,7 +58,25 @@ func resolveOutputVar(res DSLResult, name string) (any, string, bool) {
 func tableData(v any) (headers []string, rows [][]any, ok bool) {
 	switch t := v.(type) {
 	case *insyra.DataTable:
-		return displayHeaders(t.Headers()), t.To2DSlice(), true
+		headers := displayHeaders(t.Headers())
+		rows := t.To2DSlice()
+		// Surface row names (e.g. describe's stat labels) as a leading column so
+		// the values are not shown unlabeled.
+		labels := make([]string, len(rows))
+		labeled := false
+		for i := range rows {
+			if name, named := t.GetRowNameByIndex(i); named && name != "" {
+				labels[i] = name
+				labeled = true
+			}
+		}
+		if labeled {
+			headers = append([]string{""}, headers...)
+			for i := range rows {
+				rows[i] = append([]any{labels[i]}, rows[i]...)
+			}
+		}
+		return headers, rows, true
 	case *insyra.DataList:
 		data := t.Data()
 		rows = make([][]any, len(data))

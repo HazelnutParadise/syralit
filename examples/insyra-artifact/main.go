@@ -18,6 +18,17 @@ import (
 
 var board = sy.NewArtifactStore("insights", insightsSpec())
 
+func init() {
+	// Opt-in agent endpoint so an agent can POST insyra-component specs and
+	// discover capabilities. Use a real key store in production; this static
+	// dev token is only for local demos.
+	token := sy.Secrets("AGENT_KEY")
+	if token == "" {
+		token = "dev-agent-key"
+	}
+	sy.HandleArtifactAPI("/api/agent/artifacts", sy.StaticAgentKey("local-agent", token), board)
+}
+
 func main() {
 	sy.App(func() {
 		sy.SetPageConfig(sy.PageTitle("Insyra DSL Artifacts"), sy.PageLayout("wide"))
@@ -50,6 +61,9 @@ setcolnames t quarter revenue
 			sy.Header("Artifact Canvas — agent-driveable")
 			sy.Caption("The insyra component embeds a DSL script the agent can POST.")
 			sy.ArtifactCanvas(board, sy.Height(460))
+			sy.Caption("Agent endpoint (GET discovers components + capabilities, POST updates):")
+			sy.Code(`curl ${SYRALIT_URL}/api/agent/artifacts \
+  -H "Authorization: Bearer dev-agent-key"`)
 		})
 
 		sy.Divider()

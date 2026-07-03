@@ -112,6 +112,53 @@ func TestRunDSLEnvRootPersists(t *testing.T) {
 	}
 }
 
+func TestSortIsInPlaceNoAlias(t *testing.T) {
+	// sort mutates the table in place and does NOT accept "as <var>".
+	res := RunDSL("newdl 3 1 2 as v\nnewdt v as t\nsetcolnames t v\nsort t v desc")
+	if res.Err != nil {
+		t.Fatalf("RunDSL error: %v", res.Err)
+	}
+	dt, ok := res.Vars["t"].(*insyra.DataTable)
+	if !ok {
+		t.Fatalf("t is %T, want *insyra.DataTable", res.Vars["t"])
+	}
+	col := dt.GetColByName("v")
+	if col == nil {
+		t.Fatal("column v not found after sort")
+	}
+	got := col.Data()
+	if len(got) != 3 || got[0] != 3 || got[2] != 1 {
+		t.Fatalf("sort desc in place failed: %v", got)
+	}
+}
+
+func TestTableDataIncludesRowNames(t *testing.T) {
+	// describe stores its stat labels as row names; the render must surface them
+	// as a leading column so the values are not shown unlabeled.
+	res := RunDSL("newdl 1 2 3 4 5 as v\ndescribe v as d")
+	if res.Err != nil {
+		t.Fatalf("RunDSL error: %v", res.Err)
+	}
+	headers, rows, ok := tableData(res.Vars["d"])
+	if !ok {
+		t.Fatal("describe output is not tabular")
+	}
+	if len(headers) < 2 {
+		t.Fatalf("expected a label column plus values, got headers=%v", headers)
+	}
+	labeled := false
+	for _, r := range rows {
+		if len(r) > 0 {
+			if s, _ := r[0].(string); s == "count" || s == "mean" {
+				labeled = true
+			}
+		}
+	}
+	if !labeled {
+		t.Fatalf("row-name labels (count/mean/...) missing from describe render: %v", rows)
+	}
+}
+
 func TestChartSeriesByExcelLetter(t *testing.T) {
 	res := RunDSL("newdl 10 20 30 as a\nnewdl 1 2 3 as b\nnewdt a b as t")
 	if res.Err != nil {

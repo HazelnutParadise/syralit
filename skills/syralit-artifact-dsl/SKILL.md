@@ -334,7 +334,8 @@ in safe mode:
 - Aggregate: `groupby <t> by <col>[,<col2>] agg <col>:<op>[:<alias>] [...] as <out>`.
   Ops: `sum mean median min max count countall stdev var first last nunique`.
 - Filter rows: `filter <t> "<CCL>" as <out>`, e.g. `filter t "['deals'] > 10" as big`.
-- Sort: `sort <t> <col> [desc] as <out>`.
+- Sort **in place**: `sort <t> <col> [asc|desc]` — mutates the table (no `as`);
+  render it with `output: "<t>"`.
 - Derived column via CCL: `addcolccl <t> <name> "['a'] + ['b']"`, or multi-statement
   `ccl <t> "NEW('total') = ['a'] * ['b']"`.
 - Summaries: `describe <t> as <out>` (stats table); print-only stats such as

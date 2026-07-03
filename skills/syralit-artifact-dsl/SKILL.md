@@ -292,6 +292,31 @@ Safety and data rules:
   Excel-style letter (`A`, `B`, ...) or name them first with
   `setcolnames <var> <name1> <name2> ...`.
 
+The `script` prop is the one place command-like text is expected — it is Insyra
+DSL (not HTML/JS), runs server-side in safe mode, and is exempt from rule 7's ban
+on script-like content.
+
+**Writing the `script` — safe DSL cheat-sheet.** All of these are pure
+computation and allowed in safe mode:
+
+- Build data inline: `newdl <values...> as <col>` then
+  `newdt <col> <col2>... as <table>`.
+- Name columns: `setcolnames <table> <name1> <name2> ...` (space-separated) —
+  do this before referencing columns by name.
+- Aggregate: `groupby <t> by <col>[,<col2>] agg <col>:<op>[:<alias>] [...] as <out>`.
+  Ops: `sum mean median min max count countall stdev var first last nunique`.
+- Filter rows: `filter <t> "<CCL>" as <out>`, e.g. `filter t "['deals'] > 10" as big`.
+- Sort: `sort <t> <col> [desc] as <out>`.
+- Derived column via CCL: `addcolccl <t> <name> "['a'] + ['b']"`, or multi-statement
+  `ccl <t> "NEW('total') = ['a'] * ['b']"`.
+- Summaries: `describe <t> as <out>` (stats table); print-only stats such as
+  `mean <col>`, `sum <col>`, `corr <a> <b>` (pair these with `render: "text"`).
+
+Inside CCL quotes, reference columns as `['name']` by name or `A`/`[A]` by
+Excel index. Full DSL command reference: the `use-insyra-cli` skill, Insyra's
+`Docs/cli-dsl.md`, or `insyra help <command>` in a terminal — do not invent DSL
+syntax you have not verified.
+
 Example — compute a bar chart from inline data:
 
 ```json
@@ -305,6 +330,20 @@ Example — compute a bar chart from inline data:
     "x": "region",
     "y": "total",
     "title": "Deals by region"
+  }
+}
+```
+
+Example — filter to a computed table (note the `\"` around the CCL expression):
+
+```json
+{
+  "id": "top_regions",
+  "component": "insyra",
+  "props": {
+    "script": "newdl North South West as region\nnewdl 120 45 90 as deals\nnewdt region deals as t\nsetcolnames t region deals\nfilter t \"['deals'] >= 90\" as top",
+    "render": "dataframe",
+    "output": "top"
   }
 }
 ```

@@ -424,8 +424,9 @@ singleHandler := sy.ArtifactHandler(board, auth)
 The unified API uses one URL:
 
 - `GET /api/agent/artifacts` discovers exposed stores, a `components` object
-  (`builtin` + `custom`; check `custom` for opt-in components like `insyra`),
-  and observed page
+  (`builtin` + `custom`, plus `capabilities` — for `insyra` this includes the
+  live safe DSL command catalog pulled from the linked Insyra version), and
+  observed page
   placements.
 - `GET /api/agent/artifacts?artifact=main` returns the current spec.
 - `POST /api/agent/artifacts` accepts
@@ -650,6 +651,11 @@ agents can embed a DSL script in an `ArtifactSpec` for live computation:
 The artifact path is always safe mode. Columns from `newdt` are positional —
 reference by Excel letter (`A`, `B`) or name them with `setcolnames`. See
 `skills/syralit-artifact-dsl/SKILL.md` for the full `insyra` component reference.
+
+The discovery endpoint advertises the live safe DSL vocabulary under
+`components.capabilities.insyra.commands` (pulled from Insyra's registry via
+`syidsl.SafeCommandCatalog()`), so bumping the Insyra version refreshes it
+without editing docs.
 
 ### Native go-echarts charts (opt-in subpackage)
 Interactive chart types Chart.js lacks (Sankey, word cloud, K-line, gauge,

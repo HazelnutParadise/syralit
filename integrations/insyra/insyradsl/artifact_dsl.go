@@ -25,6 +25,7 @@ var artifactRenderKinds = map[string]struct{}{
 
 func init() {
 	sy.RegisterArtifactComponent("insyra", compileInsyraArtifactNode)
+	sy.RegisterArtifactComponentInfo("insyra", insyraCapabilities)
 }
 
 // compileInsyraArtifactNode runs an agent-supplied Insyra DSL script in safe

@@ -42,7 +42,19 @@ components this app build supports:
   ],
   "components": {
     "builtin": ["bar_chart", "container", "dataframe", "image", "line_chart", "markdown", "metric", "pie_chart", "progress", "table", "text"],
-    "custom": ["insyra"]
+    "custom": ["insyra"],
+    "capabilities": {
+      "insyra": {
+        "description": "Run an Insyra DSL (.isr) script server-side in safe mode; render the result as a table, chart, metric, or text node.",
+        "insyra_version": "0.2.19",
+        "render_kinds": ["dataframe", "table", "line_chart", "bar_chart", "area_chart", "pie_chart", "metric", "text"],
+        "notes": ["Embed data inline with newdl/newdt; file, database, and network commands are rejected.", "..."],
+        "commands": [
+          {"name": "groupby", "usage": "groupby <var> by <col...> agg <col>:<op>[:<alias>] [...] [as <var>]", "description": "Group a DataTable and aggregate columns"},
+          {"name": "filter", "usage": "filter <var> <ccl> [as <var>]", "description": "Filter DataTable by CCL expression"}
+        ]
+      }
+    }
   }
 }
 ```
@@ -50,6 +62,9 @@ components this app build supports:
 `components.builtin` is always available; `components.custom` lists opt-in
 components the app enabled (e.g. `insyra`). Use a custom component only if it
 appears in `custom`; otherwise the whole spec is rejected.
+`components.capabilities.insyra.commands` is the **authoritative, live** safe DSL
+vocabulary for this app's Insyra version (each entry has `name` + `usage`) —
+prefer it over any hardcoded command list, which can drift between versions.
 
 If a multi-page app has not rendered every page yet, open top-level `app_url`,
 visit its navigation pages once, and repeat discovery. Placement metadata comes
@@ -306,8 +321,11 @@ The `script` prop is the one place command-like text is expected — it is Insyr
 DSL (not HTML/JS), runs server-side in safe mode, and is exempt from rule 7's ban
 on script-like content.
 
-**Writing the `script` — safe DSL cheat-sheet.** All of these are pure
-computation and allowed in safe mode:
+**Writing the `script`.** The complete, version-accurate list of allowed
+commands (with usage) is in the discovery response under
+`components.capabilities.insyra.commands` — treat that as the source of truth.
+The essentials below are a stable starter; they are pure computation and allowed
+in safe mode:
 
 - Build data inline: `newdl <values...> as <col>` then
   `newdt <col> <col2>... as <table>`.

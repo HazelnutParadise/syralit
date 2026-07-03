@@ -27,6 +27,12 @@ All notable changes to Syralit are documented here. The format is based on
 - **Artifact discovery reports components**: `GET` on the unified artifact API
   now returns a `components` object (`builtin` + `custom`) so an agent can detect
   whether an opt-in component such as `insyra` is enabled before using it.
+- **Live component capabilities in discovery**: `RegisterArtifactComponentInfo`
+  lets a component publish discovery metadata under `components.capabilities`.
+  The `insyra` component reports the safe DSL command catalog
+  (`syidsl.SafeCommandCatalog`) pulled live from Insyra's registry, so an agent
+  learns the exact vocabulary for the app's Insyra version and version bumps need
+  no doc edits.
 - Example `examples/insyra-artifact` demonstrating both the `syidsl.DSL` widget
   and the `insyra` artifact component.
 

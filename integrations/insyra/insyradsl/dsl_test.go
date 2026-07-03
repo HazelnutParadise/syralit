@@ -1,7 +1,10 @@
 package insyradsl
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -296,6 +299,81 @@ func toStringSlice(v any) []string {
 		return out
 	}
 	return nil
+}
+
+func TestSafeCommandCatalogExcludesUnsafe(t *testing.T) {
+	cat := SafeCommandCatalog()
+	if len(cat) == 0 {
+		t.Fatal("empty catalog")
+	}
+	seen := map[string]string{}
+	for _, c := range cat {
+		seen[c.Name] = c.Usage
+	}
+	if seen["groupby"] == "" {
+		t.Fatalf("catalog should include groupby with usage; got %d entries", len(cat))
+	}
+	for _, unsafe := range []string{"load", "save", "db", "fetch", "run", "env", "plot"} {
+		if _, bad := seen[unsafe]; bad {
+			t.Fatalf("catalog exposed unsafe command %q", unsafe)
+		}
+	}
+}
+
+func TestDiscoveryReportsInsyraCapabilities(t *testing.T) {
+	store := sy.NewArtifactStore("caps", sy.ArtifactSpec{
+		Version: "v1",
+		Nodes:   []sy.ArtifactNode{{ID: "n", Component: "text", Props: map[string]any{"text": "hi"}}},
+	})
+	handler := sy.ArtifactAPIHandler(sy.StaticAgentKey("a", "tok"), store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/agent/artifacts", nil)
+	req.Header.Set("Authorization", "Bearer tok")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp struct {
+		Components struct {
+			Custom       []string `json:"custom"`
+			Capabilities struct {
+				Insyra struct {
+					InsyraVersion string       `json:"insyra_version"`
+					Commands      []CommandDoc `json:"commands"`
+				} `json:"insyra"`
+			} `json:"capabilities"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v (body=%s)", err, rec.Body.String())
+	}
+
+	found := false
+	for _, c := range resp.Components.Custom {
+		if c == "insyra" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("components.custom should include insyra: %v", resp.Components.Custom)
+	}
+	if resp.Components.Capabilities.Insyra.InsyraVersion == "" {
+		t.Fatalf("capabilities.insyra.insyra_version is empty")
+	}
+	hasGroupby := false
+	for _, cmd := range resp.Components.Capabilities.Insyra.Commands {
+		if cmd.Name == "groupby" && cmd.Usage != "" {
+			hasGroupby = true
+		}
+		if cmd.Name == "load" || cmd.Name == "fetch" {
+			t.Fatalf("capabilities exposed unsafe command %q", cmd.Name)
+		}
+	}
+	if !hasGroupby {
+		t.Fatalf("capabilities catalog missing groupby")
+	}
 }
 
 func nodeTypes(root *sy.Node) []string {

@@ -23,6 +23,7 @@ type ArtifactComponentCompiler func(node ArtifactNode, data map[string]any) (*No
 var (
 	artifactComponentMu       sync.RWMutex
 	artifactComponentRegistry = map[string]ArtifactComponentCompiler{}
+	artifactComponentInfo     = map[string]func() any{}
 )
 
 // RegisterArtifactComponent registers a custom artifact component compiler under
@@ -58,6 +59,27 @@ func lookupArtifactComponent(name string) (ArtifactComponentCompiler, bool) {
 	return compiler, ok
 }
 
+// RegisterArtifactComponentInfo attaches optional discovery metadata to a custom
+// component. fn is called for each discovery request and must return a
+// JSON-serializable value (or nil to contribute nothing); the result appears
+// under the discovery response's components.capabilities[name]. Integrations use
+// it to advertise live capabilities — e.g. the Insyra component reports the safe
+// DSL command catalog for the linked Insyra version.
+//
+// It panics on an empty name or nil fn. Order relative to
+// RegisterArtifactComponent does not matter.
+func RegisterArtifactComponentInfo(name string, fn func() any) {
+	if name == "" {
+		panic("syralit: RegisterArtifactComponentInfo: empty name")
+	}
+	if fn == nil {
+		panic("syralit: RegisterArtifactComponentInfo: nil fn for " + name)
+	}
+	artifactComponentMu.Lock()
+	defer artifactComponentMu.Unlock()
+	artifactComponentInfo[name] = fn
+}
+
 // builtinArtifactComponents returns the always-available component names, sorted.
 func builtinArtifactComponents() []string {
 	names := make([]string, 0, len(artifactComponentTypes))
@@ -85,11 +107,31 @@ func registeredArtifactComponents() []string {
 // artifactComponentsInfo describes the components this app build supports, for
 // the discovery endpoint. "custom" lists the opt-in components an integration
 // registered; an agent can check it before using one like "insyra".
+// "capabilities" carries any per-component metadata registered via
+// RegisterArtifactComponentInfo (e.g. the Insyra safe-command catalog).
 func artifactComponentsInfo() map[string]any {
-	return map[string]any{
+	info := map[string]any{
 		"builtin": builtinArtifactComponents(),
 		"custom":  registeredArtifactComponents(),
 	}
+
+	artifactComponentMu.RLock()
+	fns := make(map[string]func() any, len(artifactComponentInfo))
+	for name, fn := range artifactComponentInfo {
+		fns[name] = fn
+	}
+	artifactComponentMu.RUnlock()
+
+	caps := make(map[string]any, len(fns))
+	for name, fn := range fns {
+		if v := fn(); v != nil {
+			caps[name] = v
+		}
+	}
+	if len(caps) > 0 {
+		info["capabilities"] = caps
+	}
+	return info
 }
 
 // applyArtifactLayout writes the canvas grid span for a compiled node. Shared by

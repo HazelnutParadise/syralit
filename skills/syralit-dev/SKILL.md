@@ -404,7 +404,9 @@ sy.App(func() {
 ```
 Allowed artifact components: `text`, `markdown`, `metric`, `table`,
 `dataframe`, `line_chart`, `bar_chart`, `pie_chart`, `image`, `progress`,
-`container`. Data binding uses JSON Pointer from `ArtifactSpec.Data`, e.g.
+`container`, and — when the app imports `integrations/insyra/insyradsl` — the
+optional `insyra` component for live Insyra DSL computation (see below). Data
+binding uses JSON Pointer from `ArtifactSpec.Data`, e.g.
 `Bind: map[string]string{"props.value": "/summary/revenue"}`. Every artifact
 node needs a stable `ID` so the browser can animate enter/update/exit states.
 
@@ -601,6 +603,51 @@ out := syi.CCLBuilder(dt)                  // add computed column via CCL; appli
 ```
 Note: name a column/list with `insyra.NewDataList(vals...).SetName("X")` so
 `GetColByName` and table/chart headers work.
+
+### Insyra DSL — dynamic computation (opt-in subpackage)
+Run the Insyra CLI DSL (`.isr`) from Go and render the result. Separate package
+because it pulls in the full Insyra CLI dependency tree (cobra, DB drivers,
+parquet/arrow, readline):
+```go
+import syidsl "github.com/HazelnutParadise/syralit/integrations/insyra/insyradsl"
+
+// Go widget: run a script (safe mode) and auto-render. Cached by script hash.
+syidsl.DSL(`
+newdl Q1 Q2 Q3 Q4 as quarter
+newdl 42 55 61 78 as revenue
+newdt quarter revenue as t
+setcolnames t quarter revenue
+`, syidsl.Render("bar_chart"), syidsl.Output("t"), syidsl.X("quarter"), syidsl.Y("revenue"))
+
+syidsl.DSL("newdl 42 55 61 78 as revenue\nsummary revenue") // no opts → prints transcript
+
+// Low-level: run and inspect the produced variables yourself.
+res := syidsl.RunDSL(script, syidsl.WithVars(map[string]any{"t": dt}))
+dt2 := res.Vars["report"].(*insyra.DataTable)  // res.Err, res.Output also available
+```
+Widget options: `Render`, `Output`, `X`, `Y`, `Label`, `Value`, `MetricLabel`,
+`Title`, `Height`, `Input`. `RunDSL` options: `WithVars`, `DSLTimeout`,
+`MaxLines`, `Unrestricted`, `EnvRoot`. Each run uses a throwaway temp
+environment by default; `EnvRoot(path)` runs in a persistent
+`path/envs/default/` that survives across calls (variables restored from
+`state.json`) and is not deleted.
+
+`RunDSL` runs in **safe mode** by default: only pure, in-memory compute commands
+are allowed; `load`/`save`/`db`/`fetch`/`run`/`env`/`plot` are rejected. Pass
+`syidsl.Unrestricted()` only for trusted, app-authored scripts. Each run uses an
+isolated, ephemeral environment (no shared `~/.insyra` state).
+
+Importing this package also registers the **`insyra` Artifact component**, so
+agents can embed a DSL script in an `ArtifactSpec` for live computation:
+```go
+{ID: "chart", Component: "insyra", Props: map[string]any{
+    "script": "newdl North South West as region\nnewdl 12 18 9 as deals\n" +
+        "newdt region deals as t\nsetcolnames t region deals",
+    "render": "bar_chart", "output": "t", "x": "region", "y": "deals"}}
+```
+The artifact path is always safe mode. Columns from `newdt` are positional —
+reference by Excel letter (`A`, `B`) or name them with `setcolnames`. See
+`skills/syralit-artifact-dsl/SKILL.md` for the full `insyra` component reference.
 
 ### Native go-echarts charts (opt-in subpackage)
 Interactive chart types Chart.js lacks (Sankey, word cloud, K-line, gauge,

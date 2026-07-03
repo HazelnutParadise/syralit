@@ -6,6 +6,27 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Insyra DSL computation** (`integrations/insyra/insyradsl`, a new opt-in
+  subpackage): `RunDSL` executes an Insyra CLI DSL (`.isr`) script in an
+  isolated, ephemeral environment and returns the produced variables plus
+  textual output. It runs in **safe mode** by default — a default-deny allowlist
+  of pure, in-memory compute commands; `load`/`save`/`db`/`fetch`/`run`/`env`/
+  `plot` are rejected (`Unrestricted()` lifts this for trusted scripts).
+  `syidsl.DSL(script, opts...)` is a Go widget that runs a script and
+  auto-renders the result (cached by script hash). Kept in a separate package
+  because the Insyra DSL engine pulls in the full Insyra CLI dependency tree.
+- **`insyra` Artifact component**: importing `insyradsl` registers an `insyra`
+  artifact component so agents can embed a DSL script directly in an
+  `ArtifactSpec` for live server-side computation (group-by, filter, stats, CCL)
+  rendered as a table, chart, metric, or text node — the artifact path is always
+  safe mode.
+- **`RegisterArtifactComponent`**: a core extension point that lets integrations
+  add custom artifact components without the core package importing them,
+  preserving the core/Insyra boundary.
+- Example `examples/insyra-artifact` demonstrating both the `syidsl.DSL` widget
+  and the `insyra` artifact component.
+
 ## [0.4.0] - 2026-07-02
 
 Agent Artifacts turn Syralit apps into safe, live canvases that AI agents can

@@ -169,6 +169,10 @@ Only use:
 - `image`
 - `progress`
 - `container`
+- `insyra` — **optional**; dynamic computation via the Insyra DSL. Only usable
+  when the app imports `integrations/insyra/insyradsl`; otherwise the spec is
+  rejected with `unsupported component "insyra"`. Use it only if you know the
+  target app enables it.
 
 ## Allowed Props
 
@@ -256,6 +260,54 @@ Allowed props: `value`, `text`
 Allowed props: `border`, `height`
 
 `container` may also include `children`.
+
+### `insyra` (optional)
+
+Runs an Insyra DSL (`.isr`) script **server-side in safe mode** the moment the
+artifact is set, then renders its result as one node. Use it for dynamic
+computation (group-by, filter, stats, CCL formulas) instead of only binding
+static data.
+
+Allowed props: `script` (required), `render`, `output`, `x`, `y`, `label`,
+`value`, `metric_label`, `title`, `height`.
+
+- `script` — the DSL source. Multiple lines separated by `\n`.
+- `render` — `dataframe` (default), `table`, `line_chart`, `bar_chart`,
+  `area_chart`, `pie_chart`, `metric`, or `text`.
+- `output` — variable to render. Defaults to `$result` (where unnamed
+  transforms land), else the sole table/list the script produced.
+- `x` / `y` — chart columns (labels / series). `y` accepts a name, a
+  comma-separated string, or an array. Omit `y` to chart every numeric column.
+- `label` / `value` — pie label and value columns; `value` is also a literal
+  metric value.
+- `render: "text"` shows the script's textual transcript (use for
+  `summary`/`mean`/`show`).
+
+Safety and data rules:
+
+- **Safe mode only.** File, database, and network commands (`load`, `save`,
+  `db`, `fetch`, `run`, `env`, `plot`) are rejected. You cannot read server
+  files — embed data inline with `newdl` / `newdt`.
+- Columns from `newdt` are **positional**. Reference chart/pie columns by
+  Excel-style letter (`A`, `B`, ...) or name them first with
+  `setcolnames <var> <name1> <name2> ...`.
+
+Example — compute a bar chart from inline data:
+
+```json
+{
+  "id": "deals",
+  "component": "insyra",
+  "props": {
+    "script": "newdl North South West as region\nnewdl 12 18 9 as deals\nnewdt region deals as t\nsetcolnames t region deals\ngroupby t by region agg deals:sum:total as report",
+    "render": "bar_chart",
+    "output": "report",
+    "x": "region",
+    "y": "total",
+    "title": "Deals by region"
+  }
+}
+```
 
 ## Layout Rules
 

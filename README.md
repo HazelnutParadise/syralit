@@ -520,6 +520,42 @@ syiplot.SetOffline(true) // inline echarts JS into each chart — no CDN, runs
                          // air-gapped / under strict CSP / as a `syralit build` binary
 ```
 
+### Insyra DSL — dynamic computation
+
+Run the Insyra CLI DSL (`.isr`) from Go and render the result, or let agents
+embed a DSL script directly in an Artifact for live server-side computation.
+This is a separate opt-in subpackage because the DSL engine pulls in the full
+Insyra CLI dependency tree (cobra, database drivers, parquet/arrow, readline):
+
+```go
+import syidsl "github.com/HazelnutParadise/syralit/integrations/insyra/insyradsl"
+
+// Go widget: run a script (safe mode) and auto-render. Cached by script hash.
+syidsl.DSL(`
+newdl Q1 Q2 Q3 Q4 as quarter
+newdl 42 55 61 78 as revenue
+newdt quarter revenue as t
+setcolnames t quarter revenue
+`, syidsl.Render("bar_chart"), syidsl.Output("t"), syidsl.X("quarter"), syidsl.Y("revenue"))
+
+res := syidsl.RunDSL(script) // low-level: inspect res.Vars / res.Output / res.Err
+```
+
+`RunDSL` runs in **safe mode** by default — a default-deny allowlist of pure,
+in-memory compute commands; `load`/`save`/`db`/`fetch`/`run` are rejected, and
+each run uses an isolated, ephemeral environment (no shared `~/.insyra` state).
+Pass `syidsl.Unrestricted()` only for trusted, app-authored scripts.
+
+Importing the package also registers an `insyra` **Artifact component**, so an
+agent can POST a spec that computes live instead of only binding static data:
+
+```go
+{ID: "chart", Component: "insyra", Props: map[string]any{
+    "script": "newdl North South West as region\nnewdl 12 18 9 as deals\n" +
+        "newdt region deals as t\nsetcolnames t region deals",
+    "render": "bar_chart", "output": "t", "x": "region", "y": "deals"}}
+```
+
 ## Configuration
 
 ### syralit.toml
@@ -604,6 +640,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
 | [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
+| [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 
 Run any example:

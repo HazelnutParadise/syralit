@@ -262,6 +262,21 @@ func compileArtifactNode(src ArtifactNode, data map[string]any, seen map[string]
 	seen[src.ID] = struct{}{}
 	typ, ok := artifactComponentTypes[src.Component]
 	if !ok {
+		// Custom component supplied by an integration (e.g. "insyra"). The
+		// compiler owns its props validation and produces a render Node; the
+		// core only stamps the id and canvas layout onto the result.
+		if compiler, found := lookupArtifactComponent(src.Component); found {
+			node, err := compiler(src, data)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", path, err)
+			}
+			if node == nil {
+				return nil, fmt.Errorf("%s: component %q produced no node", path, src.Component)
+			}
+			node.ID = src.ID
+			applyArtifactLayout(node, src.Layout)
+			return node, nil
+		}
 		return nil, fmt.Errorf("%s: unsupported component %q", path, src.Component)
 	}
 	if len(src.Children) > 0 && src.Component != "container" {
@@ -285,18 +300,9 @@ func compileArtifactNode(src ArtifactNode, data map[string]any, seen map[string]
 		text, _ := props["text"].(string)
 		props = map[string]any{"html": renderArtifactMarkdown(text)}
 	}
-	if src.Layout.ColumnSpan > 0 || src.Layout.RowSpan > 0 {
-		layout := map[string]any{}
-		if src.Layout.ColumnSpan > 0 {
-			layout["column_span"] = src.Layout.ColumnSpan
-		}
-		if src.Layout.RowSpan > 0 {
-			layout["row_span"] = src.Layout.RowSpan
-		}
-		props["artifact_layout"] = layout
-	}
 
 	out := &Node{ID: src.ID, Type: typ, Props: props}
+	applyArtifactLayout(out, src.Layout)
 	for i, child := range src.Children {
 		node, err := compileArtifactNode(child, data, seen, fmt.Sprintf("%s.children[%d]", path, i))
 		if err != nil {

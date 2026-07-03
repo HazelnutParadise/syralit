@@ -423,7 +423,9 @@ singleHandler := sy.ArtifactHandler(board, auth)
 
 The unified API uses one URL:
 
-- `GET /api/agent/artifacts` discovers exposed stores and observed page
+- `GET /api/agent/artifacts` discovers exposed stores, a `components` object
+  (`builtin` + `custom`; check `custom` for opt-in components like `insyra`),
+  and observed page
   placements.
 - `GET /api/agent/artifacts?artifact=main` returns the current spec.
 - `POST /api/agent/artifacts` accepts

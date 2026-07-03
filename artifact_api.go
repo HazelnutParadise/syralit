@@ -211,7 +211,10 @@ func (api *artifactAPI) handleGet(w http.ResponseWriter, r *http.Request) {
 			"placements": artifactPlacements(name, r, api.sameOrigin),
 		})
 	}
-	response := map[string]any{"artifacts": artifacts}
+	response := map[string]any{
+		"artifacts":  artifacts,
+		"components": artifactComponentsInfo(),
+	}
 	if api.sameOrigin {
 		response["app_url"] = requestOrigin(r)
 	}

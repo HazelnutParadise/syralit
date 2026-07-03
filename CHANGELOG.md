@@ -24,6 +24,9 @@ All notable changes to Syralit are documented here. The format is based on
 - **`RegisterArtifactComponent`**: a core extension point that lets integrations
   add custom artifact components without the core package importing them,
   preserving the core/Insyra boundary.
+- **Artifact discovery reports components**: `GET` on the unified artifact API
+  now returns a `components` object (`builtin` + `custom`) so an agent can detect
+  whether an opt-in component such as `insyra` is enabled before using it.
 - Example `examples/insyra-artifact` demonstrating both the `syidsl.DSL` widget
   and the `insyra` artifact component.
 

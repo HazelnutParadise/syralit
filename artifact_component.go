@@ -1,6 +1,9 @@
 package syralit
 
-import "sync"
+import (
+	"sort"
+	"sync"
+)
 
 // ArtifactComponentCompiler compiles a custom artifact component into a render
 // Node. It receives the raw ArtifactNode and the spec-level Data map, and must
@@ -53,6 +56,40 @@ func lookupArtifactComponent(name string) (ArtifactComponentCompiler, bool) {
 	defer artifactComponentMu.RUnlock()
 	compiler, ok := artifactComponentRegistry[name]
 	return compiler, ok
+}
+
+// builtinArtifactComponents returns the always-available component names, sorted.
+func builtinArtifactComponents() []string {
+	names := make([]string, 0, len(artifactComponentTypes))
+	for name := range artifactComponentTypes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// registeredArtifactComponents returns the names of custom components added via
+// RegisterArtifactComponent (e.g. "insyra" when the Insyra DSL package is
+// imported), sorted.
+func registeredArtifactComponents() []string {
+	artifactComponentMu.RLock()
+	defer artifactComponentMu.RUnlock()
+	names := make([]string, 0, len(artifactComponentRegistry))
+	for name := range artifactComponentRegistry {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// artifactComponentsInfo describes the components this app build supports, for
+// the discovery endpoint. "custom" lists the opt-in components an integration
+// registered; an agent can check it before using one like "insyra".
+func artifactComponentsInfo() map[string]any {
+	return map[string]any{
+		"builtin": builtinArtifactComponents(),
+		"custom":  registeredArtifactComponents(),
+	}
 }
 
 // applyArtifactLayout writes the canvas grid span for a compiled node. Shared by

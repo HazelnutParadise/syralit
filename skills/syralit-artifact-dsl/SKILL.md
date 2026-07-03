@@ -21,7 +21,8 @@ GET /api/agent/artifacts
 Authorization: Bearer <token>
 ```
 
-The response lists every store explicitly exposed by the app:
+The response lists every store explicitly exposed by the app, plus the
+components this app build supports:
 
 ```json
 {
@@ -38,9 +39,17 @@ The response lists every store explicitly exposed by the app:
         }
       ]
     }
-  ]
+  ],
+  "components": {
+    "builtin": ["bar_chart", "container", "dataframe", "image", "line_chart", "markdown", "metric", "pie_chart", "progress", "table", "text"],
+    "custom": ["insyra"]
+  }
 }
 ```
+
+`components.builtin` is always available; `components.custom` lists opt-in
+components the app enabled (e.g. `insyra`). Use a custom component only if it
+appears in `custom`; otherwise the whole spec is rejected.
 
 If a multi-page app has not rendered every page yet, open top-level `app_url`,
 visit its navigation pages once, and repeat discovery. Placement metadata comes
@@ -171,8 +180,9 @@ Only use:
 - `container`
 - `insyra` — **optional**; dynamic computation via the Insyra DSL. Only usable
   when the app imports `integrations/insyra/insyradsl`; otherwise the spec is
-  rejected with `unsupported component "insyra"`. Use it only if you know the
-  target app enables it.
+  rejected with `unsupported component "insyra"`. Confirm it is enabled first:
+  the discovery response (`GET` the endpoint with no `artifact` query) includes
+  `components.custom` — use `insyra` only if it appears there.
 
 ## Allowed Props
 

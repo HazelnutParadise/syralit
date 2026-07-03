@@ -218,7 +218,9 @@ sy.App(func() {
 ```
 
 Set `SYRALIT_URL` to the public URL printed by `syralit run` or `syralit dev`.
-Agents then discover the available canvases and update one by ID:
+Agents then discover the available canvases and update one by ID. The discovery
+response also carries a `components` object (`builtin` + `custom`) so an agent
+can tell whether an opt-in component like `insyra` is enabled before using it:
 
 ```bash
 curl "$SYRALIT_URL/api/agent/artifacts" \

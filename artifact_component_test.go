@@ -1,7 +1,10 @@
 package syralit
 
 import (
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -85,6 +88,48 @@ func TestRegisterArtifactComponentPanics(t *testing.T) {
 			c.fn()
 		})
 	}
+}
+
+func TestArtifactDiscoveryReportsComponents(t *testing.T) {
+	RegisterArtifactComponent("test_disco", echoCompiler)
+	store := NewArtifactStore("disco", ArtifactSpec{
+		Version: "v1",
+		Nodes:   []ArtifactNode{{ID: "n", Component: "text", Props: map[string]any{"text": "hi"}}},
+	})
+	handler := ArtifactAPIHandler(StaticAgentKey("agent", "tok"), store)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/agent/artifacts", nil)
+	req.Header.Set("Authorization", "Bearer tok")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var resp struct {
+		Components struct {
+			Builtin []string `json:"builtin"`
+			Custom  []string `json:"custom"`
+		} `json:"components"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v (body=%s)", err, rec.Body.String())
+	}
+	if !containsStr(resp.Components.Builtin, "metric") {
+		t.Fatalf("builtin should include metric: %v", resp.Components.Builtin)
+	}
+	if !containsStr(resp.Components.Custom, "test_disco") {
+		t.Fatalf("custom should include the registered test_disco: %v", resp.Components.Custom)
+	}
+}
+
+func containsStr(s []string, v string) bool {
+	for _, x := range s {
+		if x == v {
+			return true
+		}
+	}
+	return false
 }
 
 func TestRegisterArtifactComponentDuplicatePanics(t *testing.T) {

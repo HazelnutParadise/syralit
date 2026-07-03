@@ -6,6 +6,12 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-03
+
+Insyra DSL brings dynamic, safe, server-side computation to Syralit widgets and
+agent Artifacts. Agents can embed a `.isr` script in an artifact and have it
+computed and rendered live, and discovery advertises the live command catalog.
+
 ### Added
 - **Insyra DSL computation** (`integrations/insyra/insyradsl`, a new opt-in
   subpackage): `RunDSL` executes an Insyra CLI DSL (`.isr`) script in an

@@ -18,19 +18,86 @@ type Theme struct {
 	Mode   string // "light" | "dark" | "system"
 	Accent string // CSS color, e.g. "#7C3AED"
 	Radius string // CSS length, e.g. "12px"
+
+	// Font selects the base font for all text except code. The keywords
+	// "sans-serif", "serif" and "monospace" pick the built-in Source Sans 3,
+	// Source Serif 4 and Source Code Pro (embedded, served locally); any
+	// other value is used verbatim as a CSS font-family list. Families not
+	// installed on the visitor's machine can be loaded via FontFaces.
+	Font        string
+	HeadingFont string // font for titles/headers/markdown headings; defaults to Font
+	CodeFont    string // font for code blocks and inline code
+
+	BaseFontSize   int // root font size in px (0 = browser default, 16)
+	BaseFontWeight int // body font weight (0 = default)
+
+	// HeadingFontSizes / HeadingFontWeights style h1..h6 in order (and the
+	// matching sy.Title / sy.Header / sy.Subheader widgets). Shorter slices
+	// leave the remaining levels at their defaults.
+	HeadingFontSizes   []string // CSS lengths, e.g. "2rem"
+	HeadingFontWeights []int
+
+	CodeFontSize   string // CSS length for code text, e.g. "0.875rem"
+	CodeFontWeight int
+
+	FontFaces []FontFace   // custom @font-face declarations
+	Sidebar   SidebarTheme // sidebar-scoped font overrides
+}
+
+// FontFace declares a custom font to load (rendered as CSS @font-face), so
+// Font / HeadingFont / CodeFont can reference families that are not installed
+// on the visitor's machine. OTF, TTF, WOFF and WOFF2 sources work; URL may be
+// an absolute URL or a path served by the app (e.g. from public/).
+type FontFace struct {
+	Family       string // font family name to register
+	URL          string // font file location
+	Weight       string // optional, e.g. "400" or a range "200 900"
+	Style        string // optional: "normal" | "italic" | "oblique"
+	UnicodeRange string // optional, e.g. "U+0000-00FF"
+}
+
+// SidebarTheme overrides fonts inside the sidebar only. Empty fields inherit
+// the main theme.
+type SidebarTheme struct {
+	Font        string
+	HeadingFont string
+	CodeFont    string
 }
 
 // fileConfig mirrors syralit.toml.
+type fileTheme struct {
+	Mode               string   `toml:"mode"`
+	Accent             string   `toml:"accent"`
+	Radius             string   `toml:"radius"`
+	Font               string   `toml:"font"`
+	HeadingFont        string   `toml:"heading_font"`
+	CodeFont           string   `toml:"code_font"`
+	BaseFontSize       int      `toml:"base_font_size"`
+	BaseFontWeight     int      `toml:"base_font_weight"`
+	HeadingFontSizes   []string `toml:"heading_font_sizes"`
+	HeadingFontWeights []int    `toml:"heading_font_weights"`
+	CodeFontSize       string   `toml:"code_font_size"`
+	CodeFontWeight     int      `toml:"code_font_weight"`
+	FontFaces          []struct {
+		Family       string `toml:"family"`
+		URL          string `toml:"url"`
+		Weight       string `toml:"weight"`
+		Style        string `toml:"style"`
+		UnicodeRange string `toml:"unicode_range"`
+	} `toml:"font_faces"`
+	Sidebar struct {
+		Font        string `toml:"font"`
+		HeadingFont string `toml:"heading_font"`
+		CodeFont    string `toml:"code_font"`
+	} `toml:"sidebar"`
+}
+
 type fileConfig struct {
 	Title   string            `toml:"title"`
 	Host    string            `toml:"host"`
 	Port    int               `toml:"port"`
 	Secrets map[string]string `toml:"secrets"`
-	Theme   struct {
-		Mode   string `toml:"mode"`
-		Accent string `toml:"accent"`
-		Radius string `toml:"radius"`
-	} `toml:"theme"`
+	Theme   fileTheme         `toml:"theme"`
 }
 
 // loadFileConfig reads dir/syralit.toml if present. A missing file is not an
@@ -86,13 +153,42 @@ func (fc *fileConfig) applyToDev(o *DevOptions) {
 }
 
 func (fc *fileConfig) applyTheme(t *Theme) {
-	if t.Mode == "" {
-		t.Mode = fc.Theme.Mode
+	setIfEmpty := func(dst *string, v string) {
+		if *dst == "" {
+			*dst = v
+		}
 	}
-	if t.Accent == "" {
-		t.Accent = fc.Theme.Accent
+	setIfEmpty(&t.Mode, fc.Theme.Mode)
+	setIfEmpty(&t.Accent, fc.Theme.Accent)
+	setIfEmpty(&t.Radius, fc.Theme.Radius)
+	setIfEmpty(&t.Font, fc.Theme.Font)
+	setIfEmpty(&t.HeadingFont, fc.Theme.HeadingFont)
+	setIfEmpty(&t.CodeFont, fc.Theme.CodeFont)
+	setIfEmpty(&t.CodeFontSize, fc.Theme.CodeFontSize)
+	setIfEmpty(&t.Sidebar.Font, fc.Theme.Sidebar.Font)
+	setIfEmpty(&t.Sidebar.HeadingFont, fc.Theme.Sidebar.HeadingFont)
+	setIfEmpty(&t.Sidebar.CodeFont, fc.Theme.Sidebar.CodeFont)
+	if t.BaseFontSize == 0 {
+		t.BaseFontSize = fc.Theme.BaseFontSize
 	}
-	if t.Radius == "" {
-		t.Radius = fc.Theme.Radius
+	if t.BaseFontWeight == 0 {
+		t.BaseFontWeight = fc.Theme.BaseFontWeight
+	}
+	if t.CodeFontWeight == 0 {
+		t.CodeFontWeight = fc.Theme.CodeFontWeight
+	}
+	if len(t.HeadingFontSizes) == 0 {
+		t.HeadingFontSizes = fc.Theme.HeadingFontSizes
+	}
+	if len(t.HeadingFontWeights) == 0 {
+		t.HeadingFontWeights = fc.Theme.HeadingFontWeights
+	}
+	if len(t.FontFaces) == 0 {
+		for _, f := range fc.Theme.FontFaces {
+			t.FontFaces = append(t.FontFaces, FontFace{
+				Family: f.Family, URL: f.URL, Weight: f.Weight,
+				Style: f.Style, UnicodeRange: f.UnicodeRange,
+			})
+		}
 	}
 }

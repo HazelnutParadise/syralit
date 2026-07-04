@@ -6,6 +6,23 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Font theming** (Streamlit parity): `Theme` gains `Font`, `HeadingFont`,
+  `CodeFont` (the keywords `"sans-serif"` / `"serif"` / `"monospace"` select
+  the embedded Source Sans 3 / Source Serif 4 / Source Code Pro — served
+  locally, no CDN; any other value is a CSS font-family list),
+  `BaseFontSize`, `BaseFontWeight`, `HeadingFontSizes`, `HeadingFontWeights`,
+  `CodeFontSize`, `CodeFontWeight`, custom `FontFaces` (`@font-face` from
+  OTF/TTF/WOFF/WOFF2 files or URLs) and sidebar-scoped overrides via
+  `Theme.Sidebar`. All configurable from `syralit.toml` (`[theme]`,
+  `[[theme.font_faces]]`, `[theme.sidebar]`). New example:
+  `examples/theme-fonts`.
+
+### Fixed
+- README and skill docs showed nonexistent `[theme]` keys (`primary_color`,
+  `background_color`, `text_color`); corrected to the real `mode` / `accent` /
+  `radius` keys.
+
 ## [0.5.0] - 2026-07-03
 
 Insyra DSL brings dynamic, safe, server-side computation to Syralit widgets and

@@ -532,7 +532,31 @@ host = "0.0.0.0"
 port = 8600
 
 [theme]
-primary_color = "#ff4b4b"
+mode = "system"        # "light" | "dark" | "system"
+accent = "#7C3AED"     # accent color
+radius = "12px"        # corner radius
+# Fonts: "sans-serif" | "serif" | "monospace" pick the built-in Source Sans 3 /
+# Source Serif 4 / Source Code Pro (embedded, no CDN); any other value is used
+# as a CSS font-family list.
+font = "sans-serif"
+heading_font = "serif"              # defaults to font
+code_font = "monospace"
+base_font_size = 16                 # root font size in px
+base_font_weight = 400
+heading_font_sizes = ["2rem", "1.5rem", "1.15rem"]  # h1..h6 (also Title/Header/Subheader)
+heading_font_weights = [700, 650, 600]
+code_font_size = "0.875rem"
+code_font_weight = 400
+
+[[theme.font_faces]]   # load custom fonts (otf/ttf/woff/woff2) — repeatable
+family = "Inter"
+url = "/fonts/inter.woff2"          # public/ path or absolute URL
+weight = "100 900"                  # optional
+style = "normal"                    # optional: normal | italic | oblique
+unicode_range = "U+0-10FFFF"        # optional
+
+[theme.sidebar]        # sidebar-only font overrides (inherit main theme when unset)
+font = "sans-serif"
 
 [secrets]
 api_key = "sk-..."

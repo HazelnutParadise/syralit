@@ -1,0 +1,23 @@
+title = "Font Theming"
+
+[theme]
+accent = "#0F766E"
+# Built-in keywords: "sans-serif" (Source Sans 3), "serif" (Source Serif 4),
+# "monospace" (Source Code Pro). Anything else is used as a CSS font-family list.
+font = "serif"
+heading_font = "Playfair Display, serif"
+code_font = "monospace"
+base_font_size = 17
+heading_font_sizes = ["2.4rem", "1.5rem", "1.15rem"]
+heading_font_weights = [700, 650, 600]
+code_font_size = "0.875rem"
+
+# Load a custom font so heading_font can reference it.
+[[theme.font_faces]]
+family = "Playfair Display"
+url = "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFiD-vYSZviVYUb_rj3ij__anPXDTzYgA.woff2"
+weight = "400 900"
+style = "normal"
+
+[theme.sidebar]
+font = "sans-serif"

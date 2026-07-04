@@ -1,3 +1,50 @@
+/* --- Built-in fonts (SIL OFL) ------------------------------------------ */
+/* Variable fonts, latin subset. Served from the embedded assets FS; only
+   downloaded by the browser when a theme actually references the family. */
+
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-sans-3.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-sans-3-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-serif-4.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-serif-4-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-code-pro.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-code-pro-italic.woff2") format("woff2");
+}
+
 :root {
   --sy-bg: #ffffff;
   --sy-fg: #1f2329;
@@ -15,6 +62,9 @@
   --sy-error: #dc2626;
   --sy-sidebar-bg: #f8f9fb;
   --sy-hover: rgba(0,0,0,.04);
+  --sy-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  --sy-font-heading: var(--sy-font);
+  --sy-font-code: ui-monospace, "Cascadia Code", "Consolas", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,7 +101,7 @@ body {
   margin: 0;
   background: var(--sy-bg);
   color: var(--sy-fg);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  font-family: var(--sy-font);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -97,6 +147,9 @@ body {
 
 #syralit-sidebar {
   display: none;
+  /* Re-applied here (not just inherited from body) so sidebar-scoped
+     --sy-font overrides take effect. */
+  font-family: var(--sy-font);
 }
 
 #syralit-root.has-sidebar #syralit-sidebar {
@@ -613,6 +666,12 @@ body {
 
 /* --- Typography -------------------------------------------------------- */
 
+.sy-title, .sy-header, .sy-subheader,
+.sy-markdown h1, .sy-markdown h2, .sy-markdown h3,
+.sy-markdown h4, .sy-markdown h5, .sy-markdown h6 {
+  font-family: var(--sy-font-heading);
+}
+
 .sy-title {
   font-size: 1.85rem;
   font-weight: 700;
@@ -644,6 +703,9 @@ body {
   margin: .5rem 0;
   padding: .25rem 1rem;
   color: var(--sy-muted);
+}
+.sy-markdown pre, .sy-markdown code {
+  font-family: var(--sy-font-code);
 }
 .sy-markdown pre {
   background: var(--sy-sidebar-bg);
@@ -846,7 +908,7 @@ body {
 .sy-exception-body {
   margin: 0;
   padding: 0 .8rem .7rem;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -1057,7 +1119,7 @@ body {
 }
 
 .sy-color-hex {
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   color: var(--sy-muted);
 }
@@ -1317,7 +1379,7 @@ body {
   padding: .85rem 1rem;
   margin: 0;
   overflow-x: auto;
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.5;
 }
@@ -1347,7 +1409,7 @@ body {
   border: 1px solid var(--sy-border);
   border-right: none;
   border-radius: var(--sy-radius) 0 0 var(--sy-radius);
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.5;
   color: var(--sy-muted);
@@ -1368,7 +1430,7 @@ body {
   background: var(--sy-hover);
   border: 1px solid var(--sy-border);
   border-radius: var(--sy-radius);
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.55;
   overflow-x: auto;
@@ -2019,7 +2081,7 @@ body {
   color: #f5f5f5;
   padding: 2.5rem;
   overflow: auto;
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
 }
 .sy-dev-overlay-title {
   color: #ff6b6b;

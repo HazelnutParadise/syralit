@@ -568,9 +568,30 @@ host = "0.0.0.0"
 port = 8600
 
 [theme]
-primary_color = "#ff4b4b"
-background_color = "#0e1117"
-text_color = "#fafafa"
+mode = "system"        # "light" | "dark" | "system"
+accent = "#7C3AED"
+radius = "12px"
+# Fonts: "sans-serif" | "serif" | "monospace" select the built-in Source Sans 3 /
+# Source Serif 4 / Source Code Pro (embedded, served locally — no CDN); any
+# other value is used as a CSS font-family list.
+font = "sans-serif"
+heading_font = "serif"
+code_font = "monospace"
+base_font_size = 16
+base_font_weight = 400
+heading_font_sizes = ["2rem", "1.5rem", "1.15rem"]  # h1..h6
+heading_font_weights = [700, 650, 600]
+code_font_size = "0.875rem"
+code_font_weight = 400
+
+[[theme.font_faces]]   # load custom fonts (otf/ttf/woff/woff2)
+family = "Inter"
+url = "/fonts/inter.woff2"   # public/ path or absolute URL
+weight = "100 900"
+style = "normal"
+
+[theme.sidebar]        # sidebar-only font overrides
+font = "sans-serif"
 
 [secrets]
 api_key = "sk-..."
@@ -644,6 +665,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
+| [`theme-fonts`](examples/theme-fonts/) | Font theming: built-in Source fonts, custom `@font-face` loading, size/weight tuning, sidebar overrides |
 
 Run any example:
 

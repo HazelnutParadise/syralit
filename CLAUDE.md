@@ -43,6 +43,10 @@ go build ./...          # build everything
 go test ./...           # run the test suite (server_test.go, etc.)
 go vet ./...            # vet
 
+cd uitest && go test ./...   # browser-level UI tests (separate module,
+                             # needs local Chrome; run before releases and
+                             # after any assets/runtime.js|css change)
+
 cd examples/hello && go run .   # run an example (defaults to http://localhost:8600)
 ```
 

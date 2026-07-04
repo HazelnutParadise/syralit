@@ -709,6 +709,16 @@ tree := sy.RenderOnce(func() { sy.Metric("Users", "24,891") })
 if len(tree.Find("metric")) != 1 { t.Fatal("expected a metric") }
 ```
 
+The repo also ships a browser-level UI suite under [`uitest/`](uitest/) — a
+separate Go module (so its chromedp dependency never touches the framework's
+`go.mod`) that drives headless Chrome against an in-process app and asserts on
+real rendered behavior: widget round-trips over WebSocket, CSS visibility,
+canvas chart clicks, multi-file uploads, and sub-path mounting.
+
+```bash
+cd uitest && go test ./...   # requires a local Chrome/Chromium
+```
+
 ## Examples
 
 The [`examples/`](examples/) directory contains runnable demo apps:

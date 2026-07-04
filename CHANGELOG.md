@@ -68,6 +68,14 @@ All notable changes to Syralit are documented here. The format is based on
 - **HTTPS**: `[server] ssl_cert_file` / `ssl_key_file` (and
   `Config.SSLCertFile/SSLKeyFile`) serve the app over TLS.
 - **`sy.ShowTime()`** on `SpinnerWith`: shows elapsed time next to the spinner.
+- **Browser UI test suite** (`uitest/`, separate Go module): headless-Chrome
+  tests covering widget round-trips, sidebar collapse, toast visibility and
+  duration, canvas chart click selection, multi-file upload, and sub-path
+  mounting.
+
+### Fixed
+- Toasts never became visible in hidden/backgrounded tabs (the show class was
+  added via requestAnimationFrame, which does not fire there).
 
 ### Fixed
 - README and skill docs showed nonexistent `[theme]` keys (`primary_color`,

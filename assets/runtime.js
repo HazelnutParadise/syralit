@@ -2417,7 +2417,10 @@
       document.body.appendChild(container);
     }
     container.appendChild(toast);
-    requestAnimationFrame(function () { toast.classList.add("sy-toast-show"); });
+    // setTimeout, not requestAnimationFrame: rAF doesn't fire in hidden or
+    // backgrounded tabs, which would leave the toast permanently invisible
+    // while its removal timer still runs.
+    setTimeout(function () { toast.classList.add("sy-toast-show"); }, 20);
     setTimeout(function () {
       toast.classList.remove("sy-toast-show");
       toast.classList.add("sy-toast-hide");

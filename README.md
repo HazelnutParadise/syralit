@@ -136,6 +136,8 @@ if job.Running() {
 - **Automatic SSE fallback** — when a WebSocket can't be established (e.g. a
   proxy that blocks WS upgrades), the client transparently switches to a plain
   HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
+- **`sy.Handler(cfg, fn)`** — mount a Syralit app as a plain `http.Handler`
+  inside an existing Go server (works behind `http.StripPrefix` sub-paths).
 - **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
 
 ## Features
@@ -262,7 +264,7 @@ Full DSL reference: [`docs/artifact-dsl.md`](docs/artifact-dsl.md)
 | Widget | Description |
 |--------|-------------|
 | `Table` | Static string table |
-| `DataFrame` | Sortable table; optional row selection (`sy.Selectable()` → returns selected indices) and typed display via `sy.ColConfig` |
+| `DataFrame` | Sortable table; optional row selection (`sy.Selectable()` → returns selected indices; `sy.SelectionMode("single-row")` for one), `sy.ColumnOrder(...)` to reorder/filter columns, typed display via `sy.ColConfig` |
 | `DataEditor` | Editable table with 11 column types |
 
 Column configuration (`sy.ColConfig`, shared by DataFrame and DataEditor) supports types `text`, `number`, `checkbox`, `select`, `date`, `time`, `datetime`, `link`, `image`, `progress`, `list`, plus the display-only mini-chart columns `bar_chart` / `line_chart` (cell value is a `[]float64`). Each column may set `Format` (printf-style, e.g. `"$%.2f"`, `"%d%%"`), `Label` (header override), `Help` (header tooltip), `Width`, `Min`/`Max`/`Step`, and `Color` (chart columns). Dynamic row add/delete with `sy.DynamicRows()`.
@@ -296,6 +298,14 @@ Built-in interactive charts powered by **Chart.js**:
 
 Bar/area/line charts accept `sy.Stacked()`, `sy.Horizontal()` (bar), `sy.Colors([]string{...})`, `sy.XLabels(...)`, and `sy.ChartTitle(...)`.
 
+Line/Bar/Area/Scatter/Pie charts are **selectable**: add `sy.Selectable()` and the call returns a `*sy.ChartSelection` (`Series`/`Index`/`X`/`Value`) when the user clicks a data point:
+
+```go
+if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
+    sy.Textf("%s at %s = %v", sel.Series, sel.X, sel.Value)
+}
+```
+
 External charting library integrations (CDN-loaded, accepting JSON specs):
 
 | Chart | Library | Streamlit Equivalent |
@@ -326,6 +336,8 @@ sy.Container(func() { ... }, sy.Border())
 sy.Form("key", func() { ... }, sy.ClearOnSubmit())  // ClearOnSubmit optional
 sy.Status("Loading", "running", func() { ... })
 sy.Fragment("key", func() { ... })  // partial rerun
+sy.Space(sy.Height(32))             // vertical whitespace
+sy.Bottom(func() { ... })           // pin content to the bottom of the viewport
 ```
 
 ### State & Session
@@ -336,8 +348,9 @@ count := sy.State("count", 0)
 count.Get()
 count.Set(42)
 
-// Query parameters
+// Query parameters (SetQueryParam updates the browser URL — shareable state)
 val := sy.QueryParam("page")
+sy.SetQueryParam("page", "2")
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -671,8 +684,25 @@ root) and `sy.StaticAssets(fsys)` (overrides the built-in front-end assets).
 
 ## Testing
 
-`sy.RenderOnce(appFn) *Node` runs an app function once in an isolated session
-and returns the UI tree — no server needed. Walk it with `Node.Find(type)`:
+`sy.AppTest` is a headless testing harness (the Go counterpart of Streamlit's
+`st.testing.v1.AppTest`): render without a server, simulate widget input and
+button clicks, and assert on the resulting tree.
+
+```go
+at := sy.NewAppTest(func() {
+    name := sy.TextInput("Name", sy.Key("name"))
+    if sy.Button("Greet", sy.Key("greet")) {
+        sy.Success("Hello, " + name)
+    }
+})
+at.Run()
+at.SetValue("name", "Ada")
+at.Click("greet") // or at.ClickLabel("Greet")
+at.Run()
+// at.Texts("status") -> ["Hello, Ada"]
+```
+
+For a single render, `sy.RenderOnce(appFn) *Node` returns the UI tree directly:
 
 ```go
 tree := sy.RenderOnce(func() { sy.Metric("Users", "24,891") })

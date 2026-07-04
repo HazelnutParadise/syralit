@@ -400,6 +400,7 @@
       case "radio":         return radio(node, p);
       case "multi_select":  return multiSelect(node, p);
       case "date_input":    return dateInput(node, p);
+      case "datetime_input": return datetimeInput(node, p);
       case "date_range_input": return dateRangeInput(node, p);
       case "time_input":    return timeInput(node, p);
       case "color_picker":  return colorPicker(node, p);
@@ -412,6 +413,8 @@
       case "tabs":      return tabs(node, p);
       case "tab_panel": return tabPanel(node, p);
       case "container": return container(node);
+      case "space":     return spaceEl(node, p);
+      case "bottom":    return bottomEl(node);
       case "artifact_canvas": return artifactCanvasEl(node, p);
       case "fragment":  return fragmentEl(node);
       case "form":      return formContainer(node);
@@ -438,6 +441,7 @@
       case "component":  return componentEl(node, p);
       case "iframe":     return iframeEl(node, p);
       case "pdf":        return pdfEl(node, p);
+      case "menu_button": return menuButtonEl(node, p);
       case "latex":      return latexEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
@@ -862,6 +866,21 @@
     return field(p.label, input, p.help);
   }
 
+  function datetimeInput(node, p) {
+    var input = document.createElement("input");
+    input.type = "datetime-local";
+    input.className = "sy-input";
+    input.dataset.id = node.id;
+    input.value = p.value || "";
+    if (p.min) input.min = p.min;
+    if (p.max) input.max = p.max;
+    if (p.disabled) input.disabled = true;
+    input.onchange = function () {
+      if (!inForm(input)) send(node.id, input.value, false);
+    };
+    return field(p.label, input, p.help);
+  }
+
   function timeInput(node, p) {
     var input = document.createElement("input");
     input.type = "time";
@@ -1132,6 +1151,27 @@
     if (p.height) { div.style.maxHeight = p.height + "px"; div.style.overflowY = "auto"; }
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
+  }
+
+  function spaceEl(node, p) {
+    var div = el("div", "sy-space");
+    div.style.height = (p.height || 16) + "px";
+    if (p.width) { div.style.display = "inline-block"; div.style.width = p.width + "px"; }
+    return div;
+  }
+
+  function bottomEl(node) {
+    var bar = el("div", "sy-bottom");
+    childNodes(node).forEach(function (c) { bar.appendChild(c); });
+    // Reserve space in the main area so content never hides behind the bar.
+    // Deferred: the node is appended to the DOM after this function returns.
+    setTimeout(function () {
+      var app = document.getElementById("syralit-app");
+      if (app && bar.isConnected && bar.offsetHeight) {
+        app.style.paddingBottom = (bar.offsetHeight + 24) + "px";
+      }
+    }, 50);
+    return bar;
   }
 
   function artifactCanvasEl(node, p) {
@@ -2253,6 +2293,31 @@
     iframe.style.height = (p.height || 600) + "px";
     iframe.src = p.src || "";
     return iframe;
+  }
+
+  function menuButtonEl(node, p) {
+    var wrap = el("div", "sy-menu-button-wrap");
+    var btn = document.createElement("button");
+    btn.className = "sy-button sy-menu-button";
+    btn.textContent = (p.label || "") + " ▾";
+    if (p.disabled) btn.disabled = true;
+    var dd = el("div", "sy-menu-button-dropdown");
+    (p.options || []).forEach(function (opt) {
+      var item = document.createElement("button");
+      item.className = "sy-app-menu-item";
+      item.textContent = opt;
+      item.onclick = function (ev) {
+        ev.stopPropagation();
+        dd.classList.remove("open");
+        send(node.id, opt, false);
+      };
+      dd.appendChild(item);
+    });
+    btn.onclick = function (ev) { ev.stopPropagation(); dd.classList.toggle("open"); };
+    document.addEventListener("click", function () { dd.classList.remove("open"); });
+    wrap.appendChild(btn);
+    wrap.appendChild(dd);
+    return wrap;
   }
 
   // --- Audio / Video -----------------------------------------------------

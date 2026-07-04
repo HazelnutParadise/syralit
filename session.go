@@ -91,6 +91,18 @@ func (s *session) setWidget(id string, v any) {
 	s.mu.Unlock()
 }
 
+// takeWidget returns and removes a widget value — one-shot semantics for
+// button-like widgets that carry a payload (e.g. MenuButton).
+func (s *session) takeWidget(id string) any {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.widgets[id]
+	if ok {
+		delete(s.widgets, id)
+	}
+	return v
+}
+
 func (s *session) pressButton(id string) {
 	s.mu.Lock()
 	s.transient[id] = true

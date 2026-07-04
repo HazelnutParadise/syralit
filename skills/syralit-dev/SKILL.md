@@ -65,6 +65,7 @@ func main() { sy.App(nil) }
 | `SelectBox(label, options, opts...)` | `string` | Dropdown (auto-searchable at 20+ items) |
 | `MultiSelect(label, options, opts...)` | `[]string` | Multi-select; `sy.AcceptNewOptions()` allows typing new values |
 | `DateInput(label, opts...)` | `string` | Date picker (YYYY-MM-DD) |
+| `DatetimeInput(label, opts...)` | `string` | Date+time picker (YYYY-MM-DD HH:MM) |
 | `DateRangeInput(label, opts...)` | `(string, string)` | Start/end date pickers |
 | `TimeInput(label, opts...)` | `string` | Time picker (HH:MM) |
 | `ColorPicker(label, opts...)` | `string` | Color hex |
@@ -77,6 +78,7 @@ func main() { sy.App(nil) }
 | `SegmentedControl(label, options, opts...)` | `string` | Segmented buttons (`SegmentedControlMulti` → `[]string`) |
 | `Pills(label, options, opts...)` | `string` | Pill buttons (`PillsMulti` → `[]string`) |
 | `Pagination(totalPages, opts...)` | `int` | Page selector (1-based) |
+| `MenuButton(label, options, opts...)` | `string` | Dropdown button; returns clicked option for one rerun |
 | `DownloadButton(label, data, filename, opts...)` | — | File download |
 | `LinkButton(label, url, opts...)` | — | External link button |
 | `PageLink(label, page, opts...)` | — | Internal page link |
@@ -218,6 +220,11 @@ tab("Tab1", func() { sy.Text("Content 1") })
 tab("Tab2", func() { sy.Text("Content 2") })
 
 // Sidebar
+sy.Space()                     // vertical whitespace (sy.Height(32) to size)
+sy.Bottom(func() {             // pin content to the bottom of the viewport
+    msg := sy.ChatInput("Message...")
+    _ = msg
+})
 sy.Sidebar(func() { sy.Text("Sidebar content") })
 
 // Expander
@@ -498,6 +505,13 @@ sy.SetPageConfig(
 // Secrets (from syralit.toml [secrets] section)
 apiKey := sy.Secrets("api_key")
 
+// Read resolved config values ("title", "server.port", "theme.accent", ...)
+port := sy.GetOption("server.port")
+_ = port
+
+// Embed the app in an existing Go HTTP server (instead of sy.App)
+// mux.Handle("/dash/", http.StripPrefix("/dash", sy.Handler(sy.Config{}, myApp)))
+
 // Database connection
 db := sy.Connection("mydb")  // DSN from Secrets
 rows := sy.SQLQuery(db, "SELECT * FROM users")
@@ -599,6 +613,23 @@ db_dsn = "postgres://..."
 
 [server]
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
+```
+
+### Headless App Testing (sy.AppTest)
+```go
+at := sy.NewAppTest(func() {
+    name := sy.TextInput("Name", sy.Key("name"))
+    if sy.Button("Greet", sy.Key("greet")) {
+        sy.Success("Hello, " + name)
+    }
+})
+at.Run()
+at.SetValue("name", "Ada")   // set widget value by sy.Key
+at.Click("greet")            // or at.ClickLabel("Greet")
+at.Run()
+at.Texts("status")           // -> ["Hello, Ada"]
+at.FindAll("title")          // nodes by type; at.FindByLabel(type, label)
+at.SwitchToPage("Settings")  // multi-page apps
 ```
 
 ## Patterns

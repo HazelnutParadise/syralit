@@ -160,6 +160,7 @@ if job.Running() {
 | `SelectBox` | `string` | Dropdown (auto-searchable at 20+ items) |
 | `MultiSelect` | `[]string` | Multi-select dropdown |
 | `DateInput` | `string` | Date picker (YYYY-MM-DD) |
+| `DatetimeInput` | `string` | Date+time picker (YYYY-MM-DD HH:MM) |
 | `DateRangeInput` | `(string, string)` | Start/end date pickers |
 | `TimeInput` | `string` | Time picker (HH:MM) |
 | `ColorPicker` | `string` | Color hex picker |
@@ -172,6 +173,7 @@ if job.Running() {
 | `SegmentedControl` | `string` | Segmented buttons (`SegmentedControlMulti` → `[]string`) |
 | `Pills` | `string` | Pill-style buttons (`PillsMulti` → `[]string`) |
 | `Pagination` | `int` | Page selector |
+| `MenuButton` | `string` | Dropdown button returning the clicked option |
 
 Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.
 

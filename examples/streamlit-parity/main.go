@@ -52,5 +52,20 @@ func main() {
 		sy.Header("Clipped video")
 		sy.Video("https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
 			sy.StartTime(2), sy.EndTime(5), sy.Muted())
+
+		sy.Space(sy.Height(32))
+		sy.Header("MenuButton & DatetimeInput")
+		if choice := sy.MenuButton("Actions", []string{"Export CSV", "Export JSON", "Reset"}, sy.Key("actions")); choice != "" {
+			sy.Toast("Chose: "+choice, "info")
+		}
+		if dt := sy.DatetimeInput("Schedule at", sy.Key("sched")); dt != "" {
+			sy.Textf("Scheduled: %s", dt)
+		}
+
+		sy.Bottom(func() {
+			if msg := sy.ChatInput("Pinned chat input (sy.Bottom)…", sy.Key("chat")); msg != "" {
+				sy.Toast("Sent: "+msg, "success")
+			}
+		})
 	})
 }

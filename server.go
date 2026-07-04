@@ -73,18 +73,63 @@ func App(fn func()) {
 // and honor the dev control messages on the WebSocket (state dump/restore).
 const envDevAddr = "SYRALIT_DEV_ADDR"
 
+// resolvedConfig holds the effective config after file/default resolution,
+// for GetOption.
+var resolvedConfig Config
+
 // Run starts a Syralit app with explicit config. Values left unset are filled
 // from syralit.toml in the working directory if present, then by defaults.
 func Run(cfg Config, fn func()) error {
 	loadFileConfig(".").applyToConfig(&cfg)
 	cfg.applyDefaults()
 	uploadLimitBytes = cfg.uploadLimit()
+	resolvedConfig = cfg
 	s := &server{cfg: cfg, appFn: fn}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
 		return http.ListenAndServe(addr, s.handler())
 	}
 	return s.listenAndServe()
+}
+
+// Handler returns the app as an http.Handler, so a Syralit app can be mounted
+// inside an existing Go HTTP server instead of owning the process:
+//
+//	mux.Handle("/dashboard/", http.StripPrefix("/dashboard", sy.Handler(sy.Config{}, myApp)))
+//
+// Config resolution matches Run (syralit.toml, then defaults); Host/Port are
+// ignored since the caller owns the listener.
+func Handler(cfg Config, fn func()) http.Handler {
+	loadFileConfig(".").applyToConfig(&cfg)
+	cfg.applyDefaults()
+	uploadLimitBytes = cfg.uploadLimit()
+	resolvedConfig = cfg
+	s := &server{cfg: cfg, appFn: fn}
+	return s.handler()
+}
+
+// GetOption returns a resolved configuration value by key: "title",
+// "server.host", "server.port", "server.max_upload_size_mb", "theme.mode",
+// "theme.accent", "theme.radius". Unknown keys return nil. Values reflect the
+// running server's effective config (code > syralit.toml > defaults).
+func GetOption(key string) any {
+	switch key {
+	case "title":
+		return resolvedConfig.Title
+	case "server.host":
+		return resolvedConfig.Host
+	case "server.port":
+		return resolvedConfig.Port
+	case "server.max_upload_size_mb":
+		return int(resolvedConfig.uploadLimit() >> 20)
+	case "theme.mode":
+		return resolvedConfig.Theme.Mode
+	case "theme.accent":
+		return resolvedConfig.Theme.Accent
+	case "theme.radius":
+		return resolvedConfig.Theme.Radius
+	}
+	return nil
 }
 
 type server struct {

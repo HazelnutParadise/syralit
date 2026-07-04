@@ -2096,6 +2096,49 @@ body {
   box-shadow: 0 12px 48px rgba(0,0,0,.25);
 }
 
+/* --- Bottom bar (sy.Bottom) ---------------------------------------------- */
+
+.sy-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  background: var(--sy-bg);
+  border-top: 1px solid var(--sy-border);
+  padding: .75rem 2rem;
+}
+#syralit-root.has-sidebar .sy-bottom {
+  left: 260px;
+}
+@media (max-width: 768px) {
+  #syralit-root.has-sidebar .sy-bottom { left: 0; }
+}
+#syralit-root.has-sidebar.sidebar-collapsed .sy-bottom { left: 0; }
+.sy-bottom > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+/* --- Menu button (sy.MenuButton) ----------------------------------------- */
+
+.sy-menu-button-wrap {
+  position: relative;
+  display: inline-block;
+}
+.sy-menu-button-dropdown {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  min-width: 160px;
+  z-index: 250;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  padding: .35rem;
+  flex-direction: column;
+}
+.sy-menu-button-dropdown.open { display: flex; }
+
 /* --- Multi-select free entry -------------------------------------------- */
 
 .sy-multi-new {

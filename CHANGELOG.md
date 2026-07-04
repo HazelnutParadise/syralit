@@ -42,6 +42,18 @@ All notable changes to Syralit are documented here. The format is based on
   clipping (media fragments) and WebVTT subtitle tracks.
 - **Toast duration**: optional 4th argument, e.g. `sy.Toast(msg, "success", "⏱", "8s")`.
 - New example: `examples/streamlit-parity`.
+- **`sy.Space()`**: vertical/horizontal whitespace element.
+- **`sy.Bottom(fn)`**: viewport-bottom pinned container (chat-input layouts);
+  the main area gains matching padding automatically.
+- **`sy.DatetimeInput`**: combined date+time picker returning "YYYY-MM-DD HH:MM".
+- **`sy.MenuButton(label, options)`**: dropdown button returning the clicked
+  option for exactly one rerun.
+- **`sy.Handler(cfg, fn)`**: mount a Syralit app as an `http.Handler` inside an
+  existing Go server.
+- **`sy.GetOption(key)`**: read resolved config values at runtime.
+- **`sy.AppTest`**: headless app-testing harness (`NewAppTest`, `Run`,
+  `SetValue`, `Click`/`ClickLabel`, `FindAll`/`FindByLabel`/`Texts`,
+  `SwitchToPage`) — the Go counterpart of Streamlit's `st.testing.v1.AppTest`.
 
 ### Fixed
 - README and skill docs showed nonexistent `[theme]` keys (`primary_color`,

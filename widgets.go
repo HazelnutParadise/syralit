@@ -630,6 +630,54 @@ func DateInput(label string, opts ...Option) string {
 	return s
 }
 
+// DatetimeInput renders a combined date-and-time picker and returns the value
+// as "YYYY-MM-DD HH:MM" ("" until the user picks one). Supports MinDate /
+// MaxDate ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM") bounds and DefaultValue.
+func DatetimeInput(label string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("datetime_input", o.key)
+	val, ok := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	if !ok {
+		if d, isStr := o.defaultVal.(string); isStr {
+			s = d
+		}
+	}
+	// The browser control uses "YYYY-MM-DDTHH:MM"; normalize to a space.
+	s = strings.ReplaceAll(s, "T", " ")
+	props := map[string]any{"label": label, "value": strings.ReplaceAll(s, " ", "T")}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	applyDateBounds(props, o)
+	rc.add(&Node{ID: id, Type: "datetime_input", Props: props})
+	return s
+}
+
+// MenuButton renders a button that opens a dropdown of options and returns the
+// clicked option for exactly one rerun ("" otherwise) — like Button, but with
+// a choice attached.
+func MenuButton(label string, options []string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("menu_button", o.key)
+	choice, _ := rc.sess.takeWidget(id).(string) // one-shot, like a button press
+	props := map[string]any{"label": label, "options": options}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	applyButtonProps(props, o)
+	rc.add(&Node{ID: id, Type: "menu_button", Props: props})
+	return choice
+}
+
 // applyDateBounds copies min/max date bounds onto a date widget's props.
 func applyDateBounds(props map[string]any, o widgetOpts) {
 	if o.minDate != "" {

@@ -28,6 +28,20 @@ All notable changes to Syralit are documented here. The format is based on
   built-in Chart.js series colors; sequential/diverging are published on
   `window.__SY_THEME`). Every color/font/radius option can be overridden for
   the sidebar only via `Theme.Sidebar` / `[theme.sidebar]`.
+- **`sy.PDF(src)`**: embedded PDF viewer (browser renderer); `sy.Height`/`sy.Width`.
+- **`sy.FileUploaderMultiple`**: multi-file upload returning `[]*UploadedFile`.
+- **`[server] max_upload_size_mb`** (and `Config.MaxUploadSizeMB`): configurable
+  upload cap (default 10 MB), enforced in the browser and in the socket read limit.
+- **`sy.InitialSidebarState("collapsed")`**: sidebar starts hidden; the floating
+  toggle reopens it. Also fixes the mobile sidebar toggle, which was appended
+  outside `#syralit-root` and never matched its show/hide CSS.
+- **`sy.ConfigMenuItems(helpURL, bugURL, aboutMarkdown)`**: top-right app menu
+  with "Get help" / "Report a bug" links and an About dialog.
+- **`sy.AcceptNewOptions()`**: MultiSelect free entry (type new values + Enter).
+- **`sy.StartTime` / `sy.EndTime` / `sy.Subtitles`**: Audio/Video playback
+  clipping (media fragments) and WebVTT subtitle tracks.
+- **Toast duration**: optional 4th argument, e.g. `sy.Toast(msg, "success", "⏱", "8s")`.
+- New example: `examples/streamlit-parity`.
 
 ### Fixed
 - README and skill docs showed nonexistent `[theme]` keys (`primary_color`,

@@ -164,6 +164,7 @@ if job.Running() {
 | `TimeInput` | `string` | Time picker (HH:MM) |
 | `ColorPicker` | `string` | Color hex picker |
 | `FileUploader` | `*UploadedFile` | File upload |
+| `FileUploaderMultiple` | `[]*UploadedFile` | Multi-file upload |
 | `CameraInput` | `string` | Webcam capture |
 | `AudioInput` | `string` | Microphone recording |
 | `ChatInput` | `string` | Chat message input |
@@ -176,7 +177,7 @@ Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.
 
 ### Display
 
-Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, Exception (styled Go `error` box).
+Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, PDF (embedded viewer), Exception (styled Go `error` box).
 
 ### Agent Artifacts
 
@@ -618,6 +619,9 @@ accent = "#f59e0b"
 [secrets]
 api_key = "sk-..."
 db_dsn = "postgres://..."
+
+[server]
+max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ```
 
 ### Runtime Configuration
@@ -628,6 +632,8 @@ sy.SetPageConfig(
     sy.PageLayout("wide"),
     sy.ConfigIcon("🚀"),
     sy.PrimaryColor("#ff4b4b"),
+    sy.InitialSidebarState("collapsed"),
+    sy.ConfigMenuItems("https://…/help", "https://…/issues", "**About** markdown"),
 )
 
 apiKey := sy.Secrets("api_key")
@@ -688,6 +694,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 | [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
+| [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
 
 Run any example:
 

@@ -60,6 +60,11 @@ type widgetOpts struct {
 	zoom              int
 	runEvery          int // fragment auto-refresh interval in ms
 	clearOnSubmit     bool
+	startTime         float64
+	endTime           float64
+	subtitles         string
+	acceptNew         bool
+	multipleFiles     bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -126,6 +131,17 @@ func Colors(c []string) Option { return func(o *widgetOpts) { o.colors = c } }
 func Autoplay() Option { return func(o *widgetOpts) { o.autoplay = true } }
 func Loop() Option     { return func(o *widgetOpts) { o.loop = true } }
 func Muted() Option    { return func(o *widgetOpts) { o.muted = true } }
+
+// StartTime / EndTime clip Audio/Video playback to a range (seconds).
+func StartTime(seconds float64) Option { return func(o *widgetOpts) { o.startTime = seconds } }
+func EndTime(seconds float64) Option   { return func(o *widgetOpts) { o.endTime = seconds } }
+
+// Subtitles adds a subtitle track (WebVTT URL) to a Video.
+func Subtitles(vttURL string) Option { return func(o *widgetOpts) { o.subtitles = vttURL } }
+
+// AcceptNewOptions lets a MultiSelect accept values typed by the user in
+// addition to the predefined options.
+func AcceptNewOptions() Option { return func(o *widgetOpts) { o.acceptNew = true } }
 
 // LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
 // lines instead of scrolling horizontally.
@@ -580,6 +596,9 @@ func MultiSelect(label string, options []string, opts ...Option) []string {
 		selected = []string{}
 	}
 	props := map[string]any{"label": label, "options": options, "value": selected}
+	if o.acceptNew {
+		props["accept_new"] = true
+	}
 	if o.disabled {
 		props["disabled"] = true
 	}
@@ -729,19 +748,9 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 	id := rc.widgetID("file_uploader", o.key)
 	val, _ := rc.sess.widgetValue(id)
 
-	var file *UploadedFile
-	if m, ok := val.(map[string]any); ok {
-		name, _ := m["name"].(string)
-		size := toFloat64(m["size"])
-		typ, _ := m["type"].(string)
-		dataStr, _ := m["data"].(string)
-		data, err := base64.StdEncoding.DecodeString(dataStr)
-		if err == nil && name != "" {
-			file = &UploadedFile{Name: name, Size: int64(size), Type: typ, Data: data}
-		}
-	}
+	file := decodeUploadedFile(val)
 
-	props := map[string]any{"label": label}
+	props := map[string]any{"label": label, "max_size": uploadLimitBytes}
 	if file != nil {
 		props["file_name"] = file.Name
 		props["file_size"] = file.Size
@@ -751,6 +760,58 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 	}
 	rc.add(&Node{ID: id, Type: "file_uploader", Props: props})
 	return file
+}
+
+// FileUploaderMultiple renders a file upload widget that accepts several files
+// at once and returns all of them (empty slice when none are uploaded yet).
+func FileUploaderMultiple(label string, opts ...Option) []*UploadedFile {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("file_uploader", o.key)
+	val, _ := rc.sess.widgetValue(id)
+
+	var files []*UploadedFile
+	if list, ok := val.([]any); ok {
+		for _, item := range list {
+			if f := decodeUploadedFile(item); f != nil {
+				files = append(files, f)
+			}
+		}
+	}
+
+	props := map[string]any{"label": label, "multiple": true, "max_size": uploadLimitBytes}
+	if len(files) > 0 {
+		names := make([]string, len(files))
+		var total int64
+		for i, f := range files {
+			names[i] = f.Name
+			total += f.Size
+		}
+		props["file_names"] = names
+		props["file_size"] = total
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "file_uploader", Props: props})
+	return files
+}
+
+// decodeUploadedFile converts a browser upload payload into an UploadedFile.
+func decodeUploadedFile(val any) *UploadedFile {
+	m, ok := val.(map[string]any)
+	if !ok {
+		return nil
+	}
+	name, _ := m["name"].(string)
+	size := toFloat64(m["size"])
+	typ, _ := m["type"].(string)
+	dataStr, _ := m["data"].(string)
+	data, err := base64.StdEncoding.DecodeString(dataStr)
+	if err != nil || name == "" {
+		return nil
+	}
+	return &UploadedFile{Name: name, Size: int64(size), Type: typ, Data: data}
 }
 
 // LinkButton renders a button-styled hyperlink that opens in a new tab.

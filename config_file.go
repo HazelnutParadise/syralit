@@ -182,6 +182,9 @@ type fileConfig struct {
 	Port    int               `toml:"port"`
 	Secrets map[string]string `toml:"secrets"`
 	Theme   fileTheme         `toml:"theme"`
+	Server  struct {
+		MaxUploadSizeMB int `toml:"max_upload_size_mb"`
+	} `toml:"server"`
 }
 
 // loadFileConfig reads dir/syralit.toml if present. A missing file is not an
@@ -216,6 +219,9 @@ func (fc *fileConfig) applyToConfig(cfg *Config) {
 	}
 	if cfg.Port == 0 {
 		cfg.Port = fc.Port
+	}
+	if cfg.MaxUploadSizeMB == 0 {
+		cfg.MaxUploadSizeMB = fc.Server.MaxUploadSizeMB
 	}
 	fc.applyTheme(&cfg.Theme)
 }

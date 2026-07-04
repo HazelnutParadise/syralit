@@ -206,8 +206,17 @@
     btn.id = "syralit-sidebar-toggle";
     btn.className = "sy-sidebar-toggle";
     btn.textContent = "☰";
-    btn.onclick = function () { layoutRoot.classList.toggle("sidebar-open"); };
-    document.body.appendChild(btn);
+    btn.onclick = function () {
+      if (layoutRoot.classList.contains("sidebar-collapsed")) {
+        layoutRoot.classList.remove("sidebar-collapsed");
+        return;
+      }
+      layoutRoot.classList.toggle("sidebar-open");
+    };
+    // Must live inside #syralit-root: the CSS that shows/hides it keys off
+    // the root's has-sidebar / sidebar-collapsed classes with a descendant
+    // selector. (position:fixed, so layout is unaffected.)
+    layoutRoot.appendChild(btn);
   }
 
   function ensureBackdrop() {
@@ -428,6 +437,7 @@
       case "html":       return htmlEl(node, p);
       case "component":  return componentEl(node, p);
       case "iframe":     return iframeEl(node, p);
+      case "pdf":        return pdfEl(node, p);
       case "latex":      return latexEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
@@ -817,6 +827,21 @@
         }
       };
       wrap.appendChild(sel);
+    }
+    if (p.accept_new && !p.disabled && !atLimit) {
+      var newInput = document.createElement("input");
+      newInput.type = "text";
+      newInput.className = "sy-input sy-multi-new";
+      newInput.placeholder = "Add new…";
+      newInput.onkeydown = function (ev) {
+        if (ev.key !== "Enter") return;
+        var v = newInput.value.trim();
+        if (!v || vals.indexOf(v) >= 0) return;
+        newInput.value = "";
+        var next = vals.concat([v]);
+        if (!inForm(wrap)) send(node.id, next, false);
+      };
+      wrap.appendChild(newInput);
     }
 
     return field(p.label, wrap, p.help);
@@ -2219,12 +2244,32 @@
     return iframe;
   }
 
+  function pdfEl(node, p) {
+    var iframe = document.createElement("iframe");
+    iframe.className = "sy-pdf";
+    iframe.style.border = "1px solid var(--sy-border)";
+    iframe.style.borderRadius = "var(--sy-radius)";
+    iframe.style.width = (p.width ? p.width + "px" : "100%");
+    iframe.style.height = (p.height || 600) + "px";
+    iframe.src = p.src || "";
+    return iframe;
+  }
+
   // --- Audio / Video -----------------------------------------------------
+
+  function mediaSrc(p) {
+    // Clip playback with a media fragment: #t=start[,end]
+    var src = p.src || "";
+    if (p.start_time || p.end_time) {
+      src += "#t=" + (p.start_time || 0) + (p.end_time ? "," + p.end_time : "");
+    }
+    return src;
+  }
 
   function audioEl(node, p) {
     var audio = document.createElement("audio");
     audio.className = "sy-audio";
-    audio.src = p.src;
+    audio.src = mediaSrc(p);
     audio.controls = true;
     if (p.autoplay) audio.autoplay = true;
     if (p.loop) audio.loop = true;
@@ -2236,7 +2281,15 @@
     var wrap = el("div", "sy-video-wrap");
     var video = document.createElement("video");
     video.className = "sy-video";
-    video.src = p.src;
+    video.src = mediaSrc(p);
+    if (p.subtitles) {
+      var track = document.createElement("track");
+      track.kind = "subtitles";
+      track.src = p.subtitles;
+      track.default = true;
+      video.appendChild(track);
+      video.crossOrigin = "anonymous";
+    }
     video.controls = true;
     if (p.width) video.style.maxWidth = p.width + "px";
     if (p.autoplay) video.autoplay = true;
@@ -2267,7 +2320,7 @@
       toast.classList.remove("sy-toast-show");
       toast.classList.add("sy-toast-hide");
       setTimeout(function () { toast.remove(); }, 300);
-    }, 3000);
+    }, t.duration || 3000);
   }
 
   function showBalloons() {
@@ -2308,10 +2361,79 @@
     }
   }
 
+  // --- App menu (SetPageConfig ConfigMenuItems) ---------------------------
+
+  function ensureAppMenu(cfg) {
+    var has = cfg.menu_help_url || cfg.menu_bug_url || cfg.menu_about;
+    var existing = document.getElementById("syralit-app-menu");
+    if (!has) { if (existing) existing.remove(); return; }
+    var sig = JSON.stringify([cfg.menu_help_url || "", cfg.menu_bug_url || "", cfg.menu_about || ""]);
+    if (existing) {
+      if (existing.dataset.sig === sig) return; // unchanged — keep open state
+      existing.remove();
+    }
+
+    var wrap = document.createElement("div");
+    wrap.id = "syralit-app-menu";
+    wrap.className = "sy-app-menu";
+    var btn = document.createElement("button");
+    btn.className = "sy-app-menu-btn";
+    btn.textContent = "⋮";
+    btn.title = "Menu";
+    var dd = document.createElement("div");
+    dd.className = "sy-app-menu-dropdown";
+
+    function addLink(label, url) {
+      var a = document.createElement("a");
+      a.className = "sy-app-menu-item";
+      a.textContent = label;
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      dd.appendChild(a);
+    }
+    if (cfg.menu_help_url) addLink("Get help", cfg.menu_help_url);
+    if (cfg.menu_bug_url) addLink("Report a bug", cfg.menu_bug_url);
+    if (cfg.menu_about) {
+      var about = document.createElement("button");
+      about.className = "sy-app-menu-item";
+      about.textContent = "About";
+      about.onclick = function () {
+        dd.classList.remove("open");
+        var overlay = document.createElement("div");
+        overlay.className = "sy-app-about-overlay";
+        var box = document.createElement("div");
+        box.className = "sy-app-about-box sy-markdown";
+        box.innerHTML = cfg.menu_about; // server-rendered markdown HTML
+        overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+      };
+      dd.appendChild(about);
+    }
+
+    btn.onclick = function (ev) { ev.stopPropagation(); dd.classList.toggle("open"); };
+    document.addEventListener("click", function () { dd.classList.remove("open"); });
+    wrap.dataset.sig = sig;
+    wrap.appendChild(btn);
+    wrap.appendChild(dd);
+    document.body.appendChild(wrap);
+  }
+
   // --- Page Config -------------------------------------------------------
+
+  var sidebarStateApplied = false;
 
   function applyPageConfig(cfg) {
     if (cfg.title) document.title = cfg.title;
+    if (cfg.sidebar_state === "collapsed" && !sidebarStateApplied) {
+      sidebarStateApplied = true;
+      layoutRoot.classList.add("sidebar-collapsed");
+      ensureMobileToggle();
+    } else if (cfg.sidebar_state) {
+      sidebarStateApplied = true;
+    }
+    ensureAppMenu(cfg);
     if (cfg.icon) setFavicon(cfg.icon);
     if (cfg.layout === "wide") {
       root.style.maxWidth = "100%";
@@ -2587,6 +2709,12 @@
 
   function fileUploader(node, p) {
     var wrap = el("div", "sy-file-uploader-wrap");
+    var maxSize = p.max_size || 10 * 1024 * 1024;
+    if (p.file_names && p.file_names.length) {
+      var infoM = el("div", "sy-file-info");
+      infoM.textContent = p.file_names.join(", ") + " (" + formatSize(p.file_size || 0) + ")";
+      wrap.appendChild(infoM);
+    }
     if (p.file_name) {
       var info = el("div", "sy-file-info");
       info.textContent = "📄 " + p.file_name + " (" + formatSize(p.file_size || 0) + ")";
@@ -2594,21 +2722,38 @@
     }
     var input = document.createElement("input");
     input.type = "file";
+    if (p.multiple) input.multiple = true;
     input.className = "sy-file-input";
     input.dataset.id = node.id;
+
+    function readOne(file) {
+      return new Promise(function (resolve) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var b64 = reader.result.split(",")[1] || "";
+          resolve({ name: file.name, size: file.size, type: file.type, data: b64 });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     input.onchange = function () {
       if (!input.files || !input.files.length) return;
-      var file = input.files[0];
-      if (file.size > 10 * 1024 * 1024) {
-        alert("File too large (max 10 MB)");
+      var files = Array.prototype.slice.call(input.files);
+      var total = files.reduce(function (sum, f) { return sum + f.size; }, 0);
+      if (total > maxSize) {
+        alert("File too large (max " + formatSize(maxSize) + ")");
         return;
       }
-      var reader = new FileReader();
-      reader.onload = function () {
-        var b64 = reader.result.split(",")[1] || "";
-        send(node.id, { name: file.name, size: file.size, type: file.type, data: b64 }, false);
-      };
-      reader.readAsDataURL(file);
+      if (p.multiple) {
+        Promise.all(files.map(readOne)).then(function (payloads) {
+          send(node.id, payloads, false);
+        });
+      } else {
+        readOne(files[0]).then(function (payload) {
+          send(node.id, payload, false);
+        });
+      }
     };
     wrap.appendChild(input);
     return field(p.label, wrap, p.help);

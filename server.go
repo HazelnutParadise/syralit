@@ -1,6 +1,7 @@
 package syralit
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,15 +12,31 @@ import (
 	"strings"
 
 	"github.com/coder/websocket"
+	"github.com/yuin/goldmark"
 )
 
-// Config controls the dev server. Fields beyond these (Theme, upload limits) are
-// reserved for later stages; see SPEC §6.1 / §15.
+// Config controls the dev server.
 type Config struct {
 	Title string
 	Host  string
 	Port  int
 	Theme Theme
+
+	// MaxUploadSizeMB caps FileUploader/CameraInput payloads, in megabytes.
+	// 0 means the default (10 MB). Configurable via [server] max_upload_size_mb
+	// in syralit.toml.
+	MaxUploadSizeMB int
+}
+
+// uploadLimitBytes is the resolved upload cap, set when the server starts and
+// read by the uploader widgets (sent to the browser) and the socket read limit.
+var uploadLimitBytes int64 = 10 << 20
+
+func (c *Config) uploadLimit() int64 {
+	if c.MaxUploadSizeMB > 0 {
+		return int64(c.MaxUploadSizeMB) << 20
+	}
+	return 10 << 20
 }
 
 func (c *Config) applyDefaults() {
@@ -61,6 +78,7 @@ const envDevAddr = "SYRALIT_DEV_ADDR"
 func Run(cfg Config, fn func()) error {
 	loadFileConfig(".").applyToConfig(&cfg)
 	cfg.applyDefaults()
+	uploadLimitBytes = cfg.uploadLimit()
 	s := &server{cfg: cfg, appFn: fn}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
@@ -144,7 +162,11 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	c.SetReadLimit(32 << 20) // dev restore payloads can be large
+	limit := int64(32 << 20) // dev restore payloads can be large
+	if l := uploadLimitBytes + (4 << 20); l > limit {
+		limit = l // base64 upload + envelope headroom
+	}
+	c.SetReadLimit(limit)
 	defer c.CloseNow()
 
 	ctx := context.Background()
@@ -337,6 +359,21 @@ func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 		}
 		if sess.pageConfig.textColor != "" {
 			pc["text_color"] = sess.pageConfig.textColor
+		}
+		if sess.pageConfig.sidebarState != "" {
+			pc["sidebar_state"] = sess.pageConfig.sidebarState
+		}
+		if sess.pageConfig.menuHelpURL != "" {
+			pc["menu_help_url"] = sess.pageConfig.menuHelpURL
+		}
+		if sess.pageConfig.menuBugURL != "" {
+			pc["menu_bug_url"] = sess.pageConfig.menuBugURL
+		}
+		if sess.pageConfig.menuAbout != "" {
+			var buf bytes.Buffer
+			if err := goldmark.Convert([]byte(sess.pageConfig.menuAbout), &buf); err == nil {
+				pc["menu_about"] = buf.String()
+			}
 		}
 		if len(pc) > 0 {
 			msg["page_config"] = pc

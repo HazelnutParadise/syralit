@@ -38,10 +38,14 @@ type pageConfig struct {
 	title        string
 	icon         string
 	layout       string // "centered" or "wide"
+	sidebarState string // "expanded" (default) or "collapsed"
 	logo         string // sidebar logo URL
 	primaryColor string
 	bgColor      string
 	textColor    string
+	menuHelpURL  string // "Get help" link in the app menu
+	menuBugURL   string // "Report a bug" link in the app menu
+	menuAbout    string // markdown for the About dialog
 }
 
 func newSession(appFn func()) *session {

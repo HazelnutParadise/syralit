@@ -63,12 +63,13 @@ func main() { sy.App(nil) }
 | `Toggle(label, opts...)` | `bool` | Toggle switch |
 | `Radio(label, options, opts...)` | `string` | Radio group |
 | `SelectBox(label, options, opts...)` | `string` | Dropdown (auto-searchable at 20+ items) |
-| `MultiSelect(label, options, opts...)` | `[]string` | Multi-select |
+| `MultiSelect(label, options, opts...)` | `[]string` | Multi-select; `sy.AcceptNewOptions()` allows typing new values |
 | `DateInput(label, opts...)` | `string` | Date picker (YYYY-MM-DD) |
 | `DateRangeInput(label, opts...)` | `(string, string)` | Start/end date pickers |
 | `TimeInput(label, opts...)` | `string` | Time picker (HH:MM) |
 | `ColorPicker(label, opts...)` | `string` | Color hex |
 | `FileUploader(label, opts...)` | `*UploadedFile` | File upload (nil if empty) |
+| `FileUploaderMultiple(label, opts...)` | `[]*UploadedFile` | Multi-file upload (empty slice if none) |
 | `CameraInput(label, opts...)` | `string` | Webcam capture (base64 data URI) |
 | `AudioInput(label, opts...)` | `string` | Microphone recording (base64) |
 | `ChatInput(placeholder, opts...)` | `string` | Chat input box |
@@ -108,6 +109,9 @@ sy.UseContainerWidth()        // button spans its container
 sy.Border()                   // bordered Metric card (also container border)
 sy.MinDate("2026-01-01")      // DateInput/DateRangeInput lower bound
 sy.MaxDate("2026-12-31")      // DateInput/DateRangeInput upper bound
+sy.StartTime(2), sy.EndTime(5) // Audio/Video playback range (seconds)
+sy.Subtitles("/subs.vtt")     // Video subtitle track (WebVTT)
+sy.AcceptNewOptions()         // MultiSelect: allow typing new values
 ```
 
 ### Display
@@ -137,6 +141,7 @@ sy.WriteStream(id, func(w func(string)) { w("token") })  // streaming text
 sy.ArtifactCanvas(store, opts...)  // shared, animated agent-updatable canvas
 sy.Component(html, opts...)        // custom HTML/JS in iframe
 sy.IFrame(url, opts...)
+sy.PDF(src, sy.Height(600))        // embedded PDF viewer (browser renderer)
 ```
 
 ### Data
@@ -281,7 +286,7 @@ sy.Info("Note: ...")
 sy.Warning("Watch out")
 sy.Error("Failed")
 sy.Exception(err)               // styled monospace error box; nil renders nothing
-sy.Toast("Message", "success")  // "success", "info", "warning", "error"
+sy.Toast("Message", "success")  // level: "success"/"info"/"warning"/"error"; optional 3rd/4th args: icon, duration ("8s")
 sy.Balloons()
 sy.Snow()
 sy.Status("Loading data", "running", func() {
@@ -482,6 +487,12 @@ sy.SetPageConfig(
     sy.PrimaryColor("#ff4b4b"),
     sy.BackgroundColor("#0e1117"),
     sy.TextColor("#fafafa"),
+    sy.InitialSidebarState("collapsed"),  // sidebar starts hidden; floating button reopens
+    sy.ConfigMenuItems(                   // top-right app menu (pass "" to omit an item)
+        "https://example.com/help",       // "Get help" link
+        "https://example.com/bugs",       // "Report a bug" link
+        "**My App** v1.0",                // About dialog (markdown)
+    ),
 )
 
 // Secrets (from syralit.toml [secrets] section)
@@ -585,6 +596,9 @@ accent = "#f59e0b"
 [secrets]
 api_key = "sk-..."
 db_dsn = "postgres://..."
+
+[server]
+max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ```
 
 ## Patterns

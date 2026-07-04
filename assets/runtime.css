@@ -2019,6 +2019,89 @@ body {
   animation: sy-fade-in .15s ease;
 }
 
+/* --- Collapsed sidebar (initial_sidebar_state) -------------------------- */
+
+#syralit-root.has-sidebar.sidebar-collapsed #syralit-sidebar {
+  display: none;
+}
+#syralit-root.has-sidebar.sidebar-collapsed .sy-sidebar-toggle {
+  display: flex;
+}
+
+/* --- App menu (ConfigMenuItems) ----------------------------------------- */
+
+.sy-app-menu {
+  position: fixed;
+  top: .9rem;
+  right: .9rem;
+  z-index: 300;
+}
+.sy-app-menu-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--sy-border);
+  border-radius: 50%;
+  background: var(--sy-bg);
+  color: var(--sy-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.sy-app-menu-btn:hover { color: var(--sy-fg); }
+.sy-app-menu-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40px;
+  min-width: 160px;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  padding: .35rem;
+  flex-direction: column;
+}
+.sy-app-menu-dropdown.open { display: flex; }
+.sy-app-menu-item {
+  display: block;
+  padding: .45rem .7rem;
+  border: none;
+  border-radius: calc(var(--sy-radius) - 4px);
+  background: none;
+  color: var(--sy-fg);
+  font: inherit;
+  font-size: .9rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sy-app-menu-item:hover { background: var(--sy-hover); }
+.sy-app-about-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sy-app-about-box {
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 12px 48px rgba(0,0,0,.25);
+}
+
+/* --- Multi-select free entry -------------------------------------------- */
+
+.sy-multi-new {
+  margin-top: .4rem;
+}
+
 /* --- Mobile Sidebar ---------------------------------------------------- */
 
 .sy-sidebar-toggle {

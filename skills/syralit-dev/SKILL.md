@@ -533,8 +533,31 @@ port = 8600
 
 [theme]
 mode = "system"        # "light" | "dark" | "system"
-accent = "#7C3AED"     # accent color
-radius = "12px"        # corner radius
+accent = "#7C3AED"     # primary/accent color
+radius = "12px"        # base corner radius
+button_radius = "999px"             # button corners; defaults to radius
+background_color = "#ffffff"        # app background
+secondary_background_color = "#f8f9fb"  # widget/code/sidebar surface
+text_color = "#1f2329"
+link_color = "#2563eb"              # defaults to accent
+link_underline = true               # true: always, false: never, unset: on hover
+code_text_color = "#0f766e"
+code_background_color = "#f1f5f9"
+border_color = "#e5e7eb"
+dataframe_border_color = "#e5e7eb"      # defaults to border_color
+dataframe_header_background_color = "#f3f4f6"
+show_widget_border = true           # false hides input borders
+show_sidebar_border = true          # false removes the sidebar divider
+# Basic palette (used by badges, alerts, status colors). Each color also has
+# <name>_background_color (alert surface tint) and <name>_text_color:
+red_color = "#dc2626"               # also orange/yellow/blue/green/violet/gray
+blue_background_color = "#eff6ff"
+green_text_color = "#166534"
+# Chart palettes: categorical drives built-in chart series colors;
+# sequential/diverging are published to window.__SY_THEME for custom components.
+chart_categorical_colors = ["#7c3aed", "#2563eb", "#16a34a"]
+chart_sequential_colors = ["#f0fdfa", "#0f766e"]
+chart_diverging_colors = ["#dc2626", "#f8fafc", "#2563eb"]
 # Fonts: "sans-serif" | "serif" | "monospace" pick the built-in Source Sans 3 /
 # Source Serif 4 / Source Code Pro (embedded, no CDN); any other value is used
 # as a CSS font-family list.
@@ -555,8 +578,9 @@ weight = "100 900"                  # optional
 style = "normal"                    # optional: normal | italic | oblique
 unicode_range = "U+0-10FFFF"        # optional
 
-[theme.sidebar]        # sidebar-only font overrides (inherit main theme when unset)
-font = "sans-serif"
+[theme.sidebar]        # sidebar-only overrides — supports every color/font/radius
+font = "sans-serif"    # key above (inherits the main theme when unset)
+accent = "#f59e0b"
 
 [secrets]
 api_key = "sk-..."

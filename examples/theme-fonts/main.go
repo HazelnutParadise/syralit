@@ -18,6 +18,14 @@ func main() {
 		sy.Header("Code")
 		sy.Code(`fmt.Println("Source Code Pro, sized by code_font_size")`, sy.Language("go"))
 
+		sy.Header("Colors & charts")
+		sy.Markdown("Links use `link_color`: [Syralit](https://github.com/HazelnutParadise/syralit). Buttons use `button_radius`.")
+		sy.Button("Pill button")
+		sy.LineChart(map[string][]float64{
+			"A": {3, 6, 4, 8, 7},
+			"B": {2, 3, 5, 4, 6},
+		}) // series colors come from chart_categorical_colors
+
 		sy.Sidebar(func() {
 			sy.Header("Sidebar")
 			sy.Text("The sidebar can use its own fonts via [theme.sidebar].")

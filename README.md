@@ -571,6 +571,27 @@ port = 8600
 mode = "system"        # "light" | "dark" | "system"
 accent = "#7C3AED"
 radius = "12px"
+button_radius = "999px"                 # defaults to radius
+background_color = "#ffffff"
+secondary_background_color = "#f8f9fb"  # widget/code/sidebar surface
+text_color = "#1f2329"
+link_color = "#2563eb"                  # defaults to accent
+link_underline = true                   # true: always, false: never, unset: on hover
+code_text_color = "#0f766e"
+code_background_color = "#f1f5f9"
+border_color = "#e5e7eb"
+dataframe_border_color = "#e5e7eb"
+dataframe_header_background_color = "#f3f4f6"
+show_widget_border = true
+show_sidebar_border = true
+# Basic palette (badges, alerts, status colors); each of red/orange/yellow/
+# blue/green/violet/gray also has <name>_background_color and <name>_text_color.
+red_color = "#dc2626"
+blue_background_color = "#eff6ff"
+# Chart palettes (categorical drives built-in chart series colors).
+chart_categorical_colors = ["#7c3aed", "#2563eb", "#16a34a"]
+chart_sequential_colors = ["#f0fdfa", "#0f766e"]
+chart_diverging_colors = ["#dc2626", "#f8fafc", "#2563eb"]
 # Fonts: "sans-serif" | "serif" | "monospace" select the built-in Source Sans 3 /
 # Source Serif 4 / Source Code Pro (embedded, served locally — no CDN); any
 # other value is used as a CSS font-family list.
@@ -590,8 +611,9 @@ url = "/fonts/inter.woff2"   # public/ path or absolute URL
 weight = "100 900"
 style = "normal"
 
-[theme.sidebar]        # sidebar-only font overrides
-font = "sans-serif"
+[theme.sidebar]        # sidebar-only overrides — every color/font/radius key
+font = "sans-serif"    # above works here too (inherits main theme when unset)
+accent = "#f59e0b"
 
 [secrets]
 api_key = "sk-..."
@@ -665,7 +687,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
-| [`theme-fonts`](examples/theme-fonts/) | Font theming: built-in Source fonts, custom `@font-face` loading, size/weight tuning, sidebar overrides |
+| [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
 
 Run any example:
 

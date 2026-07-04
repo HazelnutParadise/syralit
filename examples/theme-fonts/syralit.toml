@@ -2,6 +2,9 @@ title = "Font Theming"
 
 [theme]
 accent = "#0F766E"
+button_radius = "999px"
+link_color = "#B45309"
+chart_categorical_colors = ["#0F766E", "#B45309", "#7C3AED", "#DC2626", "#2563EB"]
 # Built-in keywords: "sans-serif" (Source Sans 3), "serif" (Source Serif 4),
 # "monospace" (Source Code Pro). Anything else is used as a CSS font-family list.
 font = "serif"

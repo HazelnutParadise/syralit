@@ -2509,8 +2509,10 @@
 
   function badgeEl(node, p) {
     var colorMap = {
-      blue: "#1f77b4", green: "#2ca02c", red: "#d62728",
-      orange: "#ff7f0e", gray: "#6b7280", violet: "#9467bd"
+      blue: "var(--sy-color-blue)", green: "var(--sy-color-green)",
+      red: "var(--sy-color-red)", orange: "var(--sy-color-orange)",
+      yellow: "var(--sy-color-yellow)", gray: "var(--sy-color-gray)",
+      violet: "var(--sy-color-violet)"
     };
     var c = p.color || "blue";
     var bg = colorMap[c] || c;
@@ -2620,7 +2622,12 @@
 
   // --- Charts (Chart.js) ------------------------------------------------
 
-  var CHART_COLORS = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+  var DEFAULT_CHART_COLORS = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+  // Theme override (theme.chart_categorical_colors) injected via window.__SY_THEME.
+  function CHART_PALETTE() {
+    var t = (window.__SY_THEME || {}).chart_categorical_colors;
+    return (t && t.length) ? t : DEFAULT_CHART_COLORS;
+  }
   var chartjsState = "idle";
   var chartjsQueue = [];
 
@@ -2695,7 +2702,7 @@
     var labels = p.x_labels && p.x_labels.length > 0
       ? p.x_labels
       : Array.from({ length: maxLen }, function (_, i) { return String(i + 1); });
-    var palette = (p.colors && p.colors.length) ? p.colors : CHART_COLORS;
+    var palette = (p.colors && p.colors.length) ? p.colors : CHART_PALETTE();
     var datasets = names.map(function (name, si) {
       var color = palette[si % palette.length];
       var ds = { label: name, data: series[name], borderColor: color, backgroundColor: color };
@@ -2774,7 +2781,7 @@
           labels: names,
           datasets: [{
             data: names.map(function (n) { return data[n]; }),
-            backgroundColor: names.map(function (_, i) { return CHART_COLORS[i % CHART_COLORS.length]; }),
+            backgroundColor: names.map(function (_, i) { var cp = CHART_PALETTE(); return cp[i % cp.length]; }),
           }],
         },
         options: chartOptions(p.title, "pie"),
@@ -2788,7 +2795,7 @@
     return makeChartJS("scatter", p, function () {
       var datasets = names.map(function (name, si) {
         var pts = (series[name] || []).map(function (pt) { return { x: pt[0], y: pt[1] }; });
-        return { label: name, data: pts, backgroundColor: CHART_COLORS[si % CHART_COLORS.length], pointRadius: 5 };
+        return { label: name, data: pts, backgroundColor: CHART_PALETTE()[si % CHART_PALETTE().length], pointRadius: 5 };
       });
       return { type: "scatter", data: { datasets: datasets }, options: chartOptions(p.title, "scatter") };
     });
@@ -2818,7 +2825,7 @@
         type: "bar",
         data: {
           labels: labels,
-          datasets: [{ label: "Frequency", data: counts, backgroundColor: CHART_COLORS[0] + "cc" }],
+          datasets: [{ label: "Frequency", data: counts, backgroundColor: CHART_PALETTE()[0] + "cc" }],
         },
         options: chartOptions(p.title, "bar"),
       };
@@ -2835,7 +2842,7 @@
           labels: names,
           datasets: [{
             data: names.map(function (n) { return data[n]; }),
-            backgroundColor: names.map(function (_, i) { return CHART_COLORS[i % CHART_COLORS.length]; }),
+            backgroundColor: names.map(function (_, i) { var cp = CHART_PALETTE(); return cp[i % cp.length]; }),
           }],
         },
         options: chartOptions(p.title, "doughnut"),
@@ -2849,7 +2856,7 @@
     var labels = p.labels || [];
     return makeChartJS("radar", p, function () {
       var datasets = names.map(function (name, si) {
-        var color = CHART_COLORS[si % CHART_COLORS.length];
+        var color = CHART_PALETTE()[si % CHART_PALETTE().length];
         return {
           label: name,
           data: series[name],

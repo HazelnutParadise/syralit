@@ -17,6 +17,17 @@ All notable changes to Syralit are documented here. The format is based on
   `Theme.Sidebar`. All configurable from `syralit.toml` (`[theme]`,
   `[[theme.font_faces]]`, `[theme.sidebar]`). New example:
   `examples/theme-fonts`.
+- **Full theme parity with Streamlit**: `Theme` (via the embedded `ThemeStyle`)
+  now also supports `BackgroundColor`, `SecondaryBackgroundColor`, `TextColor`,
+  `LinkColor`, `LinkUnderline`, `CodeTextColor`, `CodeBackgroundColor`,
+  `BorderColor`, `DataframeBorderColor`, `DataframeHeaderBackgroundColor`,
+  `ButtonRadius`, `ShowWidgetBorder`, `ShowSidebarBorder`, the basic color
+  palette (`red/orange/yellow/blue/green/violet/gray` base + background + text
+  variants, wired to badges, alerts and status colors via new `--sy-color-*`
+  CSS variables) and chart palettes (`ChartCategoricalColors` drives the
+  built-in Chart.js series colors; sequential/diverging are published on
+  `window.__SY_THEME`). Every color/font/radius option can be overridden for
+  the sidebar only via `Theme.Sidebar` / `[theme.sidebar]`.
 
 ### Fixed
 - README and skill docs showed nonexistent `[theme]` keys (`primary_color`,

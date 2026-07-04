@@ -115,6 +115,169 @@ func resolveFont(v string) string {
 	return ""
 }
 
+// styleVars renders a ThemeStyle's variable-backed options as CSS custom
+// property declarations. sidebar=true additionally re-emits derived variables
+// (aliases and color-mix tints normally computed at :root) so scoped
+// overrides actually cascade — custom properties substitute var() where they
+// are declared, so a sidebar-scoped base color would otherwise never reach an
+// alias declared at :root.
+func styleVars(s *ThemeStyle, sidebar bool) []string {
+	var vars []string
+	add := func(name, val string) {
+		if cssValueSafe(val) {
+			vars = append(vars, name+":"+val)
+		}
+	}
+	add("--sy-accent", s.Accent)
+	add("--sy-radius", s.Radius)
+	add("--sy-btn-radius", s.ButtonRadius)
+	add("--sy-bg", s.BackgroundColor)
+	add("--sy-fg", s.TextColor)
+	add("--sy-sidebar-bg", s.SecondaryBackgroundColor)
+	add("--sy-link", s.LinkColor)
+	add("--sy-border", s.BorderColor)
+	add("--sy-df-border", s.DataframeBorderColor)
+	add("--sy-df-header-bg", s.DataframeHeaderBackgroundColor)
+	if sidebar && s.Accent != "" && cssValueSafe(s.Accent) {
+		vars = append(vars, "--sy-primary:var(--sy-accent)",
+			"--sy-primary-alpha:color-mix(in srgb, var(--sy-accent) 12%, transparent)")
+		if s.LinkColor == "" {
+			vars = append(vars, "--sy-link:var(--sy-accent)")
+		}
+	}
+
+	statusAlias := map[string]string{"blue": "--sy-info", "green": "--sy-success", "orange": "--sy-warning", "red": "--sy-error"}
+	palette := []struct{ name, base, bg, text string }{
+		{"red", s.RedColor, s.RedBackgroundColor, s.RedTextColor},
+		{"orange", s.OrangeColor, s.OrangeBackgroundColor, s.OrangeTextColor},
+		{"yellow", s.YellowColor, s.YellowBackgroundColor, s.YellowTextColor},
+		{"blue", s.BlueColor, s.BlueBackgroundColor, s.BlueTextColor},
+		{"green", s.GreenColor, s.GreenBackgroundColor, s.GreenTextColor},
+		{"violet", s.VioletColor, s.VioletBackgroundColor, s.VioletTextColor},
+		{"gray", s.GrayColor, s.GrayBackgroundColor, s.GrayTextColor},
+	}
+	for _, c := range palette {
+		v := "--sy-color-" + c.name
+		add(v, c.base)
+		add(v+"-bg", c.bg)
+		add(v+"-text", c.text)
+		if sidebar && c.base != "" && cssValueSafe(c.base) {
+			// Re-derive the tints/aliases at sidebar scope.
+			if c.bg == "" {
+				vars = append(vars, v+"-bg:color-mix(in srgb, var("+v+") 10%, var(--sy-bg))")
+			}
+			if c.text == "" {
+				vars = append(vars, v+"-text:var("+v+")")
+			}
+			if alias, ok := statusAlias[c.name]; ok {
+				vars = append(vars, alias+":var("+v+")")
+			}
+		}
+	}
+
+	if f := resolveFont(s.Font); s.Font != "" && f != "" {
+		vars = append(vars, "--sy-font:"+f)
+		if sidebar && s.HeadingFont == "" {
+			vars = append(vars, "--sy-font-heading:"+f)
+		}
+	}
+	if f := resolveFont(s.HeadingFont); s.HeadingFont != "" && f != "" {
+		vars = append(vars, "--sy-font-heading:"+f)
+	}
+	if f := resolveFont(s.CodeFont); s.CodeFont != "" && f != "" {
+		vars = append(vars, "--sy-font-code:"+f)
+	}
+	return vars
+}
+
+// prefixSelector scopes a comma-separated selector list under prefix.
+func prefixSelector(sel, prefix string) string {
+	if prefix == "" {
+		return sel
+	}
+	parts := strings.Split(sel, ", ")
+	for i, p := range parts {
+		parts[i] = prefix + " " + p
+	}
+	return strings.Join(parts, ", ")
+}
+
+// styleRules renders the ThemeStyle options that need whole CSS rules rather
+// than variables. prefix is "" for the main area or a scoping selector.
+func styleRules(css *strings.Builder, s *ThemeStyle, prefix string) {
+	if s.BaseFontSize > 0 {
+		if prefix == "" {
+			fmt.Fprintf(css, "html{font-size:%dpx}", s.BaseFontSize)
+		} else {
+			fmt.Fprintf(css, "%s{font-size:%dpx}", prefix, s.BaseFontSize)
+		}
+	}
+	if fontWeightValid(s.BaseFontWeight) {
+		sel := prefix
+		if sel == "" {
+			sel = "body"
+		}
+		fmt.Fprintf(css, "%s{font-weight:%d}", sel, s.BaseFontWeight)
+	}
+
+	for i, sel := range headingSelectors {
+		var decls []string
+		if i < len(s.HeadingFontSizes) && cssValueSafe(s.HeadingFontSizes[i]) {
+			decls = append(decls, "font-size:"+s.HeadingFontSizes[i])
+		}
+		if i < len(s.HeadingFontWeights) && fontWeightValid(s.HeadingFontWeights[i]) {
+			decls = append(decls, fmt.Sprintf("font-weight:%d", s.HeadingFontWeights[i]))
+		}
+		if len(decls) > 0 {
+			css.WriteString(prefixSelector(sel, prefix) + "{" + strings.Join(decls, ";") + "}")
+		}
+	}
+
+	var codeDecls []string
+	if cssValueSafe(s.CodeFontSize) {
+		codeDecls = append(codeDecls, "font-size:"+s.CodeFontSize)
+	}
+	if fontWeightValid(s.CodeFontWeight) {
+		codeDecls = append(codeDecls, fmt.Sprintf("font-weight:%d", s.CodeFontWeight))
+	}
+	if cssValueSafe(s.CodeTextColor) {
+		codeDecls = append(codeDecls, "color:"+s.CodeTextColor)
+	}
+	if cssValueSafe(s.CodeBackgroundColor) {
+		codeDecls = append(codeDecls, "background:"+s.CodeBackgroundColor)
+	}
+	if len(codeDecls) > 0 {
+		css.WriteString(prefixSelector(codeFontSelector, prefix) + "{" + strings.Join(codeDecls, ";") + "}")
+	}
+
+	if s.LinkUnderline != nil {
+		linkSel := prefixSelector(".sy-link, .sy-markdown a", prefix)
+		hoverSel := prefixSelector(".sy-link:hover, .sy-markdown a:hover", prefix)
+		if *s.LinkUnderline {
+			css.WriteString(linkSel + "{text-decoration:underline}")
+		} else {
+			css.WriteString(linkSel + "{text-decoration:none}" + hoverSel + "{text-decoration:none}")
+		}
+	}
+
+	if s.ShowWidgetBorder != nil && !*s.ShowWidgetBorder {
+		css.WriteString(prefixSelector(".sy-input, .sy-select, .sy-textarea", prefix) + "{border-color:transparent}")
+	}
+}
+
+// chartColorsJSON validates a palette and returns it, or nil.
+func chartColorsJSON(colors []string) []string {
+	if len(colors) == 0 {
+		return nil
+	}
+	for _, c := range colors {
+		if !cssValueSafe(c) {
+			return nil
+		}
+	}
+	return colors
+}
+
 // renderIndex builds the app shell with the title and theme applied. Theme
 // values are validated before being inlined as CSS.
 func renderIndex(title string, th Theme) string {
@@ -145,72 +308,27 @@ func renderIndex(title string, th Theme) string {
 		css.WriteString(";font-display:swap}")
 	}
 
-	var vars []string
-	if cssValueSafe(th.Accent) {
-		vars = append(vars, "--sy-accent:"+th.Accent)
-	}
-	if cssValueSafe(th.Radius) {
-		vars = append(vars, "--sy-radius:"+th.Radius)
-	}
-	if f := resolveFont(th.Font); th.Font != "" && f != "" {
-		vars = append(vars, "--sy-font:"+f)
-	}
-	if f := resolveFont(th.HeadingFont); th.HeadingFont != "" && f != "" {
-		vars = append(vars, "--sy-font-heading:"+f)
-	}
-	if f := resolveFont(th.CodeFont); th.CodeFont != "" && f != "" {
-		vars = append(vars, "--sy-font-code:"+f)
-	}
-	if len(vars) > 0 {
+	if vars := styleVars(&th.ThemeStyle, false); len(vars) > 0 {
 		css.WriteString(":root{" + strings.Join(vars, ";") + "}")
 	}
+	styleRules(&css, &th.ThemeStyle, "")
 
-	// Sidebar-scoped font overrides: the runtime stylesheet resolves all
-	// font-family declarations through these variables, so redefining them
-	// on the sidebar element cascades to its descendants only.
-	var sbVars []string
-	if f := resolveFont(th.Sidebar.Font); th.Sidebar.Font != "" && f != "" {
-		sbVars = append(sbVars, "--sy-font:"+f, "--sy-font-heading:"+f)
+	sbVars := styleVars(&th.Sidebar, true)
+	if cssValueSafe(th.Sidebar.BackgroundColor) {
+		// The sidebar surface is painted with --sy-sidebar-bg, so a sidebar
+		// background override needs an explicit background declaration too.
+		sbVars = append(sbVars, "background:"+th.Sidebar.BackgroundColor)
 	}
-	if f := resolveFont(th.Sidebar.HeadingFont); th.Sidebar.HeadingFont != "" && f != "" {
-		sbVars = append(sbVars, "--sy-font-heading:"+f)
-	}
-	if f := resolveFont(th.Sidebar.CodeFont); th.Sidebar.CodeFont != "" && f != "" {
-		sbVars = append(sbVars, "--sy-font-code:"+f)
+	if cssValueSafe(th.Sidebar.TextColor) {
+		sbVars = append(sbVars, "color:"+th.Sidebar.TextColor)
 	}
 	if len(sbVars) > 0 {
 		css.WriteString("#syralit-sidebar{" + strings.Join(sbVars, ";") + "}")
 	}
+	styleRules(&css, &th.Sidebar, "#syralit-sidebar")
 
-	if th.BaseFontSize > 0 {
-		fmt.Fprintf(&css, "html{font-size:%dpx}", th.BaseFontSize)
-	}
-	if fontWeightValid(th.BaseFontWeight) {
-		fmt.Fprintf(&css, "body{font-weight:%d}", th.BaseFontWeight)
-	}
-
-	for i, sel := range headingSelectors {
-		var decls []string
-		if i < len(th.HeadingFontSizes) && cssValueSafe(th.HeadingFontSizes[i]) {
-			decls = append(decls, "font-size:"+th.HeadingFontSizes[i])
-		}
-		if i < len(th.HeadingFontWeights) && fontWeightValid(th.HeadingFontWeights[i]) {
-			decls = append(decls, fmt.Sprintf("font-weight:%d", th.HeadingFontWeights[i]))
-		}
-		if len(decls) > 0 {
-			css.WriteString(sel + "{" + strings.Join(decls, ";") + "}")
-		}
-	}
-
-	var codeDecls []string
-	if cssValueSafe(th.CodeFontSize) {
-		codeDecls = append(codeDecls, "font-size:"+th.CodeFontSize)
-	}
-	if fontWeightValid(th.CodeFontWeight) {
-		codeDecls = append(codeDecls, fmt.Sprintf("font-weight:%d", th.CodeFontWeight))
-	}
-	if len(codeDecls) > 0 {
-		css.WriteString(codeFontSelector + "{" + strings.Join(codeDecls, ";") + "}")
+	if th.ShowSidebarBorder != nil && !*th.ShowSidebarBorder {
+		css.WriteString("#syralit-root.has-sidebar #syralit-sidebar{border-right:none}")
 	}
 
 	style := ""
@@ -218,7 +336,26 @@ func renderIndex(title string, th Theme) string {
 		style = "\n<style>" + css.String() + "</style>"
 	}
 
-	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+assetOverridesScript())
+	// Chart palettes ride to the front end as JSON; the runtime resolves the
+	// default Chart.js series colors against window.__SY_THEME.
+	themeJS := map[string][]string{}
+	if c := chartColorsJSON(th.ChartCategoricalColors); c != nil {
+		themeJS["chart_categorical_colors"] = c
+	}
+	if c := chartColorsJSON(th.ChartSequentialColors); c != nil {
+		themeJS["chart_sequential_colors"] = c
+	}
+	if c := chartColorsJSON(th.ChartDivergingColors); c != nil {
+		themeJS["chart_diverging_colors"] = c
+	}
+	themeScript := ""
+	if len(themeJS) > 0 {
+		if b, err := json.Marshal(themeJS); err == nil {
+			themeScript = "\n<script>window.__SY_THEME=" + string(b) + ";</script>"
+		}
+	}
+
+	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript())
 }
 
 // fontValueSafe allows a CSS font-family list (quoted names, commas) while

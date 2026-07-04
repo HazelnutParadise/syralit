@@ -56,10 +56,36 @@
   --sy-primary: var(--sy-accent);
   --sy-primary-alpha: color-mix(in srgb, var(--sy-accent) 12%, transparent);
   --sy-radius: 12px;
-  --sy-info: #2563eb;
-  --sy-success: #16a34a;
-  --sy-warning: #d97706;
-  --sy-error: #dc2626;
+  /* Basic color palette (theme-overridable). The base color is used for
+     badges/accents, the -bg tint for alert surfaces, the -text shade for
+     text sitting on the tinted surface. */
+  --sy-color-red: #dc2626;
+  --sy-color-orange: #d97706;
+  --sy-color-yellow: #eab308;
+  --sy-color-green: #16a34a;
+  --sy-color-blue: #2563eb;
+  --sy-color-violet: #8b5cf6;
+  --sy-color-gray: #6b7280;
+  --sy-color-red-bg: color-mix(in srgb, var(--sy-color-red) 10%, var(--sy-bg));
+  --sy-color-orange-bg: color-mix(in srgb, var(--sy-color-orange) 10%, var(--sy-bg));
+  --sy-color-yellow-bg: color-mix(in srgb, var(--sy-color-yellow) 10%, var(--sy-bg));
+  --sy-color-green-bg: color-mix(in srgb, var(--sy-color-green) 10%, var(--sy-bg));
+  --sy-color-blue-bg: color-mix(in srgb, var(--sy-color-blue) 10%, var(--sy-bg));
+  --sy-color-violet-bg: color-mix(in srgb, var(--sy-color-violet) 10%, var(--sy-bg));
+  --sy-color-gray-bg: color-mix(in srgb, var(--sy-color-gray) 10%, var(--sy-bg));
+  --sy-color-red-text: var(--sy-color-red);
+  --sy-color-orange-text: var(--sy-color-orange);
+  --sy-color-yellow-text: var(--sy-color-yellow);
+  --sy-color-green-text: var(--sy-color-green);
+  --sy-color-blue-text: var(--sy-color-blue);
+  --sy-color-violet-text: var(--sy-color-violet);
+  --sy-color-gray-text: var(--sy-color-gray);
+  /* Status colors track the palette so palette overrides flow through. */
+  --sy-info: var(--sy-color-blue);
+  --sy-success: var(--sy-color-green);
+  --sy-warning: var(--sy-color-orange);
+  --sy-error: var(--sy-color-red);
+  --sy-link: var(--sy-accent);
   --sy-sidebar-bg: #f8f9fb;
   --sy-hover: rgba(0,0,0,.04);
   --sy-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
@@ -724,7 +750,7 @@ body {
   background: none;
   padding: 0;
 }
-.sy-markdown a { color: var(--sy-accent); text-decoration: none; }
+.sy-markdown a { color: var(--sy-link); text-decoration: none; }
 .sy-markdown a:hover { text-decoration: underline; }
 .sy-markdown img { max-width: 100%; border-radius: var(--sy-radius); }
 .sy-markdown table {
@@ -755,24 +781,24 @@ body {
   border: 1px solid transparent;
 }
 .sy-status-info {
-  background: color-mix(in srgb, var(--sy-info) 10%, var(--sy-bg));
+  background: var(--sy-color-blue-bg);
   border-color: color-mix(in srgb, var(--sy-info) 22%, transparent);
-  color: var(--sy-info);
+  color: var(--sy-color-blue-text);
 }
 .sy-status-success {
-  background: color-mix(in srgb, var(--sy-success) 10%, var(--sy-bg));
+  background: var(--sy-color-green-bg);
   border-color: color-mix(in srgb, var(--sy-success) 22%, transparent);
-  color: var(--sy-success);
+  color: var(--sy-color-green-text);
 }
 .sy-status-warning {
-  background: color-mix(in srgb, var(--sy-warning) 10%, var(--sy-bg));
+  background: var(--sy-color-orange-bg);
   border-color: color-mix(in srgb, var(--sy-warning) 22%, transparent);
-  color: var(--sy-warning);
+  color: var(--sy-color-orange-text);
 }
 .sy-status-error {
-  background: color-mix(in srgb, var(--sy-error) 10%, var(--sy-bg));
+  background: var(--sy-color-red-bg);
   border-color: color-mix(in srgb, var(--sy-error) 22%, transparent);
-  color: var(--sy-error);
+  color: var(--sy-color-red-text);
 }
 
 /* --- Form Controls ----------------------------------------------------- */
@@ -835,7 +861,7 @@ body {
   justify-content: center;
   padding: .55rem 1.15rem;
   border: none;
-  border-radius: var(--sy-radius);
+  border-radius: var(--sy-btn-radius, var(--sy-radius));
   background: var(--sy-accent);
   color: #fff;
   font: inherit;
@@ -1312,7 +1338,7 @@ body {
 .sy-table th, .sy-table td {
   padding: .5rem .75rem;
   text-align: left;
-  border-bottom: 1px solid var(--sy-border);
+  border-bottom: 1px solid var(--sy-df-border, var(--sy-border));
 }
 
 .sy-table th {
@@ -1321,7 +1347,7 @@ body {
   color: var(--sy-muted);
   text-transform: uppercase;
   letter-spacing: .04em;
-  background: var(--sy-hover);
+  background: var(--sy-df-header-bg, var(--sy-hover));
 }
 
 .sy-table tbody tr:hover {
@@ -1520,7 +1546,7 @@ body {
 /* --- Display: Link ----------------------------------------------------- */
 
 .sy-link {
-  color: var(--sy-accent);
+  color: var(--sy-link);
   text-decoration: none;
   font-weight: 500;
 }
@@ -1766,7 +1792,7 @@ body {
 
 .sy-dataframe-wrap {
   margin: .75rem 0;
-  border: 1px solid var(--sy-border);
+  border: 1px solid var(--sy-df-border, var(--sy-border));
   border-radius: var(--sy-radius);
   overflow: hidden;
 }

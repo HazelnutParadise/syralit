@@ -155,6 +155,8 @@ sy.Table(headers []string, rows [][]string)
 // selected indices into the original rows); sy.ColConfig renders cells by type.
 sy.DataFrame(headers []string, rows [][]any, opts...)
 selected := sy.DataFrame(headers, rows, sy.Selectable(), sy.Key("df")) // []int
+// sy.SelectionMode("single-row") limits selection to one row;
+// sy.ColumnOrder("B", "A") reorders/filters displayed columns.
 
 // Editable data editor — returns current rows
 edited := sy.DataEditor(headers, rows, opts...)
@@ -162,7 +164,8 @@ edited := sy.DataEditor(headers, rows, opts...)
 // Column configuration for DataEditor and DataFrame. Fields: Type, Options,
 // Width, Min, Max, Step, Format ("$%.2f"/"%d%%"), Label, Help, Color.
 // Types: text/number/checkbox/select/date/time/datetime/link/image/progress/
-// list, plus display-only bar_chart / line_chart (cell value = []float64).
+// list, json, plus display-only bar_chart / line_chart / area_chart
+// (cell value = []float64).
 sy.ColConfig(map[string]sy.ColumnConfig{
     "Score":  {Type: "number", Min: 0, Max: 100, Format: "%.1f"},
     "Pass":   {Type: "checkbox"},
@@ -178,6 +181,11 @@ sy.ColConfig(map[string]sy.ColumnConfig{
 ### Charts (all powered by Chart.js, interactive)
 ```go
 sy.LineChart(map[string][]float64{"Series": {1,2,3}}, opts...)
+// Line/Bar/Area/Scatter/Pie charts accept sy.Selectable() and then return a
+// *sy.ChartSelection (nil until the user clicks a point):
+if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
+    sy.Textf("%s at %s = %v", sel.Series, sel.X, sel.Value) // Series/Index/X/Value
+}
 sy.BarChart(data, opts...)
 sy.AreaChart(data, opts...)
 sy.PieChart(map[string]float64{"A": 30, "B": 70}, opts...)
@@ -330,6 +338,7 @@ sy.Session().Get("key")
 // Query parameters
 val := sy.QueryParam("page")
 all := sy.QueryParams()
+sy.SetQueryParam("page", "2")  // updates the browser URL (deep linking); "" removes
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -613,6 +622,8 @@ db_dsn = "postgres://..."
 
 [server]
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
+ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
+ssl_key_file = "key.pem"
 ```
 
 ### Headless App Testing (sy.AppTest)

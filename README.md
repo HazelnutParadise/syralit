@@ -624,6 +624,8 @@ db_dsn = "postgres://..."
 
 [server]
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
+ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
+ssl_key_file = "key.pem"
 ```
 
 ### Runtime Configuration

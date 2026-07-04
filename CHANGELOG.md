@@ -54,6 +54,20 @@ All notable changes to Syralit are documented here. The format is based on
 - **`sy.AppTest`**: headless app-testing harness (`NewAppTest`, `Run`,
   `SetValue`, `Click`/`ClickLabel`, `FindAll`/`FindByLabel`/`Texts`,
   `SwitchToPage`) — the Go counterpart of Streamlit's `st.testing.v1.AppTest`.
+- **Selectable charts**: `LineChart`/`BarChart`/`AreaChart`/`ScatterChart`/
+  `PieChart` accept `sy.Selectable()` and return a `*ChartSelection`
+  (Series/Index/X/Value) when the user clicks a data point.
+- **`sy.SetQueryParam`**: writable URL query parameters — the browser address
+  bar updates via history.replaceState, making app state shareable.
+- **Sub-path mounting fixed**: assets, WebSocket, SSE and message endpoints now
+  resolve against the mount prefix, so `sy.Handler` works behind
+  `http.StripPrefix` (e.g. `/dashboard/`).
+- **DataFrame**: `sy.ColumnOrder(...)` reorders/filters columns;
+  `sy.SelectionMode("single-row")` limits row selection.
+- **Column config**: new `area_chart` and `json` cell types.
+- **HTTPS**: `[server] ssl_cert_file` / `ssl_key_file` (and
+  `Config.SSLCertFile/SSLKeyFile`) serve the app over TLS.
+- **`sy.ShowTime()`** on `SpinnerWith`: shows elapsed time next to the spinner.
 
 ### Fixed
 - README and skill docs showed nonexistent `[theme]` keys (`primary_color`,

@@ -63,19 +63,19 @@ func assetOverridesScript() string {
 // inline <style> block carrying theme overrides. The client runtime is loaded
 // from /_syralit/assets and opens the WebSocket back to the server.
 const indexHTML = `<!doctype html>
-<html lang="en"%s>
+<html lang="en"%[1]s>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>%s</title>
-<link rel="stylesheet" href="/_syralit/assets/runtime.css">%s
+<title>%[2]s</title>
+<link rel="stylesheet" href="%[4]s/_syralit/assets/runtime.css">%[3]s
 </head>
 <body>
 <div id="syralit-root">
 <nav id="syralit-sidebar"></nav>
 <main id="syralit-app"><div class="sy-loading"><div class="sy-loading-spinner"></div><p>Connecting…</p></div></main>
 </div>
-<script src="/_syralit/assets/runtime.js"></script>
+%[5]s<script src="%[4]s/_syralit/assets/runtime.js"></script>
 </body>
 </html>`
 
@@ -279,8 +279,22 @@ func chartColorsJSON(colors []string) []string {
 }
 
 // renderIndex builds the app shell with the title and theme applied. Theme
-// values are validated before being inlined as CSS.
-func renderIndex(title string, th Theme) string {
+// values are validated before being inlined as CSS. basePath is the URL
+// prefix the app is mounted under ("" at the root; e.g. "/dash" behind
+// sy.Handler + http.StripPrefix) so assets and endpoints resolve correctly.
+func renderIndex(title string, th Theme, basePath ...string) string {
+	base := ""
+	if len(basePath) > 0 {
+		base = strings.TrimSuffix(basePath[0], "/")
+	}
+	// Only emitted when actually mounted under a prefix; the runtime defaults
+	// to "" otherwise.
+	baseScript := ""
+	if base != "" {
+		if b, err := json.Marshal(base); err == nil {
+			baseScript = "<script>window.__SY_BASE=" + string(b) + ";</script>\n"
+		}
+	}
 	htmlAttr := ""
 	if th.Mode == "light" || th.Mode == "dark" {
 		htmlAttr = fmt.Sprintf(` data-theme=%q`, th.Mode)
@@ -355,7 +369,7 @@ func renderIndex(title string, th Theme) string {
 		}
 	}
 
-	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript())
+	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript(), base, baseScript)
 }
 
 // fontValueSafe allows a CSS font-family list (quoted names, commas) while

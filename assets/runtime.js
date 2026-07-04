@@ -11,6 +11,7 @@
 // {type:"page_change", page} and the server reruns the target page.
 
 (function () {
+  var SY_BASE = window.__SY_BASE || "";
   "use strict";
 
   var root = document.getElementById("syralit-app");
@@ -38,11 +39,13 @@
           renderSidebar(msg.pages || [], msg.active_page || "", msg.sidebar || []);
         }
         if (msg.page_config) applyPageConfig(msg.page_config);
+        if (msg.set_query) applyQueryParams(msg.set_query);
         render(msg.nodes || []);
         if (msg.toasts) msg.toasts.forEach(handleToast);
         break;
       case "fragment_patch":
         patchFragment(msg.fragment_key, msg.nodes || []);
+        if (msg.set_query) applyQueryParams(msg.set_query);
         if (msg.toasts) msg.toasts.forEach(handleToast);
         break;
       case "stream_append":
@@ -65,7 +68,7 @@
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
     var qs = location.search || "";
     try {
-      ws = new WebSocket(proto + "//" + location.host + "/_syralit/ws" + qs);
+      ws = new WebSocket(proto + "//" + location.host + SY_BASE + "/_syralit/ws" + qs);
     } catch (e) {
       startSSE();
       return;
@@ -86,7 +89,7 @@
     if (usingSSE) return;
     usingSSE = true;
     ws = null;
-    var es = new EventSource("/_syralit/sse" + (location.search || ""));
+    var es = new EventSource(SY_BASE + "/_syralit/sse" + (location.search || ""));
     es.addEventListener("session", function (e) { sessionId = e.data; });
     es.onmessage = function (e) { handleServerMsg(JSON.parse(e.data)); };
     // EventSource auto-reconnects; the server starts a fresh session on
@@ -99,7 +102,7 @@
       ws.send(JSON.stringify(obj));
     } else if (usingSSE) {
       obj.session_id = sessionId;
-      fetch("/_syralit/msg", {
+      fetch(SY_BASE + "/_syralit/msg", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(obj),
@@ -1756,9 +1759,17 @@
     var c = (color || "var(--sy-accent)");
     function x(i) { return pad + (nums.length === 1 ? (w - 2 * pad) / 2 : i * (w - 2 * pad) / (nums.length - 1)); }
     function y(v) { return h - pad - (v - min) / range * (h - 2 * pad); }
-    if (type === "line_chart") {
+    if (type === "line_chart" || type === "area_chart") {
+      var pts = nums.map(function (v, i) { return x(i) + "," + y(v); }).join(" ");
+      if (type === "area_chart") {
+        var pg = document.createElementNS(ns, "polygon");
+        pg.setAttribute("points", x(0) + "," + (h - pad) + " " + pts + " " + x(nums.length - 1) + "," + (h - pad));
+        pg.setAttribute("fill", c);
+        pg.setAttribute("opacity", "0.25");
+        svg.appendChild(pg);
+      }
       var pl = document.createElementNS(ns, "polyline");
-      pl.setAttribute("points", nums.map(function (v, i) { return x(i) + "," + y(v); }).join(" "));
+      pl.setAttribute("points", pts);
       pl.setAttribute("fill", "none");
       pl.setAttribute("stroke", c);
       pl.setAttribute("stroke-width", "1.5");
@@ -1808,8 +1819,14 @@
       if (cfg.format) { var lbl = el("span", "sy-progress-label", applyNumFormat(cfg.format, cell)); td.appendChild(lbl); }
     } else if (colType === "list") {
       td.textContent = Array.isArray(cell) ? cell.join(", ") : String(cell == null ? "" : cell);
-    } else if (colType === "bar_chart" || colType === "line_chart") {
+    } else if (colType === "bar_chart" || colType === "line_chart" || colType === "area_chart") {
       td.appendChild(sparkline(cell, colType, cfg.color));
+    } else if (colType === "json") {
+      var codeEl = document.createElement("code");
+      codeEl.className = "sy-json-cell";
+      try { codeEl.textContent = typeof cell === "string" ? cell : JSON.stringify(cell); }
+      catch (e) { codeEl.textContent = String(cell); }
+      td.appendChild(codeEl);
     } else if (colType === "number" && cfg.format) {
       td.textContent = applyNumFormat(cfg.format, cell);
     } else {
@@ -1820,6 +1837,14 @@
   function dataframeEl(node, p) {
     var headers = p.headers || [];
     var colCfg = p.column_config || {};
+    // column_order reorders and filters columns; colIdx maps display position
+    // back to the original column index.
+    var colIdx = headers.map(function (_, i) { return i; });
+    if (p.column_order && p.column_order.length) {
+      colIdx = p.column_order.map(function (h) { return headers.indexOf(h); })
+        .filter(function (i) { return i >= 0; });
+    }
+    var singleRow = p.selection_mode === "single-row";
     var selectable = !!p.selectable;
     var selected = {};
     (p.selected || []).forEach(function (i) { selected[i] = true; });
@@ -1843,7 +1868,8 @@
       var thead = document.createElement("thead");
       var tr = document.createElement("tr");
       if (selectable) tr.appendChild(el("th", "sy-df-header sy-df-select"));
-      headers.forEach(function (h, ci) {
+      colIdx.forEach(function (ci) {
+        var h = headers[ci];
         var hcfg = colCfg[h] || {};
         var label = hcfg.label || h;
         var th = el("th", "sy-df-header", label + (ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
@@ -1876,6 +1902,16 @@
           cb.type = "checkbox";
           cb.checked = !!selected[oi];
           function toggle(checked) {
+            if (singleRow && checked) {
+              selected = {};
+              // Clear every other row's visual state on next rebuild; do it
+              // live for the current table too.
+              [].forEach.call(tbody.querySelectorAll("tr"), function (row) {
+                row.classList.remove("sy-df-row-selected");
+                var box = row.querySelector(".sy-df-select input");
+                if (box) box.checked = false;
+              });
+            }
             selected[oi] = checked;
             cb.checked = checked;
             tr2.classList.toggle("sy-df-row-selected", checked);
@@ -1887,7 +1923,8 @@
           tr2.appendChild(selTd);
           tr2.onclick = function () { toggle(!cb.checked); };
         }
-        (row || []).forEach(function (cell, ci) {
+        colIdx.forEach(function (ci) {
+          var cell = (row || [])[ci];
           var td = document.createElement("td");
           var cfg = colCfg[headers[ci]] || {};
           renderReadonlyCell(td, cell, cfg.type || "text", cfg);
@@ -2487,6 +2524,14 @@
 
   // --- Page Config -------------------------------------------------------
 
+  function applyQueryParams(params) {
+    var qs = Object.keys(params).map(function (k) {
+      return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+    }).join("&");
+    var url = location.pathname + (qs ? "?" + qs : "") + location.hash;
+    try { history.replaceState(null, "", url); } catch (e) {}
+  }
+
   var sidebarStateApplied = false;
 
   function applyPageConfig(cfg) {
@@ -2740,7 +2785,16 @@
     var wrap = el("div", "sy-spinner-wrap");
     var dot = el("div", "sy-spinner");
     wrap.appendChild(dot);
-    wrap.appendChild(el("span", "sy-spinner-text", p.text || "Loading…"));
+    var label = p.text || "Loading…";
+    var txt = el("span", "sy-spinner-text", label);
+    wrap.appendChild(txt);
+    if (p.show_time) {
+      var start = Date.now();
+      var timer = setInterval(function () {
+        if (!txt.isConnected) { clearInterval(timer); return; }
+        txt.textContent = label + " (" + ((Date.now() - start) / 1000).toFixed(1) + "s)";
+      }, 100);
+    }
     return wrap;
   }
 
@@ -2960,24 +3014,51 @@
     return opts;
   }
 
+  // applyChartSelect wires a click handler onto a selectable chart config: the
+  // nearest element's series/index/label/value is sent as the widget value.
+  function applyChartSelect(cfg, node, p, kind) {
+    if (!p.selectable || !node.id) return cfg;
+    cfg.options = cfg.options || {};
+    cfg.options.onClick = function (evt, elements, chart) {
+      var els = elements && elements.length ? elements
+        : chart.getElementsAtEventForMode(evt.native || evt, "nearest", { intersect: true }, true);
+      if (!els || !els.length) return;
+      var dsi = els[0].datasetIndex, idx = els[0].index;
+      var ds = chart.data.datasets[dsi] || {};
+      var sel;
+      if (kind === "pie") {
+        sel = { series: String(chart.data.labels[idx]), index: idx,
+                x: String(chart.data.labels[idx]), value: Number(ds.data[idx]) || 0 };
+      } else if (kind === "scatter") {
+        var pt = ds.data[idx] || {};
+        sel = { series: ds.label || "", index: idx, x: String(pt.x), value: Number(pt.y) || 0 };
+      } else {
+        sel = { series: ds.label || "", index: idx,
+                x: String((chart.data.labels || [])[idx]), value: Number(ds.data[idx]) || 0 };
+      }
+      send(node.id, sel, false);
+    };
+    return cfg;
+  }
+
   function lineChartEl(node, p) {
     return makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "line");
-      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line", p) };
+      return applyChartSelect({ type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line", p) }, node, p, "line");
     });
   }
 
   function barChartEl(node, p) {
     return makeChartJS("bar", p, function () {
       var d = seriesDatasets(p, "bar");
-      return { type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar", p) };
+      return applyChartSelect({ type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar", p) }, node, p, "bar");
     });
   }
 
   function areaChartEl(node, p) {
     return makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "area");
-      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area", p) };
+      return applyChartSelect({ type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area", p) }, node, p, "area");
     });
   }
 
@@ -2985,7 +3066,7 @@
     var data = p.data || {};
     var names = Object.keys(data);
     return makeChartJS("pie", p, function () {
-      return {
+      return applyChartSelect({
         type: "pie",
         data: {
           labels: names,
@@ -2995,7 +3076,7 @@
           }],
         },
         options: chartOptions(p.title, "pie"),
-      };
+      }, node, p, "pie");
     });
   }
 
@@ -3007,7 +3088,7 @@
         var pts = (series[name] || []).map(function (pt) { return { x: pt[0], y: pt[1] }; });
         return { label: name, data: pts, backgroundColor: CHART_PALETTE()[si % CHART_PALETTE().length], pointRadius: 5 };
       });
-      return { type: "scatter", data: { datasets: datasets }, options: chartOptions(p.title, "scatter") };
+      return applyChartSelect({ type: "scatter", data: { datasets: datasets }, options: chartOptions(p.title, "scatter") }, node, p, "scatter");
     });
   }
 

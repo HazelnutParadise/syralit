@@ -65,6 +65,9 @@ type widgetOpts struct {
 	subtitles         string
 	acceptNew         bool
 	multipleFiles     bool
+	columnOrder       []string
+	selectionMode     string
+	showTime          bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -142,6 +145,17 @@ func Subtitles(vttURL string) Option { return func(o *widgetOpts) { o.subtitles 
 // AcceptNewOptions lets a MultiSelect accept values typed by the user in
 // addition to the predefined options.
 func AcceptNewOptions() Option { return func(o *widgetOpts) { o.acceptNew = true } }
+
+// ColumnOrder reorders (and filters) the displayed columns of a DataFrame /
+// DataEditor; columns not listed are hidden.
+func ColumnOrder(cols ...string) Option { return func(o *widgetOpts) { o.columnOrder = cols } }
+
+// SelectionMode sets how DataFrame rows are selected with sy.Selectable():
+// "multi-row" (default) or "single-row".
+func SelectionMode(mode string) Option { return func(o *widgetOpts) { o.selectionMode = mode } }
+
+// ShowTime makes a Spinner display the elapsed time next to its label.
+func ShowTime() Option { return func(o *widgetOpts) { o.showTime = true } }
 
 // LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
 // lines instead of scrolling horizontally.
@@ -985,12 +999,21 @@ func ChatInput(placeholder string, opts ...Option) string {
 }
 
 // Spinner renders a loading indicator with optional text.
-func Spinner(text ...string) {
+func Spinner(text ...string) { spinnerOpts(nil, text...) }
+
+// SpinnerWith renders a spinner with options, e.g. sy.ShowTime().
+func SpinnerWith(opts []Option, text ...string) { spinnerOpts(opts, text...) }
+
+func spinnerOpts(opts []Option, text ...string) {
 	label := "Loading..."
 	if len(text) > 0 && text[0] != "" {
 		label = text[0]
 	}
-	current().add(&Node{Type: "spinner", Props: map[string]any{"text": label}})
+	props := map[string]any{"text": label}
+	if applyOpts(opts).showTime {
+		props["show_time"] = true
+	}
+	current().add(&Node{Type: "spinner", Props: props})
 }
 
 // Popover renders a button that shows a floating panel with the content

@@ -62,6 +62,29 @@ func main() {
 			sy.Textf("Scheduled: %s", dt)
 		}
 
+		sy.Header("Selectable chart")
+		if sel := sy.BarChart(map[string][]float64{
+			"Sales": {12, 19, 8, 15},
+			"Cost":  {7, 11, 5, 9},
+		}, sy.XLabels([]string{"Q1", "Q2", "Q3", "Q4"}), sy.Selectable(), sy.Key("sales")); sel != nil {
+			sy.Textf("Clicked %s at %s: %.0f", sel.Series, sel.X, sel.Value)
+			sy.SetQueryParam("q", sel.X) // URL updates — the view is shareable
+		}
+
+		sy.Header("DataFrame options")
+		sy.DataFrame(
+			[]string{"Name", "Score", "Trend"},
+			[][]any{
+				{"Ada", 92, []float64{80, 85, 92}},
+				{"Bob", 78, []float64{88, 82, 78}},
+			},
+			sy.ColumnOrder("Score", "Name", "Trend"),
+			sy.Selectable(), sy.SelectionMode("single-row"), sy.Key("people"),
+			sy.ColConfig(map[string]sy.ColumnConfig{
+				"Trend": {Type: "area_chart"},
+			}),
+		)
+
 		sy.Bottom(func() {
 			if msg := sy.ChatInput("Pinned chat input (sy.Bottom)…", sy.Key("chat")); msg != "" {
 				sy.Toast("Sent: "+msg, "success")

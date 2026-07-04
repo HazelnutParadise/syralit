@@ -155,9 +155,15 @@ func DataFrame(headers []string, rows [][]any, opts ...Option) []int {
 	if o.colConfig != nil {
 		props["column_config"] = colConfigProps(o.colConfig)
 	}
+	if len(o.columnOrder) > 0 {
+		props["column_order"] = o.columnOrder
+	}
 	if !o.selectable {
 		rc.add(&Node{Type: "dataframe", Props: props})
 		return nil
+	}
+	if o.selectionMode != "" {
+		props["selection_mode"] = o.selectionMode
 	}
 	id := rc.widgetID("dataframe", o.key)
 	var selected []int

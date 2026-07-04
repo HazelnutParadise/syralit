@@ -22,6 +22,7 @@ type session struct {
 	pageConfig    *pageConfig
 	needsRerun    bool // set by SwitchPage to re-render after stop
 	queryParams   map[string]string
+	queryDirty    bool // SetQueryParam called; push the URL update to the client
 	reqCtx        RequestContext
 
 	fragmentFns     map[string]func() // fragment key -> registered function
@@ -258,6 +259,14 @@ func (s *session) clearFormWidgets(formID string) {
 			delete(s.widgets, wid)
 		}
 	}
+}
+
+func cloneStrMap(m map[string]string) map[string]string {
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
 
 func cloneAnyMap(m map[string]any) map[string]any {

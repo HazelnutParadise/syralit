@@ -26,6 +26,11 @@ type Config struct {
 	// 0 means the default (10 MB). Configurable via [server] max_upload_size_mb
 	// in syralit.toml.
 	MaxUploadSizeMB int
+
+	// SSLCertFile / SSLKeyFile serve the app over HTTPS when both are set
+	// (PEM files). Configurable via [server] ssl_cert_file / ssl_key_file.
+	SSLCertFile string
+	SSLKeyFile  string
 }
 
 // uploadLimitBytes is the resolved upload cap, set when the server starts and
@@ -163,8 +168,26 @@ func (s *server) handler() http.Handler {
 
 func (s *server) listenAndServe() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	if s.cfg.SSLCertFile != "" && s.cfg.SSLKeyFile != "" {
+		log.Printf("syralit: %q running on https://%s", s.cfg.Title, addr)
+		return http.ListenAndServeTLS(addr, s.cfg.SSLCertFile, s.cfg.SSLKeyFile, s.handler())
+	}
 	log.Printf("syralit: %q running on http://%s", s.cfg.Title, addr)
 	return http.ListenAndServe(addr, s.handler())
+}
+
+// requestBasePath recovers the mount prefix when the app runs behind
+// http.StripPrefix (sy.Handler under a sub-path): RequestURI keeps the
+// original path while URL.Path has been stripped.
+func requestBasePath(r *http.Request) string {
+	orig := r.RequestURI
+	if i := strings.IndexByte(orig, '?'); i >= 0 {
+		orig = orig[:i]
+	}
+	if orig != r.URL.Path && strings.HasSuffix(orig, r.URL.Path) {
+		return strings.TrimSuffix(orig, r.URL.Path)
+	}
+	return ""
 }
 
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -178,7 +201,7 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(renderIndex(s.cfg.Title, s.cfg.Theme)))
+	_, _ = w.Write([]byte(renderIndex(s.cfg.Title, s.cfg.Theme, requestBasePath(r))))
 }
 
 // inbound message from the browser (SPEC §13). The __dev_* fields are only used
@@ -378,6 +401,10 @@ func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 	}
 
 	sess.mu.Lock()
+	if sess.queryDirty {
+		msg["set_query"] = cloneStrMap(sess.queryParams)
+		sess.queryDirty = false
+	}
 	if len(sess.pendingToasts) > 0 {
 		msg["toasts"] = sess.pendingToasts
 		sess.pendingToasts = nil
@@ -444,6 +471,10 @@ func pushFragmentUI(sink uiSink, sess *session, key string, fn func()) error {
 	}
 
 	sess.mu.Lock()
+	if sess.queryDirty {
+		msg["set_query"] = cloneStrMap(sess.queryParams)
+		sess.queryDirty = false
+	}
 	if len(sess.pendingToasts) > 0 {
 		msg["toasts"] = sess.pendingToasts
 		sess.pendingToasts = nil

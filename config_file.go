@@ -183,7 +183,9 @@ type fileConfig struct {
 	Secrets map[string]string `toml:"secrets"`
 	Theme   fileTheme         `toml:"theme"`
 	Server  struct {
-		MaxUploadSizeMB int `toml:"max_upload_size_mb"`
+		MaxUploadSizeMB int    `toml:"max_upload_size_mb"`
+		SSLCertFile     string `toml:"ssl_cert_file"`
+		SSLKeyFile      string `toml:"ssl_key_file"`
 	} `toml:"server"`
 }
 
@@ -222,6 +224,12 @@ func (fc *fileConfig) applyToConfig(cfg *Config) {
 	}
 	if cfg.MaxUploadSizeMB == 0 {
 		cfg.MaxUploadSizeMB = fc.Server.MaxUploadSizeMB
+	}
+	if cfg.SSLCertFile == "" {
+		cfg.SSLCertFile = fc.Server.SSLCertFile
+	}
+	if cfg.SSLKeyFile == "" {
+		cfg.SSLKeyFile = fc.Server.SSLKeyFile
 	}
 	fc.applyTheme(&cfg.Theme)
 }

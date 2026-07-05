@@ -1345,8 +1345,9 @@ body {
   font-weight: 600;
   font-size: .82rem;
   color: var(--sy-muted);
-  text-transform: uppercase;
-  letter-spacing: .04em;
+  /* No text-transform: headers must show the column's true casing — data
+     tooling (e.g. CCL formulas) matches names case-sensitively. */
+  letter-spacing: .02em;
   background: var(--sy-df-header-bg, var(--sy-hover));
 }
 

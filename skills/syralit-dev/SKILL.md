@@ -727,7 +727,11 @@ syi.PctChangeChart(dt, "Month", "Revenue", 1)       // percent change bars
 out := syi.AddFormulaColumn(dt, "ccl")              // interactive CCL formula column;
                                                     // "ccl" = widget-key prefix (inputs stored as
                                                     // ccl_formula / ccl_name — unique per page).
-                                                    // Columns as A/B or ["Name"]; timeout-guarded.
+                                                    // Columns as A/B or ["Name"] (case-sensitive);
+                                                    // shows a live letter=name legend; timeout-guarded.
+out, err := syi.ComputeColumn(dt, "Profit", `+'`'+`["Revenue"] - ["Cost"]`+'`'+`)
+                                                    // the guarded primitive for building a custom
+                                                    // formula UI (own labels/layout/i18n)
 // sy.ResetWidget("by_region") clears a stored selection (del st.session_state equivalent)
 
 // DataList (single series) — symmetric helpers

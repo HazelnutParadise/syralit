@@ -39,8 +39,13 @@ scaffold.
   `syi.RollingMeanChart`, `syi.CumSumChart`, `syi.PctChangeChart`, and
   `syi.AddFormulaColumn` (interactive CCL formula column — monospace `ƒx`
   editor, columns addressable as `A`/`B` or `["Name"]`, timeout-guarded
-  evaluation since CCL can hang on malformed input). New `sy.Mono()` option
-  renders TextInput/TextArea in the code font.
+  evaluation since CCL can hang on malformed input). The editor shows a live
+  `A = Name` column legend (CCL names are case-sensitive), and the guarded
+  evaluator is exported as `syi.ComputeColumn` for custom formula UIs. New
+  `sy.Mono()` option renders TextInput/TextArea in the code font.
+- Table/dataframe headers no longer render uppercase: the true column casing
+  must be visible because data tooling (CCL formulas) matches names
+  case-sensitively.
 - `syralit new` scaffold: generated syralit.toml now documents the full
   theme/server/secrets option surface.
 - UI test suite: added chart range-drag and Insyra click-to-filter coverage

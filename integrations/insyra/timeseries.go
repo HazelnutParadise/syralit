@@ -104,6 +104,9 @@ func AddFormulaColumn(dt *insyra.DataTable, key string) *insyra.DataTable {
 	formula := sy.TextInput("ƒx CCL formula (new column)",
 		sy.Key(key+"_formula"), sy.Mono(),
 		sy.Placeholder(`["Revenue"] - ["Cost"]  ·  IF(["Revenue"] > 1000, 'high', 'low')`))
+	// Column names are matched case-sensitively by CCL, so show the exact
+	// letter=name mapping the formula can reference.
+	sy.Caption("Columns: " + columnLegend(dt))
 	name := sy.TextInput("Column name",
 		sy.Key(key+"_name"), sy.Placeholder("computed"))
 	if formula == "" {
@@ -112,10 +115,49 @@ func AddFormulaColumn(dt *insyra.DataTable, key string) *insyra.DataTable {
 	if name == "" {
 		name = "computed"
 	}
-	out, err := evalCCL(dt, name, formula, 3*time.Second)
+	out, err := ComputeColumn(dt, name, formula)
 	if err != nil {
 		sy.Error("CCL: " + err.Error())
 		return dt
+	}
+	return out
+}
+
+// ComputeColumn evaluates a CCL formula into a new column on a COPY of the
+// table, with the same timeout guard AddFormulaColumn uses — the primitive
+// for building a custom formula UI (own labels, layout, i18n) instead of the
+// built-in editor. Column names in the formula are case-sensitive.
+func ComputeColumn(dt *insyra.DataTable, name, formula string) (*insyra.DataTable, error) {
+	return evalCCL(dt, name, formula, 3*time.Second)
+}
+
+// columnLegend renders "A = Product · B = Revenue · ..." with exact casing.
+func columnLegend(dt *insyra.DataTable) string {
+	headers := dt.Headers()
+	parts := make([]string, len(headers))
+	for i, h := range headers {
+		parts[i] = excelLetter(i) + " = " + h
+	}
+	return joinParts(parts)
+}
+
+// excelLetter converts 0-based index to Excel column letters (A..Z, AA..).
+func excelLetter(i int) string {
+	s := ""
+	for i >= 0 {
+		s = string(rune('A'+i%26)) + s
+		i = i/26 - 1
+	}
+	return s
+}
+
+func joinParts(parts []string) string {
+	out := ""
+	for i, p := range parts {
+		if i > 0 {
+			out += "  ·  "
+		}
+		out += p
 	}
 	return out
 }

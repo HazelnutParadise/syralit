@@ -363,9 +363,25 @@ title = "` + name + `"
 port = 8600
 
 [theme]
-mode = "system"
+mode = "system"        # "light" | "dark" | "system"
 accent = "#7C3AED"
 radius = "12px"
+# Fonts: "sans-serif" | "serif" | "monospace" pick the built-in Source fonts;
+# any other value is used as a CSS font-family list. More options: colors
+# (background_color, text_color, link_color, red_color, ...), chart palettes
+# (chart_categorical_colors), [[theme.font_faces]] for custom fonts, and
+# [theme.sidebar] for sidebar-only overrides — see the Syralit README.
+#font = "sans-serif"
+#heading_font = "serif"
+#code_font = "monospace"
+
+#[server]
+#max_upload_size_mb = 50      # FileUploader cap (default 10 MB)
+#ssl_cert_file = "cert.pem"   # serve HTTPS when both are set
+#ssl_key_file = "key.pem"
+
+#[secrets]
+#api_key = "sk-..."
 `
 }
 

@@ -187,6 +187,7 @@ type fileConfig struct {
 		SSLCertFile     string `toml:"ssl_cert_file"`
 		SSLKeyFile      string `toml:"ssl_key_file"`
 	} `toml:"server"`
+	I18n map[string]string `toml:"i18n"`
 }
 
 // loadFileConfig reads dir/syralit.toml if present. A missing file is not an
@@ -230,6 +231,9 @@ func (fc *fileConfig) applyToConfig(cfg *Config) {
 	}
 	if cfg.SSLKeyFile == "" {
 		cfg.SSLKeyFile = fc.Server.SSLKeyFile
+	}
+	if cfg.UIStrings == nil {
+		cfg.UIStrings = fc.I18n
 	}
 	fc.applyTheme(&cfg.Theme)
 }

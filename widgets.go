@@ -68,6 +68,7 @@ type widgetOpts struct {
 	columnOrder       []string
 	selectionMode     string
 	showTime          bool
+	rangeSelectable   bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -117,6 +118,13 @@ func MaxDate(d string) Option { return func(o *widgetOpts) { o.maxDate = d } }
 // selected row indices.
 func Selectable() Option { return func(o *widgetOpts) { o.selectable = true } }
 
+// RangeSelectable lets the user drag across a Line/Bar/Area chart to select an
+// x-axis range; the chart then returns a *ChartSelection with Range true and
+// Index..EndIndex spanning the dragged interval. Point clicks still work.
+func RangeSelectable() Option {
+	return func(o *widgetOpts) { o.selectable = true; o.rangeSelectable = true }
+}
+
 // FeedbackStyle selects the Feedback widget's rating style: "thumbs" (default,
 // 👍/👎 → "up"/"down"), "stars" (★ → "1".."5"), or "faces" (→ "1".."5").
 func FeedbackStyle(s string) Option { return func(o *widgetOpts) { o.feedbackStyle = s } }
@@ -150,8 +158,11 @@ func AcceptNewOptions() Option { return func(o *widgetOpts) { o.acceptNew = true
 // DataEditor; columns not listed are hidden.
 func ColumnOrder(cols ...string) Option { return func(o *widgetOpts) { o.columnOrder = cols } }
 
-// SelectionMode sets how DataFrame rows are selected with sy.Selectable():
-// "multi-row" (default) or "single-row".
+// SelectionMode sets what sy.Selectable() selects on a DataFrame:
+// "multi-row" (default), "single-row", "multi-column", or "single-column".
+// Row modes return selected row indices; column modes return selected column
+// indices (into the headers slice). In column modes, clicking a header
+// selects it (sorting is disabled).
 func SelectionMode(mode string) Option { return func(o *widgetOpts) { o.selectionMode = mode } }
 
 // ShowTime makes a Spinner display the elapsed time next to its label.

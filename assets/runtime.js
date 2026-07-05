@@ -12,6 +12,11 @@
 
 (function () {
   var SY_BASE = window.__SY_BASE || "";
+  // T resolves a built-in UI string against the [i18n] overrides.
+  function T(key, fallback) {
+    var m = window.__SY_I18N || {};
+    return m[key] || fallback;
+  }
   "use strict";
 
   var root = document.getElementById("syralit-app");
@@ -839,7 +844,7 @@
       var newInput = document.createElement("input");
       newInput.type = "text";
       newInput.className = "sy-input sy-multi-new";
-      newInput.placeholder = "Add new…";
+      newInput.placeholder = T("add_new", "Add new…");
       newInput.onkeydown = function (ev) {
         if (ev.key !== "Enter") return;
         var v = newInput.value.trim();
@@ -1845,6 +1850,8 @@
         .filter(function (i) { return i >= 0; });
     }
     var singleRow = p.selection_mode === "single-row";
+    var colMode = p.selection_mode === "single-column" || p.selection_mode === "multi-column";
+    var singleCol = p.selection_mode === "single-column";
     var selectable = !!p.selectable;
     var selected = {};
     (p.selected || []).forEach(function (i) { selected[i] = true; });
@@ -1867,14 +1874,31 @@
       t.className = "sy-table sy-dataframe";
       var thead = document.createElement("thead");
       var tr = document.createElement("tr");
-      if (selectable) tr.appendChild(el("th", "sy-df-header sy-df-select"));
+      if (selectable && !colMode) tr.appendChild(el("th", "sy-df-header sy-df-select"));
       colIdx.forEach(function (ci) {
         var h = headers[ci];
         var hcfg = colCfg[h] || {};
         var label = hcfg.label || h;
-        var th = el("th", "sy-df-header", label + (ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
+        var th = el("th", "sy-df-header", label + (!colMode && ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
         if (hcfg.help) th.title = hcfg.help;
         if (hcfg.width) th.style.width = hcfg.width + "px";
+        if (selectable && colMode) {
+          if (selected[ci]) th.classList.add("sy-df-col-selected");
+          th.onclick = function () {
+            if (singleCol) {
+              var was = !!selected[ci];
+              selected = {};
+              if (!was) selected[ci] = true;
+            } else {
+              selected[ci] = !selected[ci];
+            }
+            sendSelection();
+            wrap.replaceChildren();
+            rebuild();
+          };
+          tr.appendChild(th);
+          return;
+        }
         th.onclick = function () {
           if (sortCol === ci) { sortAsc = !sortAsc; } else { sortCol = ci; sortAsc = true; }
           indexed.sort(function (a, b) {
@@ -1895,7 +1919,7 @@
       indexed.forEach(function (item) {
         var row = item.r, oi = item.i;
         var tr2 = document.createElement("tr");
-        if (selectable) {
+        if (selectable && !colMode) {
           if (selected[oi]) tr2.className = "sy-df-row-selected";
           var selTd = el("td", "sy-df-select");
           var cb = document.createElement("input");
@@ -1926,6 +1950,7 @@
         colIdx.forEach(function (ci) {
           var cell = (row || [])[ci];
           var td = document.createElement("td");
+          if (colMode && selected[ci]) td.classList.add("sy-df-col-selected");
           var cfg = colCfg[headers[ci]] || {};
           renderReadonlyCell(td, cell, cfg.type || "text", cfg);
           tr2.appendChild(td);
@@ -2484,7 +2509,7 @@
     var btn = document.createElement("button");
     btn.className = "sy-app-menu-btn";
     btn.textContent = "⋮";
-    btn.title = "Menu";
+    btn.title = T("menu", "Menu");
     var dd = document.createElement("div");
     dd.className = "sy-app-menu-dropdown";
 
@@ -2497,12 +2522,12 @@
       a.rel = "noopener";
       dd.appendChild(a);
     }
-    if (cfg.menu_help_url) addLink("Get help", cfg.menu_help_url);
-    if (cfg.menu_bug_url) addLink("Report a bug", cfg.menu_bug_url);
+    if (cfg.menu_help_url) addLink(T("menu_get_help", "Get help"), cfg.menu_help_url);
+    if (cfg.menu_bug_url) addLink(T("menu_report_bug", "Report a bug"), cfg.menu_bug_url);
     if (cfg.menu_about) {
       var about = document.createElement("button");
       about.className = "sy-app-menu-item";
-      about.textContent = "About";
+      about.textContent = T("menu_about", "About");
       about.onclick = function () {
         dd.classList.remove("open");
         var overlay = document.createElement("div");
@@ -2788,7 +2813,7 @@
     var wrap = el("div", "sy-spinner-wrap");
     var dot = el("div", "sy-spinner");
     wrap.appendChild(dot);
-    var label = p.text || "Loading…";
+    var label = p.text || T("loading", "Loading…");
     var txt = el("span", "sy-spinner-text", label);
     wrap.appendChild(txt);
     if (p.show_time) {
@@ -2864,7 +2889,7 @@
       var files = Array.prototype.slice.call(input.files);
       var total = files.reduce(function (sum, f) { return sum + f.size; }, 0);
       if (total > maxSize) {
-        alert("File too large (max " + formatSize(maxSize) + ")");
+        alert(T("file_too_large", "File too large") + " (max " + formatSize(maxSize) + ")");
         return;
       }
       if (p.multiple) {
@@ -3017,12 +3042,82 @@
     return opts;
   }
 
+  // Drag-to-select on index-based charts (line/bar/area): dragging
+  // horizontally selects an x-axis range and sends
+  // {range:true, index, x, end_index, end_x}. One document-level handler pair
+  // serves every chart — per-render listeners would pile up stale closures
+  // because reruns rebuild the chart elements.
+  var rangeDrag = null; // {wrap, canvas, node, startPx, overlay}
+  var rangeDocHandlersInstalled = false;
+  // Set when a drag-range gesture completes: the mouseup also produces a
+  // Chart.js click on the same canvas, which would immediately overwrite the
+  // just-sent range selection with a point selection.
+  var suppressNextChartClick = false;
+
+  function attachRangeSelect(wrap, canvas, node) {
+    canvas.addEventListener("mousedown", function (ev) {
+      var overlay = el("div", "sy-chart-range-overlay");
+      wrap.appendChild(overlay);
+      rangeDrag = { wrap: wrap, canvas: canvas, node: node, startPx: ev.clientX, overlay: overlay };
+      updateRangeOverlay(ev.clientX);
+      ev.preventDefault();
+    });
+    installRangeDocHandlers();
+  }
+
+  function updateRangeOverlay(curX) {
+    if (!rangeDrag) return;
+    var rect = rangeDrag.wrap.getBoundingClientRect();
+    var a = Math.min(rangeDrag.startPx, curX) - rect.left;
+    var b = Math.max(rangeDrag.startPx, curX) - rect.left;
+    rangeDrag.overlay.style.left = a + "px";
+    rangeDrag.overlay.style.width = (b - a) + "px";
+  }
+
+  function installRangeDocHandlers() {
+    if (rangeDocHandlersInstalled) return;
+    rangeDocHandlersInstalled = true;
+
+    document.addEventListener("mousemove", function (ev) {
+      if (rangeDrag) updateRangeOverlay(ev.clientX);
+    });
+
+    document.addEventListener("mouseup", function (ev) {
+      if (!rangeDrag) return;
+      var d = rangeDrag;
+      rangeDrag = null;
+      d.overlay.remove();
+      var chart = window.Chart && window.Chart.getChart(d.canvas);
+      if (!chart) return;
+      // Small drags fall through to Chart.js's own click handling.
+      if (Math.abs(ev.clientX - d.startPx) < 8) return;
+      var rect = d.canvas.getBoundingClientRect();
+      function idxAt(clientX) {
+        var v = chart.scales.x.getValueForPixel(clientX - rect.left);
+        var n = chart.data.labels.length;
+        return Math.max(0, Math.min(n - 1, Math.round(v)));
+      }
+      var i0 = idxAt(Math.min(d.startPx, ev.clientX));
+      var i1 = idxAt(Math.max(d.startPx, ev.clientX));
+      var labels = chart.data.labels || [];
+      suppressNextChartClick = true;
+      setTimeout(function () { suppressNextChartClick = false; }, 100);
+      send(d.node.id, {
+        range: true,
+        index: i0, x: String(labels[i0]),
+        end_index: i1, end_x: String(labels[i1]),
+        series: "", value: 0,
+      }, false);
+    });
+  }
+
   // applyChartSelect wires a click handler onto a selectable chart config: the
   // nearest element's series/index/label/value is sent as the widget value.
   function applyChartSelect(cfg, node, p, kind) {
     if (!p.selectable || !node.id) return cfg;
     cfg.options = cfg.options || {};
     cfg.options.onClick = function (evt, elements, chart) {
+      if (suppressNextChartClick) { suppressNextChartClick = false; return; }
       var els = elements && elements.length ? elements
         : chart.getElementsAtEventForMode(evt.native || evt, "nearest", { intersect: true }, true);
       if (!els || !els.length) return;
@@ -3045,24 +3140,30 @@
   }
 
   function lineChartEl(node, p) {
-    return makeChartJS("line", p, function () {
+    var wrap = makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "line");
       return applyChartSelect({ type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line", p) }, node, p, "line");
     });
+    if (p.range_selectable && node.id) attachRangeSelect(wrap, wrap.querySelector("canvas"), node);
+    return wrap;
   }
 
   function barChartEl(node, p) {
-    return makeChartJS("bar", p, function () {
+    var wrap = makeChartJS("bar", p, function () {
       var d = seriesDatasets(p, "bar");
       return applyChartSelect({ type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar", p) }, node, p, "bar");
     });
+    if (p.range_selectable && node.id) attachRangeSelect(wrap, wrap.querySelector("canvas"), node);
+    return wrap;
   }
 
   function areaChartEl(node, p) {
-    return makeChartJS("line", p, function () {
+    var wrap = makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "area");
       return applyChartSelect({ type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area", p) }, node, p, "area");
     });
+    if (p.range_selectable && node.id) attachRangeSelect(wrap, wrap.querySelector("canvas"), node);
+    return wrap;
   }
 
   function pieChartEl(node, p) {

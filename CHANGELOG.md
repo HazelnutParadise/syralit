@@ -19,6 +19,22 @@ All notable changes to Syralit are documented here. The format is based on
   workflow, with README screenshots).
 - **`sy.ResetWidget(key)`**: delete a widget's stored value (the counterpart
   of Streamlit's `del st.session_state[key]`), e.g. to clear a chart selection.
+- **Chart range selection**: `sy.RangeSelectable()` on Line/Bar/Area charts —
+  drag across the chart to select an x-axis interval; `ChartSelection` gains
+  `Range`/`EndIndex`/`EndX`. The completing drag suppresses the Chart.js click
+  that would otherwise overwrite the range with a point selection.
+- **DataFrame column selection**: `sy.SelectionMode("single-column" /
+  "multi-column")` — header clicks select columns and return their indices.
+- **`[i18n]` config**: localize built-in UI strings (connecting/loading/menu
+  labels/upload errors), published to the front end as `window.__SY_I18N`.
+- **Insyra time-series & export helpers**: `syi.DownloadCSV`,
+  `syi.RollingMeanChart`, `syi.CumSumChart`, `syi.PctChangeChart`, and
+  `syi.FormulaColumn` (interactive CCL formula column with timeout-guarded
+  evaluation, since CCL can hang on malformed input).
+- `syralit new` scaffold: generated syralit.toml now documents the full
+  theme/server/secrets option surface.
+- UI test suite: added chart range-drag and Insyra click-to-filter coverage
+  (real mouse-drag CDP events).
 
 ## [0.6.0] - 2026-07-05
 

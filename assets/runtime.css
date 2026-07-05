@@ -2139,6 +2139,28 @@ body {
 }
 .sy-menu-button-dropdown.open { display: flex; }
 
+/* --- Chart range selection ------------------------------------------------ */
+
+.sy-chart-wrap { position: relative; }
+.sy-chart-range-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--sy-accent) 15%, transparent);
+  border-left: 1px solid var(--sy-accent);
+  border-right: 1px solid var(--sy-accent);
+  pointer-events: none;
+}
+
+/* --- Dataframe column selection ------------------------------------------ */
+
+.sy-df-col-selected {
+  background: color-mix(in srgb, var(--sy-accent) 10%, transparent) !important;
+}
+th.sy-df-col-selected {
+  color: var(--sy-accent);
+}
+
 /* --- Multi-select free entry -------------------------------------------- */
 
 .sy-multi-new {

@@ -186,6 +186,12 @@ sy.LineChart(map[string][]float64{"Series": {1,2,3}}, opts...)
 if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
     sy.Textf("%s at %s = %v", sel.Series, sel.X, sel.Value) // Series/Index/X/Value
 }
+// sy.RangeSelectable() on Line/Bar/Area also lets the user DRAG across the
+// chart to select an x-range: sel.Range is true, Index..EndIndex / X..EndX
+// span the interval. Point clicks still work.
+if sel := sy.LineChart(data, sy.RangeSelectable(), sy.Key("ts")); sel != nil && sel.Range {
+    sy.Textf("%s to %s", sel.X, sel.EndX)
+}
 sy.BarChart(data, opts...)
 sy.AreaChart(data, opts...)
 sy.PieChart(map[string]float64{"A": 30, "B": 70}, opts...)
@@ -340,6 +346,7 @@ val := sy.QueryParam("page")
 all := sy.QueryParams()
 sy.SetQueryParam("page", "2")  // updates the browser URL (deep linking); "" removes
 sy.ResetWidget("key")          // delete a widget's stored value (del st.session_state[key])
+port := sy.GetOption("server.port") // read resolved config values
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -625,6 +632,10 @@ db_dsn = "postgres://..."
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
 ssl_key_file = "key.pem"
+
+[i18n]                    # localize built-in UI text (all keys optional)
+connecting = "連線中…"     # keys: connecting, loading, add_new, file_too_large,
+loading = "載入中…"        #       menu, menu_get_help, menu_report_bug, menu_about
 ```
 
 ### Headless App Testing (sy.AppTest)
@@ -696,6 +707,12 @@ sel := syi.GroupedBarChart(dt, "region", "revenue", insyra.OpSum,
 syi.Table(syi.FilterBySelection(dt, "region", sel)) // nil sel = unfiltered
 sub := syi.FilterEquals(dt, "region", "north")      // pure data helper
 edited := syi.EditableDataTable(dt, sy.Key("e"))    // DataEditor → new *insyra.DataTable
+syi.DownloadCSV("Export", dt, "data.csv")           // download button for a DataTable
+syi.RollingMeanChart(dt, "Month", "Revenue", 7)     // raw + rolling mean overlay
+syi.CumSumChart(dt, "Month", "Revenue")             // cumulative sum line
+syi.PctChangeChart(dt, "Month", "Revenue", 1)       // percent change bars
+out := syi.FormulaColumn(dt, "ccl")                 // interactive CCL formula column
+                                                    // (timeout-guarded evaluation)
 // sy.ResetWidget("by_region") clears a stored selection (del st.session_state equivalent)
 
 // DataList (single series) — symmetric helpers

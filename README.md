@@ -318,6 +318,16 @@ if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
 }
 ```
 
+With `sy.RangeSelectable()`, dragging across a Line/Bar/Area chart selects an
+x-axis **range** (`sel.Range`, `Index..EndIndex`, `X..EndX`) — the building
+block for time-series drill-downs:
+
+```go
+if sel := sy.LineChart(data, sy.RangeSelectable(), sy.Key("ts")); sel != nil && sel.Range {
+    sy.Textf("from %s to %s", sel.X, sel.EndX)
+}
+```
+
 External charting library integrations (CDN-loaded, accepting JSON specs):
 
 | Chart | Library | Streamlit Equivalent |
@@ -518,6 +528,11 @@ sel := syi.GroupedBarChart(dt, "Region", "Revenue", insyra.OpSum,
 syi.Table(syi.FilterBySelection(dt, "Region", sel))  // nil selection = unfiltered
 sub := syi.FilterEquals(dt, "Region", "North")       // pure data helper
 edited := syi.EditableDataTable(dt, sy.Key("e"))     // edits → new *insyra.DataTable
+syi.DownloadCSV("Export", dt, "data.csv")            // CSV download button
+syi.RollingMeanChart(dt, "Month", "Revenue", 7)      // raw + rolling mean overlay
+syi.CumSumChart(dt, "Month", "Revenue")              // cumulative sum
+syi.PctChangeChart(dt, "Month", "Revenue", 1)        // percent change bars
+out := syi.FormulaColumn(dt, "ccl")                  // interactive CCL formula column
 
 // DataList (single series) — the symmetric counterpart
 syi.List(dl)                            // single-column table
@@ -662,6 +677,10 @@ db_dsn = "postgres://..."
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
 ssl_key_file = "key.pem"
+
+[i18n]                    # localize built-in UI text
+connecting = "連線中…"
+loading = "載入中…"
 ```
 
 ### Runtime Configuration

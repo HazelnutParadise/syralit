@@ -10,6 +10,12 @@ type ChartSelection struct {
 	Index  int
 	X      string
 	Value  float64
+
+	// Range selection (sy.RangeSelectable() + drag): Range is true and
+	// Index..EndIndex / X..EndX span the dragged x-axis interval.
+	Range    bool
+	EndIndex int
+	EndX     string
 }
 
 // chartSelection wires a selectable chart's widget ID into props and reads the
@@ -21,6 +27,9 @@ func chartSelection(o widgetOpts, typ string, props map[string]any) (string, *Ch
 	rc := current()
 	id := rc.widgetID(typ, o.key)
 	props["selectable"] = true
+	if o.rangeSelectable {
+		props["range_selectable"] = true
+	}
 	val, _ := rc.sess.widgetValue(id)
 	m, ok := val.(map[string]any)
 	if !ok {
@@ -32,6 +41,11 @@ func chartSelection(o widgetOpts, typ string, props map[string]any) (string, *Ch
 	}
 	sel.Series, _ = m["series"].(string)
 	sel.X, _ = m["x"].(string)
+	if r, _ := m["range"].(bool); r {
+		sel.Range = true
+		sel.EndIndex = int(toFloat64(m["end_index"]))
+		sel.EndX, _ = m["end_x"].(string)
+	}
 	return id, sel
 }
 

@@ -73,11 +73,15 @@ const indexHTML = `<!doctype html>
 <body>
 <div id="syralit-root">
 <nav id="syralit-sidebar"></nav>
-<main id="syralit-app"><div class="sy-loading"><div class="sy-loading-spinner"></div><p>Connecting…</p></div></main>
+<main id="syralit-app"><div class="sy-loading"><div class="sy-loading-spinner"></div><p>%[6]s</p></div></main>
 </div>
 %[5]s<script src="%[4]s/_syralit/assets/runtime.js"></script>
 </body>
 </html>`
+
+// uiStrings holds the [i18n] overrides for built-in UI text; nil means the
+// English defaults. Published to the front end as window.__SY_I18N.
+var uiStrings map[string]string
 
 // Built-in font stacks selected by the "sans-serif" / "serif" / "monospace"
 // theme keywords. The named families are embedded (assets/fonts) and declared
@@ -295,6 +299,17 @@ func renderIndex(title string, th Theme, basePath ...string) string {
 			baseScript = "<script>window.__SY_BASE=" + string(b) + ";</script>\n"
 		}
 	}
+	// [i18n] overrides for built-in UI text. json.Marshal escapes <, > and &,
+	// so the payload cannot break out of the script element.
+	if len(uiStrings) > 0 {
+		if b, err := json.Marshal(uiStrings); err == nil {
+			baseScript += "<script>window.__SY_I18N=" + string(b) + ";</script>\n"
+		}
+	}
+	connecting := "Connecting…"
+	if v := uiStrings["connecting"]; v != "" {
+		connecting = v
+	}
 	htmlAttr := ""
 	if th.Mode == "light" || th.Mode == "dark" {
 		htmlAttr = fmt.Sprintf(` data-theme=%q`, th.Mode)
@@ -369,7 +384,7 @@ func renderIndex(title string, th Theme, basePath ...string) string {
 		}
 	}
 
-	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript(), base, baseScript)
+	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript(), base, baseScript, htmlEscape(connecting))
 }
 
 // fontValueSafe allows a CSS font-family list (quoted names, commas) while

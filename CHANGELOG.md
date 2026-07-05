@@ -14,7 +14,9 @@ All notable changes to Syralit are documented here. The format is based on
   `GroupedBarChart`/`GroupedPieChart` (Insyra GroupBy + Aggregate per group),
   `FilterEquals`/`FilterBySelection` (pure data helpers for click-to-filter
   dashboards), and `EditableDataTable` (DataEditor edits back as a new
-  `*insyra.DataTable`). New example: `examples/insyra-interactive`.
+  `*insyra.DataTable`). New examples: `examples/insyra-interactive` and
+  `examples/data-studio` (the full upload → group → click-to-drill-down
+  workflow, with README screenshots).
 - **`sy.ResetWidget(key)`**: delete a widget's stored value (the counterpart
   of Streamlit's `del st.session_state[key]`), e.g. to clear a chart selection.
 

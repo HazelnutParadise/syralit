@@ -99,6 +99,12 @@ Real screenshots captured from the runnable examples in [`examples/`](examples/)
 |---|---|
 | ![Syralit data explorer analysis view](docs/images/data-explorer-analysis.png) | ![Syralit data explorer analysis view dark mode](docs/images/data-explorer-analysis-dark.png) |
 
+### Data studio — upload → group → click to drill down (`examples/data-studio`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit data studio](docs/images/data-studio.png) | ![Syralit data studio dark mode](docs/images/data-studio-dark.png) |
+
 ### Conference registration form (`examples/form-app`)
 
 | Light | Dark |
@@ -751,6 +757,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
 | [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
 | [`insyra-interactive`](examples/insyra-interactive/) | Click-to-filter dashboard: selectable GroupBy chart drives an Insyra-filtered table, metrics, and deep-linkable URL state |
+| [`data-studio`](examples/data-studio/) | Full upload → explore workflow: file upload, column pickers, aggregate switch, selectable GroupBy chart, drill-down detail and statistics |
 
 Run any example:
 

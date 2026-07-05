@@ -6,6 +6,14 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-05
+
+Interactive-data release: click-to-filter and drag-range chart selections
+wired end-to-end into Insyra (GroupBy charts, filters, time-series helpers,
+CSV export, guarded CCL formula columns), OIDC single sign-on as an opt-in
+module, dataframe column selection, UI-string localization, and a fuller
+scaffold.
+
 ### Added
 - **Interactive Insyra integration**: DataTable chart helpers now pass options
   through, use the x column as axis labels, and return `*sy.ChartSelection`

@@ -35,6 +35,12 @@ All notable changes to Syralit are documented here. The format is based on
   theme/server/secrets option surface.
 - UI test suite: added chart range-drag and Insyra click-to-filter coverage
   (real mouse-drag CDP events).
+- **OIDC single sign-on** (`integrations/oidc`, separate module): wrap the app
+  handler with `syoidc.Protect` and visitors authenticate through any OIDC
+  provider (auth-code flow with state/nonce, HMAC-signed identity cookie);
+  `sy.User()` returns the verified claims. Built on the new core hook
+  `sy.SetUserResolver` (request context -> user, dependency-free). New
+  example: `examples/oidc-login` (standalone module).
 
 ## [0.6.0] - 2026-07-05
 

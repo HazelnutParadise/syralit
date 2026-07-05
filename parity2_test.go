@@ -83,3 +83,42 @@ func TestI18nConfig(t *testing.T) {
 		t.Fatalf("i18n config not applied: %+v", cfg.UIStrings)
 	}
 }
+
+func TestUserResolver(t *testing.T) {
+	defer SetUserResolver(nil)
+	SetUserResolver(func(rc RequestContext) map[string]string {
+		if rc.Cookies["auth"] == "good" {
+			return map[string]string{"username": "ada", "email": "ada@example.com"}
+		}
+		return nil
+	})
+
+	sess := newSession(func() {
+		if u := User(); u != nil {
+			Text("user:" + u["username"])
+		} else {
+			Text("anon")
+		}
+	})
+	sess.reqCtx = RequestContext{Cookies: map[string]string{"auth": "good"}}
+	resolveSessionUser(sess)
+	at := &AppTest{sess: sess}
+	at.Run()
+	if got := at.Texts("text"); len(got) != 1 || got[0] != "user:ada" {
+		t.Fatalf("resolved user = %v", got)
+	}
+
+	// Bad cookie → anonymous.
+	sess2 := newSession(func() {
+		if User() == nil {
+			Text("anon")
+		}
+	})
+	sess2.reqCtx = RequestContext{Cookies: map[string]string{"auth": "bad"}}
+	resolveSessionUser(sess2)
+	at2 := &AppTest{sess: sess2}
+	at2.Run()
+	if got := at2.Texts("text"); len(got) != 1 || got[0] != "anon" {
+		t.Fatalf("anonymous path = %v", got)
+	}
+}

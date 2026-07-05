@@ -411,6 +411,25 @@ sy.Login(map[string]string{"name": "admin", "role": "admin"})
 sy.Logout()
 ```
 
+
+**OIDC single sign-on** lives in a separate module (`integrations/oidc`) so
+its dependency tree never touches the core. Wrap the app handler and every
+visitor signs in through Google / Microsoft Entra / Keycloak / Auth0 / any
+OIDC provider; `sy.User()` then returns the verified claims:
+
+```go
+import syoidc "github.com/HazelnutParadise/syralit/integrations/oidc"
+
+handler, _ := syoidc.Protect(sy.Handler(sy.Config{}, app), syoidc.Config{
+    Issuer:       "https://accounts.google.com",
+    ClientID:     os.Getenv("OIDC_CLIENT_ID"),
+    ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
+    RedirectURL:  "http://localhost:8600/auth/callback",
+    CookieSecret: []byte(os.Getenv("COOKIE_SECRET")),
+})
+http.ListenAndServe(":8600", handler)
+```
+
 ### Caching
 
 ```go
@@ -783,6 +802,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
 | [`insyra-interactive`](examples/insyra-interactive/) | Click-to-filter dashboard: selectable GroupBy chart drives an Insyra-filtered table, metrics, and deep-linkable URL state |
 | [`data-studio`](examples/data-studio/) | Full upload → explore workflow: file upload, column pickers, aggregate switch, selectable GroupBy chart, drill-down detail and statistics |
+| [`oidc-login`](examples/oidc-login/) | OIDC single sign-on via `integrations/oidc` (standalone module) |
 
 Run any example:
 

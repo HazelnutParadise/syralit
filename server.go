@@ -260,6 +260,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	sess.queryParams = qp
 	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()
+	resolveSessionUser(sess)
 
 	sink := wsSink{c: c, ctx: ctx}
 

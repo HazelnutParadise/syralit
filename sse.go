@@ -89,6 +89,7 @@ func (s *server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	sess.queryParams = qp
 	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()
+	resolveSessionUser(sess)
 
 	sink := sseSink{w: w, f: flusher, mu: &sync.Mutex{}}
 	sess.sink = sink

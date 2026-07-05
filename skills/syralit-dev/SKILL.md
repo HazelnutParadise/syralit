@@ -546,6 +546,18 @@ sy.Textf("Welcome, %s", username)
 sy.Login(map[string]string{"name": "admin", "role": "admin"})
 user := sy.User()  // map[string]string or nil
 sy.Logout()
+
+// OIDC single sign-on (Google / Entra / Keycloak / Auth0 ...) — separate
+// module so its dependency tree stays out of the core:
+//   import syoidc "github.com/HazelnutParadise/syralit/integrations/oidc"
+// handler, err := syoidc.Protect(sy.Handler(sy.Config{}, app), syoidc.Config{
+//     Issuer: "https://accounts.google.com", ClientID: "...",
+//     ClientSecret: "...", RedirectURL: "http://host/auth/callback",
+//     CookieSecret: []byte("32+ random bytes"),
+// })
+// Visitors are redirected through the provider; sy.User() returns the verified
+// claims (sub/email/name/picture). Sign-out link: /auth/logout.
+// sy.SetUserResolver(fn) is the underlying core hook (request -> user).
 ```
 
 ### Navigation

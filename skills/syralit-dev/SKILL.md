@@ -339,6 +339,7 @@ sy.Session().Get("key")
 val := sy.QueryParam("page")
 all := sy.QueryParams()
 sy.SetQueryParam("page", "2")  // updates the browser URL (deep linking); "" removes
+sy.ResetWidget("key")          // delete a widget's stored value (del st.session_state[key])
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -681,8 +682,21 @@ syi.Table(dt)                           // render DataTable
 syi.Preview(dt, 5)                      // first N rows
 syi.EditableTable(dt, sy.Key("edit"))   // editable
 syi.Metrics(dt, "column")              // statistics for one column
-syi.BarChart(dt, "x_col", "y_col")     // chart from columns
+syi.BarChart(dt, "x_col", "y_col")     // chart from columns (x_col = axis labels);
+                                        // also LineChart / AreaChart / ScatterChart / PieChart.
+                                        // All accept sy.Option and return *sy.ChartSelection
+                                        // when sy.Selectable() is set.
+syi.MultiLineChart(dt, "x", nil)       // all numeric columns as series (st.line_chart(df));
+                                        // also MultiBarChart / MultiAreaChart; pass []string to pick columns
 col := syi.ColumnSelect("Pick", dt)    // column picker
+
+// Click-to-filter dashboards: GroupBy chart + selection + filter
+sel := syi.GroupedBarChart(dt, "region", "revenue", insyra.OpSum,
+    sy.Selectable(), sy.Key("by_region"))     // one bar per group (also GroupedPieChart)
+syi.Table(syi.FilterBySelection(dt, "region", sel)) // nil sel = unfiltered
+sub := syi.FilterEquals(dt, "region", "north")      // pure data helper
+edited := syi.EditableDataTable(dt, sy.Key("e"))    // DataEditor → new *insyra.DataTable
+// sy.ResetWidget("by_region") clears a stored selection (del st.session_state equivalent)
 
 // DataList (single series) — symmetric helpers
 syi.List(dl)                            // single-column table

@@ -6,6 +6,12 @@
       "runtimeExecutable": "go",
       "runtimeArgs": ["run", "./examples/streamlit-parity"],
       "port": 8600
+    },
+    {
+      "name": "insyra-interactive",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./examples/insyra-interactive"],
+      "port": 8600
     }
   ]
 }

@@ -6,6 +6,18 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Interactive Insyra integration**: DataTable chart helpers now pass options
+  through, use the x column as axis labels, and return `*sy.ChartSelection`
+  with `sy.Selectable()`. New `MultiLineChart`/`MultiBarChart`/`MultiAreaChart`
+  (nil column list = every numeric column, like `st.line_chart(df)`),
+  `GroupedBarChart`/`GroupedPieChart` (Insyra GroupBy + Aggregate per group),
+  `FilterEquals`/`FilterBySelection` (pure data helpers for click-to-filter
+  dashboards), and `EditableDataTable` (DataEditor edits back as a new
+  `*insyra.DataTable`). New example: `examples/insyra-interactive`.
+- **`sy.ResetWidget(key)`**: delete a widget's stored value (the counterpart
+  of Streamlit's `del st.session_state[key]`), e.g. to clear a chart selection.
+
 ## [0.6.0] - 2026-07-05
 
 Streamlit parity release: full theming (fonts, color palette, chart colors,

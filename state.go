@@ -127,6 +127,17 @@ func QueryParams() map[string]string {
 	return cp
 }
 
+// ResetWidget deletes a widget's stored value (by its sy.Key), reverting it
+// to its default on this rerun — the counterpart of Streamlit's
+// `del st.session_state[key]`. Useful for clearing a chart selection or an
+// input programmatically.
+func ResetWidget(key string) {
+	rc := current()
+	rc.sess.mu.Lock()
+	delete(rc.sess.widgets, key)
+	rc.sess.mu.Unlock()
+}
+
 // SetQueryParam sets (or, with value "", removes) a URL query parameter. The
 // browser's address bar updates after this rerun via history.replaceState, so
 // app state becomes shareable as a link.

@@ -60,58 +60,64 @@ func ColumnSelect(label string, dt *insyra.DataTable, opts ...sy.Option) string 
 	return sy.SelectBox(label, dt.Headers(), opts...)
 }
 
-// LineChart extracts two columns from a DataTable and renders a line chart.
-// xCol provides x-axis labels, yCol provides numeric y values.
-func LineChart(dt *insyra.DataTable, xCol, yCol string) {
+// LineChart extracts two columns from a DataTable and renders a line chart:
+// xCol provides x-axis labels, yCol the numeric y values. Options pass
+// through to the underlying chart — with sy.Selectable() the clicked point is
+// returned (nil until then).
+func LineChart(dt *insyra.DataTable, xCol, yCol string, opts ...sy.Option) *sy.ChartSelection {
 	ys := extractNumericCol(dt, yCol)
 	if ys == nil {
-		return
+		return nil
 	}
-	sy.LineChart(map[string][]float64{yCol: ys})
+	return sy.LineChart(map[string][]float64{yCol: ys}, withXLabels(dt, xCol, opts)...)
 }
 
-// BarChart extracts a numeric column and renders a bar chart.
-func BarChart(dt *insyra.DataTable, xCol, yCol string) {
+// BarChart extracts a numeric column and renders a bar chart with xCol as the
+// axis labels. Supports sy.Selectable() like LineChart.
+func BarChart(dt *insyra.DataTable, xCol, yCol string, opts ...sy.Option) *sy.ChartSelection {
 	ys := extractNumericCol(dt, yCol)
 	if ys == nil {
-		return
+		return nil
 	}
-	sy.BarChart(map[string][]float64{yCol: ys})
+	return sy.BarChart(map[string][]float64{yCol: ys}, withXLabels(dt, xCol, opts)...)
 }
 
-// AreaChart extracts a numeric column and renders an area chart.
-func AreaChart(dt *insyra.DataTable, xCol, yCol string) {
+// AreaChart extracts a numeric column and renders an area chart with xCol as
+// the axis labels. Supports sy.Selectable() like LineChart.
+func AreaChart(dt *insyra.DataTable, xCol, yCol string, opts ...sy.Option) *sy.ChartSelection {
 	ys := extractNumericCol(dt, yCol)
 	if ys == nil {
-		return
+		return nil
 	}
-	sy.AreaChart(map[string][]float64{yCol: ys})
+	return sy.AreaChart(map[string][]float64{yCol: ys}, withXLabels(dt, xCol, opts)...)
 }
 
 // ScatterChart extracts x and y columns and renders a scatter chart.
-func ScatterChart(dt *insyra.DataTable, xCol, yCol string) {
+// Supports sy.Selectable() like LineChart.
+func ScatterChart(dt *insyra.DataTable, xCol, yCol string, opts ...sy.Option) *sy.ChartSelection {
 	x := extractNumericCol(dt, xCol)
 	y := extractNumericCol(dt, yCol)
 	if x == nil || y == nil {
-		return
+		return nil
 	}
 	n := min(len(x), len(y))
 	points := make([][2]float64, n)
 	for i := range n {
 		points[i] = [2]float64{x[i], y[i]}
 	}
-	sy.ScatterChart(map[string][][2]float64{yCol: points})
+	return sy.ScatterChart(map[string][][2]float64{yCol: points}, opts...)
 }
 
 // PieChart extracts a label column and a value column to render a pie chart.
-func PieChart(dt *insyra.DataTable, labelCol, valueCol string) {
+// Supports sy.Selectable(); the clicked slice's label arrives in Selection.X.
+func PieChart(dt *insyra.DataTable, labelCol, valueCol string, opts ...sy.Option) *sy.ChartSelection {
 	labels := dt.GetColByName(labelCol)
 	values := extractNumericCol(dt, valueCol)
 	if labels == nil || values == nil {
 		if labels == nil {
 			sy.Warning(fmt.Sprintf("column %q not found", labelCol))
 		}
-		return
+		return nil
 	}
 	data := make(map[string]float64)
 	labelData := labels.Data()
@@ -119,7 +125,194 @@ func PieChart(dt *insyra.DataTable, labelCol, valueCol string) {
 	for i := range n {
 		data[fmt.Sprint(labelData[i])] = values[i]
 	}
-	sy.PieChart(data)
+	return sy.PieChart(data, opts...)
+}
+
+// MultiLineChart plots several numeric columns as one line chart over xCol
+// labels. Pass nil yCols to plot every numeric column except xCol — the
+// equivalent of Streamlit's st.line_chart(df).
+func MultiLineChart(dt *insyra.DataTable, xCol string, yCols []string, opts ...sy.Option) *sy.ChartSelection {
+	series := multiSeries(dt, xCol, yCols)
+	if series == nil {
+		return nil
+	}
+	return sy.LineChart(series, withXLabels(dt, xCol, opts)...)
+}
+
+// MultiBarChart is MultiLineChart's bar counterpart (st.bar_chart(df)).
+func MultiBarChart(dt *insyra.DataTable, xCol string, yCols []string, opts ...sy.Option) *sy.ChartSelection {
+	series := multiSeries(dt, xCol, yCols)
+	if series == nil {
+		return nil
+	}
+	return sy.BarChart(series, withXLabels(dt, xCol, opts)...)
+}
+
+// MultiAreaChart is MultiLineChart's area counterpart (st.area_chart(df)).
+func MultiAreaChart(dt *insyra.DataTable, xCol string, yCols []string, opts ...sy.Option) *sy.ChartSelection {
+	series := multiSeries(dt, xCol, yCols)
+	if series == nil {
+		return nil
+	}
+	return sy.AreaChart(series, withXLabels(dt, xCol, opts)...)
+}
+
+// GroupedBarChart groups the table by keyCol, aggregates valueCol with op
+// (insyra.OpSum, OpMean, ...), and renders one bar per group. Combined with
+// sy.Selectable() this is the click-to-filter building block: the clicked
+// group's key arrives in Selection.X, ready for FilterEquals.
+func GroupedBarChart(dt *insyra.DataTable, keyCol, valueCol string, op insyra.AggregateOp, opts ...sy.Option) *sy.ChartSelection {
+	agg := aggregate(dt, keyCol, valueCol, op)
+	if agg == nil {
+		return nil
+	}
+	return BarChart(agg, keyCol, aggColName(valueCol, op), opts...)
+}
+
+// GroupedPieChart is GroupedBarChart's pie counterpart.
+func GroupedPieChart(dt *insyra.DataTable, keyCol, valueCol string, op insyra.AggregateOp, opts ...sy.Option) *sy.ChartSelection {
+	agg := aggregate(dt, keyCol, valueCol, op)
+	if agg == nil {
+		return nil
+	}
+	return PieChart(agg, keyCol, aggColName(valueCol, op), opts...)
+}
+
+// aggregate runs GroupBy(keyCol).Aggregate(op on valueCol).
+func aggregate(dt *insyra.DataTable, keyCol, valueCol string, op insyra.AggregateOp) *insyra.DataTable {
+	if dt == nil {
+		sy.Warning("nil DataTable")
+		return nil
+	}
+	return dt.GroupBy(keyCol).Aggregate(insyra.AggregateConfig{
+		SourceCol: valueCol, As: aggColName(valueCol, op), Op: op,
+	})
+}
+
+func aggColName(valueCol string, op insyra.AggregateOp) string {
+	return valueCol + "_" + op.String()
+}
+
+// FilterEquals returns a new DataTable with only the rows whose col value
+// (string-compared) equals want. The source table is left untouched. It is a
+// pure data helper (no UI): a nil table returns nil and an unknown column
+// returns the input table unchanged.
+func FilterEquals(dt *insyra.DataTable, col string, want any) *insyra.DataTable {
+	if dt == nil {
+		return nil
+	}
+	headers := dt.Headers()
+	colIdx := -1
+	for i, h := range headers {
+		if h == col {
+			colIdx = i
+			break
+		}
+	}
+	if colIdx < 0 {
+		return dt
+	}
+	wantStr := fmt.Sprint(want)
+	var rows [][]any
+	for _, row := range dt.To2DSlice() {
+		if colIdx < len(row) && fmt.Sprint(row[colIdx]) == wantStr {
+			rows = append(rows, row)
+		}
+	}
+	return tableFromRows(headers, rows)
+}
+
+// FilterBySelection filters dt to the rows matching a chart selection's X
+// label in col. A nil selection returns dt unchanged, so the call composes
+// directly with a selectable chart:
+//
+//	sel := syi.GroupedBarChart(dt, "region", "revenue", insyra.OpSum,
+//	    sy.Selectable(), sy.Key("by_region"))
+//	syi.Table(syi.FilterBySelection(dt, "region", sel))
+func FilterBySelection(dt *insyra.DataTable, col string, sel *sy.ChartSelection) *insyra.DataTable {
+	if sel == nil {
+		return dt
+	}
+	return FilterEquals(dt, col, sel.X)
+}
+
+// EditableDataTable renders an editable table and returns the current state
+// as a new *insyra.DataTable (the input is untouched), so user edits flow
+// straight back into Insyra pipelines.
+func EditableDataTable(dt *insyra.DataTable, opts ...sy.Option) *insyra.DataTable {
+	if dt == nil {
+		sy.Warning("nil DataTable")
+		return nil
+	}
+	headers := dt.Headers()
+	return tableFromRows(headers, sy.DataEditor(headers, dt.To2DSlice(), opts...))
+}
+
+// tableFromRows rebuilds a DataTable from headers and row-major data.
+func tableFromRows(headers []string, rows [][]any) *insyra.DataTable {
+	cols := make([][]any, len(headers))
+	for _, row := range rows {
+		for i := range headers {
+			var v any
+			if i < len(row) {
+				v = row[i]
+			}
+			cols[i] = append(cols[i], v)
+		}
+	}
+	lists := make([]*insyra.DataList, len(headers))
+	for i, h := range headers {
+		lists[i] = insyra.NewDataList(cols[i]...).SetName(h)
+	}
+	return insyra.NewDataTable(lists...)
+}
+
+// withXLabels prepends an sy.XLabels option built from a column's values;
+// a missing column or empty name simply omits the labels.
+func withXLabels(dt *insyra.DataTable, xCol string, opts []sy.Option) []sy.Option {
+	if dt == nil || xCol == "" {
+		return opts
+	}
+	dl := dt.GetColByName(xCol)
+	if dl == nil {
+		return opts
+	}
+	data := dl.Data()
+	labels := make([]string, len(data))
+	for i, v := range data {
+		labels[i] = fmt.Sprint(v)
+	}
+	return append([]sy.Option{sy.XLabels(labels)}, opts...)
+}
+
+// multiSeries extracts the named numeric columns (or, when yCols is empty,
+// every numeric column except xCol) as chart series.
+func multiSeries(dt *insyra.DataTable, xCol string, yCols []string) map[string][]float64 {
+	if dt == nil {
+		sy.Warning("nil DataTable")
+		return nil
+	}
+	if len(yCols) == 0 {
+		for _, h := range dt.Headers() {
+			if h == xCol {
+				continue
+			}
+			if dl := dt.GetColByName(h); dl != nil && len(numericList(dl)) > 0 {
+				yCols = append(yCols, h)
+			}
+		}
+	}
+	series := make(map[string][]float64, len(yCols))
+	for _, y := range yCols {
+		if ys := extractNumericCol(dt, y); len(ys) > 0 {
+			series[y] = ys
+		}
+	}
+	if len(series) == 0 {
+		sy.Warning("no numeric columns to plot")
+		return nil
+	}
+	return series
 }
 
 // Metrics renders summary statistics for a numeric column as Metric widgets.

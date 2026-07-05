@@ -352,6 +352,9 @@ count.Set(42)
 val := sy.QueryParam("page")
 sy.SetQueryParam("page", "2")
 
+// Reset a widget to its default (e.g. clear a chart selection)
+sy.ResetWidget("key")
+
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
 lang := ctx.Locale
@@ -492,9 +495,17 @@ syi.Preview(dt, 5)                      // first N rows
 syi.EditableTable(dt, sy.Key("edit"))   // editable DataTable
 col := syi.ColumnSelect("Column", dt)   // column picker
 syi.Metrics(dt, col)                    // count, mean, min, max
-syi.BarChart(dt, "Category", "Value")   // chart from columns
-syi.LineChart(dt, "Month", "Revenue")
-syi.ScatterChart(dt, "X", "Y")
+syi.BarChart(dt, "Category", "Value")   // chart from columns ("Category" = axis labels)
+syi.LineChart(dt, "Month", "Revenue")   // all chart helpers accept sy.Option and return
+syi.ScatterChart(dt, "X", "Y")          // *sy.ChartSelection when sy.Selectable() is set
+syi.MultiLineChart(dt, "Month", nil)    // every numeric column as a series (st.line_chart(df))
+
+// Click-to-filter dashboards: GroupBy chart + selection + filter
+sel := syi.GroupedBarChart(dt, "Region", "Revenue", insyra.OpSum,
+    sy.Selectable(), sy.Key("by_region"))
+syi.Table(syi.FilterBySelection(dt, "Region", sel))  // nil selection = unfiltered
+sub := syi.FilterEquals(dt, "Region", "North")       // pure data helper
+edited := syi.EditableDataTable(dt, sy.Key("e"))     // edits → new *insyra.DataTable
 
 // DataList (single series) — the symmetric counterpart
 syi.List(dl)                            // single-column table
@@ -739,6 +750,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 | [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
 | [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
+| [`insyra-interactive`](examples/insyra-interactive/) | Click-to-filter dashboard: selectable GroupBy chart drives an Insyra-filtered table, metrics, and deep-linkable URL state |
 
 Run any example:
 

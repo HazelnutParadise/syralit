@@ -99,6 +99,12 @@ Real screenshots captured from the runnable examples in [`examples/`](examples/)
 |---|---|
 | ![Syralit data explorer analysis view](docs/images/data-explorer-analysis.png) | ![Syralit data explorer analysis view dark mode](docs/images/data-explorer-analysis-dark.png) |
 
+### Click-to-filter dashboard (`examples/insyra-interactive`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit insyra interactive dashboard](docs/images/insyra-interactive.png) | ![Syralit insyra interactive dashboard dark mode](docs/images/insyra-interactive-dark.png) |
+
 ### Data studio — upload → group → click to drill down (`examples/data-studio`)
 
 | Light | Dark |

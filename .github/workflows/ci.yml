@@ -20,6 +20,9 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test ./...
+      - name: Test integrations/oidc (separate module)
+        run: go test ./...
+        working-directory: integrations/oidc
 
   uitest:
     # Browser-level UI tests (uitest/ is a separate module; drives the

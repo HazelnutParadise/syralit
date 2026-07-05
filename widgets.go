@@ -68,6 +68,9 @@ type widgetOpts struct {
 	columnOrder       []string
 	selectionMode     string
 	showTime          bool
+	rangeSelectable   bool
+	mono              bool
+	formula           bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -117,6 +120,13 @@ func MaxDate(d string) Option { return func(o *widgetOpts) { o.maxDate = d } }
 // selected row indices.
 func Selectable() Option { return func(o *widgetOpts) { o.selectable = true } }
 
+// RangeSelectable lets the user drag across a Line/Bar/Area chart to select an
+// x-axis range; the chart then returns a *ChartSelection with Range true and
+// Index..EndIndex spanning the dragged interval. Point clicks still work.
+func RangeSelectable() Option {
+	return func(o *widgetOpts) { o.selectable = true; o.rangeSelectable = true }
+}
+
 // FeedbackStyle selects the Feedback widget's rating style: "thumbs" (default,
 // 👍/👎 → "up"/"down"), "stars" (★ → "1".."5"), or "faces" (→ "1".."5").
 func FeedbackStyle(s string) Option { return func(o *widgetOpts) { o.feedbackStyle = s } }
@@ -150,12 +160,24 @@ func AcceptNewOptions() Option { return func(o *widgetOpts) { o.acceptNew = true
 // DataEditor; columns not listed are hidden.
 func ColumnOrder(cols ...string) Option { return func(o *widgetOpts) { o.columnOrder = cols } }
 
-// SelectionMode sets how DataFrame rows are selected with sy.Selectable():
-// "multi-row" (default) or "single-row".
+// SelectionMode sets what sy.Selectable() selects on a DataFrame:
+// "multi-row" (default), "single-row", "multi-column", or "single-column".
+// Row modes return selected row indices; column modes return selected column
+// indices (into the headers slice). In column modes, clicking a header
+// selects it (sorting is disabled).
 func SelectionMode(mode string) Option { return func(o *widgetOpts) { o.selectionMode = mode } }
 
 // ShowTime makes a Spinner display the elapsed time next to its label.
 func ShowTime() Option { return func(o *widgetOpts) { o.showTime = true } }
+
+// Mono renders a TextInput / TextArea in the code font — for formulas,
+// identifiers, or anything typed character-by-character.
+func Mono() Option { return func(o *widgetOpts) { o.mono = true } }
+
+// Formula gives a TextInput the formula-bar look: an ƒx marker inside the
+// box, code font, and a code-block background — visually distinct from
+// ordinary text inputs. Implies Mono.
+func Formula() Option { return func(o *widgetOpts) { o.formula = true; o.mono = true } }
 
 // LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
 // lines instead of scrolling horizontally.
@@ -270,6 +292,12 @@ func TextInput(label string, opts ...Option) string {
 	}
 	if o.maxChars > 0 {
 		props["max_chars"] = o.maxChars
+	}
+	if o.mono {
+		props["mono"] = true
+	}
+	if o.formula {
+		props["formula"] = true
 	}
 	applyCommonProps(props, o)
 	rc.add(&Node{ID: id, Type: "text_input", Props: props})

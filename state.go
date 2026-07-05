@@ -127,6 +127,17 @@ func QueryParams() map[string]string {
 	return cp
 }
 
+// ResetWidget deletes a widget's stored value (by its sy.Key), reverting it
+// to its default on this rerun — the counterpart of Streamlit's
+// `del st.session_state[key]`. Useful for clearing a chart selection or an
+// input programmatically.
+func ResetWidget(key string) {
+	rc := current()
+	rc.sess.mu.Lock()
+	delete(rc.sess.widgets, key)
+	rc.sess.mu.Unlock()
+}
+
 // SetQueryParam sets (or, with value "", removes) a URL query parameter. The
 // browser's address bar updates after this rerun via history.replaceState, so
 // app state becomes shareable as a link.
@@ -228,6 +239,33 @@ func SQLQuery(db *sql.DB, query string, args ...any) ([]string, [][]any) {
 }
 
 // --- Auth ---------------------------------------------------------------
+
+// userResolver, when set, derives the authenticated user from the HTTP
+// request that opened a session (cookies/headers), so external auth layers —
+// e.g. the integrations/oidc middleware — can make sy.User() work without the
+// core importing any auth dependency.
+var userResolver func(RequestContext) map[string]string
+
+// SetUserResolver installs a function that maps a new session's request
+// context to an authenticated user (nil = anonymous). It runs once per
+// session, when the WebSocket or SSE connection is established. Intended for
+// auth middleware such as integrations/oidc; most apps use LoginGate instead.
+func SetUserResolver(fn func(RequestContext) map[string]string) {
+	userResolver = fn
+}
+
+// resolveSessionUser seeds a new session's user from the request via the
+// registered resolver.
+func resolveSessionUser(sess *session) {
+	if userResolver == nil {
+		return
+	}
+	if u := userResolver(sess.reqCtx); u != nil {
+		sess.mu.Lock()
+		sess.store["__syralit_user"] = u
+		sess.mu.Unlock()
+	}
+}
 
 // User returns the current session's authenticated user info. Returns nil
 // if no user is logged in.

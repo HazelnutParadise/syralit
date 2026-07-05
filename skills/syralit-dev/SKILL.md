@@ -114,6 +114,8 @@ sy.MaxDate("2026-12-31")      // DateInput/DateRangeInput upper bound
 sy.StartTime(2), sy.EndTime(5) // Audio/Video playback range (seconds)
 sy.Subtitles("/subs.vtt")     // Video subtitle track (WebVTT)
 sy.AcceptNewOptions()         // MultiSelect: allow typing new values
+sy.Mono()                     // TextInput/TextArea in the code font (formulas, IDs)
+sy.Formula()                  // formula-bar look: fx marker in the box, code surface (implies Mono)
 ```
 
 ### Display
@@ -185,6 +187,12 @@ sy.LineChart(map[string][]float64{"Series": {1,2,3}}, opts...)
 // *sy.ChartSelection (nil until the user clicks a point):
 if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
     sy.Textf("%s at %s = %v", sel.Series, sel.X, sel.Value) // Series/Index/X/Value
+}
+// sy.RangeSelectable() on Line/Bar/Area also lets the user DRAG across the
+// chart to select an x-range: sel.Range is true, Index..EndIndex / X..EndX
+// span the interval. Point clicks still work.
+if sel := sy.LineChart(data, sy.RangeSelectable(), sy.Key("ts")); sel != nil && sel.Range {
+    sy.Textf("%s to %s", sel.X, sel.EndX)
 }
 sy.BarChart(data, opts...)
 sy.AreaChart(data, opts...)
@@ -339,6 +347,8 @@ sy.Session().Get("key")
 val := sy.QueryParam("page")
 all := sy.QueryParams()
 sy.SetQueryParam("page", "2")  // updates the browser URL (deep linking); "" removes
+sy.ResetWidget("key")          // delete a widget's stored value (del st.session_state[key])
+port := sy.GetOption("server.port") // read resolved config values
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -538,6 +548,18 @@ sy.Textf("Welcome, %s", username)
 sy.Login(map[string]string{"name": "admin", "role": "admin"})
 user := sy.User()  // map[string]string or nil
 sy.Logout()
+
+// OIDC single sign-on (Google / Entra / Keycloak / Auth0 ...) — separate
+// module so its dependency tree stays out of the core:
+//   import syoidc "github.com/HazelnutParadise/syralit/integrations/oidc"
+// handler, err := syoidc.Protect(sy.Handler(sy.Config{}, app), syoidc.Config{
+//     Issuer: "https://accounts.google.com", ClientID: "...",
+//     ClientSecret: "...", RedirectURL: "http://host/auth/callback",
+//     CookieSecret: []byte("32+ random bytes"),
+// })
+// Visitors are redirected through the provider; sy.User() returns the verified
+// claims (sub/email/name/picture). Sign-out link: /auth/logout.
+// sy.SetUserResolver(fn) is the underlying core hook (request -> user).
 ```
 
 ### Navigation
@@ -624,6 +646,10 @@ db_dsn = "postgres://..."
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
 ssl_key_file = "key.pem"
+
+[i18n]                    # localize built-in UI text (all keys optional)
+connecting = "連線中…"     # keys: connecting, loading, add_new, file_too_large,
+loading = "載入中…"        #       menu, menu_get_help, menu_report_bug, menu_about
 ```
 
 ### Headless App Testing (sy.AppTest)
@@ -681,8 +707,33 @@ syi.Table(dt)                           // render DataTable
 syi.Preview(dt, 5)                      // first N rows
 syi.EditableTable(dt, sy.Key("edit"))   // editable
 syi.Metrics(dt, "column")              // statistics for one column
-syi.BarChart(dt, "x_col", "y_col")     // chart from columns
+syi.BarChart(dt, "x_col", "y_col")     // chart from columns (x_col = axis labels);
+                                        // also LineChart / AreaChart / ScatterChart / PieChart.
+                                        // All accept sy.Option and return *sy.ChartSelection
+                                        // when sy.Selectable() is set.
+syi.MultiLineChart(dt, "x", nil)       // all numeric columns as series (st.line_chart(df));
+                                        // also MultiBarChart / MultiAreaChart; pass []string to pick columns
 col := syi.ColumnSelect("Pick", dt)    // column picker
+
+// Click-to-filter dashboards: GroupBy chart + selection + filter
+sel := syi.GroupedBarChart(dt, "region", "revenue", insyra.OpSum,
+    sy.Selectable(), sy.Key("by_region"))     // one bar per group (also GroupedPieChart)
+syi.Table(syi.FilterBySelection(dt, "region", sel)) // nil sel = unfiltered
+sub := syi.FilterEquals(dt, "region", "north")      // pure data helper
+edited := syi.EditableDataTable(dt, sy.Key("e"))    // DataEditor → new *insyra.DataTable
+syi.DownloadCSV("Export", dt, "data.csv")           // download button for a DataTable
+syi.RollingMeanChart(dt, "Month", "Revenue", 7)     // raw + rolling mean overlay
+syi.CumSumChart(dt, "Month", "Revenue")             // cumulative sum line
+syi.PctChangeChart(dt, "Month", "Revenue", 1)       // percent change bars
+out := syi.AddFormulaColumn(dt, "ccl")              // interactive CCL formula column;
+                                                    // "ccl" = widget-key prefix (inputs stored as
+                                                    // ccl_formula / ccl_name — unique per page).
+                                                    // Columns as A/B or ["Name"] (case-sensitive);
+                                                    // shows a live letter=name legend; timeout-guarded.
+out, err := syi.ComputeColumn(dt, "Profit", `+'`'+`["Revenue"] - ["Cost"]`+'`'+`)
+                                                    // the guarded primitive for building a custom
+                                                    // formula UI (own labels/layout/i18n)
+// sy.ResetWidget("by_region") clears a stored selection (del st.session_state equivalent)
 
 // DataList (single series) — symmetric helpers
 syi.List(dl)                            // single-column table

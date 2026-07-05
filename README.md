@@ -99,6 +99,18 @@ Real screenshots captured from the runnable examples in [`examples/`](examples/)
 |---|---|
 | ![Syralit data explorer analysis view](docs/images/data-explorer-analysis.png) | ![Syralit data explorer analysis view dark mode](docs/images/data-explorer-analysis-dark.png) |
 
+### Click-to-filter dashboard (`examples/insyra-interactive`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit insyra interactive dashboard](docs/images/insyra-interactive.png) | ![Syralit insyra interactive dashboard dark mode](docs/images/insyra-interactive-dark.png) |
+
+### Data studio — upload → group → click to drill down (`examples/data-studio`)
+
+| Light | Dark |
+|---|---|
+| ![Syralit data studio](docs/images/data-studio.png) | ![Syralit data studio dark mode](docs/images/data-studio-dark.png) |
+
 ### Conference registration form (`examples/form-app`)
 
 | Light | Dark |
@@ -306,6 +318,16 @@ if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
 }
 ```
 
+With `sy.RangeSelectable()`, dragging across a Line/Bar/Area chart selects an
+x-axis **range** (`sel.Range`, `Index..EndIndex`, `X..EndX`) — the building
+block for time-series drill-downs:
+
+```go
+if sel := sy.LineChart(data, sy.RangeSelectable(), sy.Key("ts")); sel != nil && sel.Range {
+    sy.Textf("from %s to %s", sel.X, sel.EndX)
+}
+```
+
 External charting library integrations (CDN-loaded, accepting JSON specs):
 
 | Chart | Library | Streamlit Equivalent |
@@ -352,6 +374,9 @@ count.Set(42)
 val := sy.QueryParam("page")
 sy.SetQueryParam("page", "2")
 
+// Reset a widget to its default (e.g. clear a chart selection)
+sy.ResetWidget("key")
+
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
 lang := ctx.Locale
@@ -384,6 +409,25 @@ username := sy.LoginGate(func(user, pass string) bool {
 user := sy.User()  // map[string]string or nil
 sy.Login(map[string]string{"name": "admin", "role": "admin"})
 sy.Logout()
+```
+
+
+**OIDC single sign-on** lives in a separate module (`integrations/oidc`) so
+its dependency tree never touches the core. Wrap the app handler and every
+visitor signs in through Google / Microsoft Entra / Keycloak / Auth0 / any
+OIDC provider; `sy.User()` then returns the verified claims:
+
+```go
+import syoidc "github.com/HazelnutParadise/syralit/integrations/oidc"
+
+handler, _ := syoidc.Protect(sy.Handler(sy.Config{}, app), syoidc.Config{
+    Issuer:       "https://accounts.google.com",
+    ClientID:     os.Getenv("OIDC_CLIENT_ID"),
+    ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
+    RedirectURL:  "http://localhost:8600/auth/callback",
+    CookieSecret: []byte(os.Getenv("COOKIE_SECRET")),
+})
+http.ListenAndServe(":8600", handler)
 ```
 
 ### Caching
@@ -492,9 +536,22 @@ syi.Preview(dt, 5)                      // first N rows
 syi.EditableTable(dt, sy.Key("edit"))   // editable DataTable
 col := syi.ColumnSelect("Column", dt)   // column picker
 syi.Metrics(dt, col)                    // count, mean, min, max
-syi.BarChart(dt, "Category", "Value")   // chart from columns
-syi.LineChart(dt, "Month", "Revenue")
-syi.ScatterChart(dt, "X", "Y")
+syi.BarChart(dt, "Category", "Value")   // chart from columns ("Category" = axis labels)
+syi.LineChart(dt, "Month", "Revenue")   // all chart helpers accept sy.Option and return
+syi.ScatterChart(dt, "X", "Y")          // *sy.ChartSelection when sy.Selectable() is set
+syi.MultiLineChart(dt, "Month", nil)    // every numeric column as a series (st.line_chart(df))
+
+// Click-to-filter dashboards: GroupBy chart + selection + filter
+sel := syi.GroupedBarChart(dt, "Region", "Revenue", insyra.OpSum,
+    sy.Selectable(), sy.Key("by_region"))
+syi.Table(syi.FilterBySelection(dt, "Region", sel))  // nil selection = unfiltered
+sub := syi.FilterEquals(dt, "Region", "North")       // pure data helper
+edited := syi.EditableDataTable(dt, sy.Key("e"))     // edits → new *insyra.DataTable
+syi.DownloadCSV("Export", dt, "data.csv")            // CSV download button
+syi.RollingMeanChart(dt, "Month", "Revenue", 7)      // raw + rolling mean overlay
+syi.CumSumChart(dt, "Month", "Revenue")              // cumulative sum
+syi.PctChangeChart(dt, "Month", "Revenue", 1)        // percent change bars
+out := syi.AddFormulaColumn(dt, "ccl")               // interactive CCL formula column
 
 // DataList (single series) — the symmetric counterpart
 syi.List(dl)                            // single-column table
@@ -639,6 +696,10 @@ db_dsn = "postgres://..."
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
 ssl_key_file = "key.pem"
+
+[i18n]                    # localize built-in UI text
+connecting = "連線中…"
+loading = "載入中…"
 ```
 
 ### Runtime Configuration
@@ -739,6 +800,9 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 | [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
 | [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
+| [`insyra-interactive`](examples/insyra-interactive/) | Click-to-filter dashboard: selectable GroupBy chart drives an Insyra-filtered table, metrics, and deep-linkable URL state |
+| [`data-studio`](examples/data-studio/) | Full upload → explore workflow: file upload, column pickers, aggregate switch, selectable GroupBy chart, drill-down detail and statistics |
+| [`oidc-login`](examples/oidc-login/) | OIDC single sign-on via `integrations/oidc` (standalone module) |
 
 Run any example:
 

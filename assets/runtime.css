@@ -1345,8 +1345,9 @@ body {
   font-weight: 600;
   font-size: .82rem;
   color: var(--sy-muted);
-  text-transform: uppercase;
-  letter-spacing: .04em;
+  /* No text-transform: headers must show the column's true casing — data
+     tooling (e.g. CCL formulas) matches names case-sensitively. */
+  letter-spacing: .02em;
   background: var(--sy-df-header-bg, var(--sy-hover));
 }
 
@@ -2138,6 +2139,73 @@ body {
   flex-direction: column;
 }
 .sy-menu-button-dropdown.open { display: flex; }
+
+/* --- Monospace / formula inputs ------------------------------------------- */
+
+.sy-input-mono {
+  font-family: var(--sy-font-code);
+  font-size: .88rem;
+}
+
+/* Formula-bar look (sy.Formula): fx marker + code surface, clearly distinct
+   from ordinary text inputs. */
+.sy-formula-input {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0 .75rem;
+  border: 1px solid var(--sy-border);
+  border-left: 3px solid var(--sy-accent);
+  border-radius: var(--sy-radius);
+  background: var(--sy-sidebar-bg);
+  transition: border-color .2s, box-shadow .2s;
+}
+.sy-formula-input:focus-within {
+  border-color: var(--sy-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sy-accent) 18%, transparent);
+}
+.sy-formula-fx {
+  color: var(--sy-accent);
+  font-family: var(--sy-font-code);
+  font-style: italic;
+  font-weight: 700;
+  font-size: .9rem;
+  user-select: none;
+}
+.sy-formula-input .sy-formula-field {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+.sy-formula-input .sy-formula-field:focus {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+/* --- Chart range selection ------------------------------------------------ */
+
+.sy-chart-wrap { position: relative; }
+.sy-chart-range-overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--sy-accent) 15%, transparent);
+  border-left: 1px solid var(--sy-accent);
+  border-right: 1px solid var(--sy-accent);
+  pointer-events: none;
+}
+
+/* --- Dataframe column selection ------------------------------------------ */
+
+.sy-df-col-selected {
+  background: color-mix(in srgb, var(--sy-accent) 10%, transparent) !important;
+}
+th.sy-df-col-selected {
+  color: var(--sy-accent);
+}
 
 /* --- Multi-select free entry -------------------------------------------- */
 

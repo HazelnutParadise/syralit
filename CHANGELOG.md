@@ -6,6 +6,59 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-05
+
+Interactive-data release: click-to-filter and drag-range chart selections
+wired end-to-end into Insyra (GroupBy charts, filters, time-series helpers,
+CSV export, guarded CCL formula columns), OIDC single sign-on as an opt-in
+module, dataframe column selection, UI-string localization, and a fuller
+scaffold.
+
+### Added
+- **Interactive Insyra integration**: DataTable chart helpers now pass options
+  through, use the x column as axis labels, and return `*sy.ChartSelection`
+  with `sy.Selectable()`. New `MultiLineChart`/`MultiBarChart`/`MultiAreaChart`
+  (nil column list = every numeric column, like `st.line_chart(df)`),
+  `GroupedBarChart`/`GroupedPieChart` (Insyra GroupBy + Aggregate per group),
+  `FilterEquals`/`FilterBySelection` (pure data helpers for click-to-filter
+  dashboards), and `EditableDataTable` (DataEditor edits back as a new
+  `*insyra.DataTable`). New examples: `examples/insyra-interactive` and
+  `examples/data-studio` (the full upload → group → click-to-drill-down
+  workflow, with README screenshots).
+- **`sy.ResetWidget(key)`**: delete a widget's stored value (the counterpart
+  of Streamlit's `del st.session_state[key]`), e.g. to clear a chart selection.
+- **Chart range selection**: `sy.RangeSelectable()` on Line/Bar/Area charts —
+  drag across the chart to select an x-axis interval; `ChartSelection` gains
+  `Range`/`EndIndex`/`EndX`. The completing drag suppresses the Chart.js click
+  that would otherwise overwrite the range with a point selection.
+- **DataFrame column selection**: `sy.SelectionMode("single-column" /
+  "multi-column")` — header clicks select columns and return their indices.
+- **`[i18n]` config**: localize built-in UI strings (connecting/loading/menu
+  labels/upload errors), published to the front end as `window.__SY_I18N`.
+- **Insyra time-series & export helpers**: `syi.DownloadCSV`,
+  `syi.RollingMeanChart`, `syi.CumSumChart`, `syi.PctChangeChart`, and
+  `syi.AddFormulaColumn` (interactive CCL formula column — monospace `ƒx`
+  editor, columns addressable as `A`/`B` or `["Name"]`, timeout-guarded
+  evaluation since CCL can hang on malformed input). The editor shows a live
+  `A = Name` column legend (CCL names are case-sensitive), and the guarded
+  evaluator is exported as `syi.ComputeColumn` for custom formula UIs. New
+  `sy.Mono()` option renders TextInput/TextArea in the code font, and
+  `sy.Formula()` gives an input the formula-bar look (fx marker inside the
+  box, accent edge, code surface) — used by the CCL editor by default.
+- Table/dataframe headers no longer render uppercase: the true column casing
+  must be visible because data tooling (CCL formulas) matches names
+  case-sensitively.
+- `syralit new` scaffold: generated syralit.toml now documents the full
+  theme/server/secrets option surface.
+- UI test suite: added chart range-drag and Insyra click-to-filter coverage
+  (real mouse-drag CDP events).
+- **OIDC single sign-on** (`integrations/oidc`, separate module): wrap the app
+  handler with `syoidc.Protect` and visitors authenticate through any OIDC
+  provider (auth-code flow with state/nonce, HMAC-signed identity cookie);
+  `sy.User()` returns the verified claims. Built on the new core hook
+  `sy.SetUserResolver` (request context -> user, dependency-free). New
+  example: `examples/oidc-login` (standalone module).
+
 ## [0.6.0] - 2026-07-05
 
 Streamlit parity release: full theming (fonts, color palette, chart colors,

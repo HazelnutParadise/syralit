@@ -4,7 +4,28 @@
     {
       "name": "streamlit-parity",
       "runtimeExecutable": "go",
-      "runtimeArgs": ["run", "./examples/streamlit-parity"],
+      "runtimeArgs": [
+        "run",
+        "./examples/streamlit-parity"
+      ],
+      "port": 8600
+    },
+    {
+      "name": "insyra-interactive",
+      "runtimeExecutable": "go",
+      "runtimeArgs": [
+        "run",
+        "./examples/insyra-interactive"
+      ],
+      "port": 8600
+    },
+    {
+      "name": "data-studio",
+      "runtimeExecutable": "go",
+      "runtimeArgs": [
+        "run",
+        "./examples/data-studio"
+      ],
       "port": 8600
     }
   ]

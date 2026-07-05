@@ -31,6 +31,12 @@ type Config struct {
 	// (PEM files). Configurable via [server] ssl_cert_file / ssl_key_file.
 	SSLCertFile string
 	SSLKeyFile  string
+
+	// UIStrings overrides the framework's built-in UI text (localization).
+	// Known keys: "connecting", "loading", "add_new", "file_too_large",
+	// "menu", "menu_get_help", "menu_report_bug", "menu_about".
+	// Configurable via the [i18n] table in syralit.toml.
+	UIStrings map[string]string
 }
 
 // uploadLimitBytes is the resolved upload cap, set when the server starts and
@@ -89,6 +95,7 @@ func Run(cfg Config, fn func()) error {
 	cfg.applyDefaults()
 	uploadLimitBytes = cfg.uploadLimit()
 	resolvedConfig = cfg
+	uiStrings = cfg.UIStrings
 	s := &server{cfg: cfg, appFn: fn}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
@@ -109,6 +116,7 @@ func Handler(cfg Config, fn func()) http.Handler {
 	cfg.applyDefaults()
 	uploadLimitBytes = cfg.uploadLimit()
 	resolvedConfig = cfg
+	uiStrings = cfg.UIStrings
 	s := &server{cfg: cfg, appFn: fn}
 	return s.handler()
 }
@@ -252,6 +260,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	sess.queryParams = qp
 	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()
+	resolveSessionUser(sess)
 
 	sink := wsSink{c: c, ctx: ctx}
 

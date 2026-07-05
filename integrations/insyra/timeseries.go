@@ -88,6 +88,10 @@ func PctChangeChart(dt *insyra.DataTable, xCol, yCol string, periods int, opts .
 // or invalid. Columns are referenced by letter (A, B, ...) or by name in
 // brackets: ["Revenue"] - ["Cost"].
 //
+// key is the widget-identity prefix for the two inputs it renders (stored as
+// key+"_formula" and key+"_name"); give each AddFormulaColumn on a page a
+// distinct key.
+//
 // The evaluation runs in a goroutine guarded by a timeout: CCL can loop on
 // certain malformed inputs, and a UI must never hang on user input. On
 // timeout the goroutine is abandoned (it may leak until it finishes) and the

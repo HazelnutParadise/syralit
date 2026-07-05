@@ -724,8 +724,10 @@ syi.DownloadCSV("Export", dt, "data.csv")           // download button for a Dat
 syi.RollingMeanChart(dt, "Month", "Revenue", 7)     // raw + rolling mean overlay
 syi.CumSumChart(dt, "Month", "Revenue")             // cumulative sum line
 syi.PctChangeChart(dt, "Month", "Revenue", 1)       // percent change bars
-out := syi.AddFormulaColumn(dt, "ccl")              // interactive CCL formula column
-                                                    // (columns as A/B or ["Name"]; timeout-guarded)
+out := syi.AddFormulaColumn(dt, "ccl")              // interactive CCL formula column;
+                                                    // "ccl" = widget-key prefix (inputs stored as
+                                                    // ccl_formula / ccl_name — unique per page).
+                                                    // Columns as A/B or ["Name"]; timeout-guarded.
 // sy.ResetWidget("by_region") clears a stored selection (del st.session_state equivalent)
 
 // DataList (single series) — symmetric helpers

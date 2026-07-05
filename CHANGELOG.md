@@ -6,6 +6,15 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-05
+
+Streamlit parity release: full theming (fonts, color palette, chart colors,
+per-sidebar overrides), the remaining widget/display gaps (PDF viewer,
+multi-file upload, selectable charts, menu button, datetime input, bottom
+container), deployment features (sub-path mounting via `sy.Handler`, HTTPS,
+upload limits), a public headless testing API (`sy.AppTest`), and a
+browser-level UI test suite.
+
 ### Added
 - **Font theming** (Streamlit parity): `Theme` gains `Font`, `HeadingFont`,
   `CodeFont` (the keywords `"sans-serif"` / `"serif"` / `"monospace"` select

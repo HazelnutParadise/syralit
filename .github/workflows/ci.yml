@@ -20,3 +20,18 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test ./...
+
+  uitest:
+    # Browser-level UI tests (uitest/ is a separate module; drives the
+    # ubuntu runner's preinstalled Chrome headlessly).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: uitest/go.mod
+          cache: true
+          cache-dependency-path: uitest/go.sum
+      - name: UI tests
+        run: go test ./...
+        working-directory: uitest

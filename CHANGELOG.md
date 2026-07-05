@@ -42,7 +42,9 @@ scaffold.
   evaluation since CCL can hang on malformed input). The editor shows a live
   `A = Name` column legend (CCL names are case-sensitive), and the guarded
   evaluator is exported as `syi.ComputeColumn` for custom formula UIs. New
-  `sy.Mono()` option renders TextInput/TextArea in the code font.
+  `sy.Mono()` option renders TextInput/TextArea in the code font, and
+  `sy.Formula()` gives an input the formula-bar look (fx marker inside the
+  box, accent edge, code surface) — used by the CCL editor by default.
 - Table/dataframe headers no longer render uppercase: the true column casing
   must be visible because data tooling (CCL formulas) matches names
   case-sensitively.

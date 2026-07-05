@@ -528,6 +528,14 @@
     input.oninput = function () {
       if (!inForm(input)) send(node.id, input.value, false);
     };
+    if (p.formula) {
+      // Formula-bar look: fx marker inside the box, input borderless within.
+      var wrap = el("div", "sy-formula-input");
+      wrap.appendChild(el("span", "sy-formula-fx", "ƒx"));
+      input.classList.add("sy-formula-field");
+      wrap.appendChild(input);
+      return field(p.label, wrap, p.help, p.label_visibility);
+    }
     return field(p.label, input, p.help, p.label_visibility);
   }
 

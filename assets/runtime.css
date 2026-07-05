@@ -2147,6 +2147,44 @@ body {
   font-size: .88rem;
 }
 
+/* Formula-bar look (sy.Formula): fx marker + code surface, clearly distinct
+   from ordinary text inputs. */
+.sy-formula-input {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0 .75rem;
+  border: 1px solid var(--sy-border);
+  border-left: 3px solid var(--sy-accent);
+  border-radius: var(--sy-radius);
+  background: var(--sy-sidebar-bg);
+  transition: border-color .2s, box-shadow .2s;
+}
+.sy-formula-input:focus-within {
+  border-color: var(--sy-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sy-accent) 18%, transparent);
+}
+.sy-formula-fx {
+  color: var(--sy-accent);
+  font-family: var(--sy-font-code);
+  font-style: italic;
+  font-weight: 700;
+  font-size: .9rem;
+  user-select: none;
+}
+.sy-formula-input .sy-formula-field {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+.sy-formula-input .sy-formula-field:focus {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
 /* --- Chart range selection ------------------------------------------------ */
 
 .sy-chart-wrap { position: relative; }

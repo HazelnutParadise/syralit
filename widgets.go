@@ -70,6 +70,7 @@ type widgetOpts struct {
 	showTime          bool
 	rangeSelectable   bool
 	mono              bool
+	formula           bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -172,6 +173,11 @@ func ShowTime() Option { return func(o *widgetOpts) { o.showTime = true } }
 // Mono renders a TextInput / TextArea in the code font — for formulas,
 // identifiers, or anything typed character-by-character.
 func Mono() Option { return func(o *widgetOpts) { o.mono = true } }
+
+// Formula gives a TextInput the formula-bar look: an ƒx marker inside the
+// box, code font, and a code-block background — visually distinct from
+// ordinary text inputs. Implies Mono.
+func Formula() Option { return func(o *widgetOpts) { o.formula = true; o.mono = true } }
 
 // LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
 // lines instead of scrolling horizontally.
@@ -289,6 +295,9 @@ func TextInput(label string, opts ...Option) string {
 	}
 	if o.mono {
 		props["mono"] = true
+	}
+	if o.formula {
+		props["formula"] = true
 	}
 	applyCommonProps(props, o)
 	rc.add(&Node{ID: id, Type: "text_input", Props: props})

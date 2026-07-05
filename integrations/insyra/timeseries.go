@@ -101,8 +101,8 @@ func AddFormulaColumn(dt *insyra.DataTable, key string) *insyra.DataTable {
 		sy.Warning("nil DataTable")
 		return nil
 	}
-	formula := sy.TextInput("ƒx CCL formula (new column)",
-		sy.Key(key+"_formula"), sy.Mono(),
+	formula := sy.TextInput("CCL formula (new column)",
+		sy.Key(key+"_formula"), sy.Formula(),
 		sy.Placeholder(`["Revenue"] - ["Cost"]  ·  IF(["Revenue"] > 1000, 'high', 'low')`))
 	// Column names are matched case-sensitively by CCL, so show the exact
 	// letter=name mapping the formula can reference.

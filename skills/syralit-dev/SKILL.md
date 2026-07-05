@@ -115,6 +115,7 @@ sy.StartTime(2), sy.EndTime(5) // Audio/Video playback range (seconds)
 sy.Subtitles("/subs.vtt")     // Video subtitle track (WebVTT)
 sy.AcceptNewOptions()         // MultiSelect: allow typing new values
 sy.Mono()                     // TextInput/TextArea in the code font (formulas, IDs)
+sy.Formula()                  // formula-bar look: fx marker in the box, code surface (implies Mono)
 ```
 
 ### Display

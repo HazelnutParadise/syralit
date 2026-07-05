@@ -1,3 +1,50 @@
+/* --- Built-in fonts (SIL OFL) ------------------------------------------ */
+/* Variable fonts, latin subset. Served from the embedded assets FS; only
+   downloaded by the browser when a theme actually references the family. */
+
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-sans-3.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-sans-3-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-serif-4.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Serif 4";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-serif-4-italic.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-code-pro.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("fonts/source-code-pro-italic.woff2") format("woff2");
+}
+
 :root {
   --sy-bg: #ffffff;
   --sy-fg: #1f2329;
@@ -9,12 +56,41 @@
   --sy-primary: var(--sy-accent);
   --sy-primary-alpha: color-mix(in srgb, var(--sy-accent) 12%, transparent);
   --sy-radius: 12px;
-  --sy-info: #2563eb;
-  --sy-success: #16a34a;
-  --sy-warning: #d97706;
-  --sy-error: #dc2626;
+  /* Basic color palette (theme-overridable). The base color is used for
+     badges/accents, the -bg tint for alert surfaces, the -text shade for
+     text sitting on the tinted surface. */
+  --sy-color-red: #dc2626;
+  --sy-color-orange: #d97706;
+  --sy-color-yellow: #eab308;
+  --sy-color-green: #16a34a;
+  --sy-color-blue: #2563eb;
+  --sy-color-violet: #8b5cf6;
+  --sy-color-gray: #6b7280;
+  --sy-color-red-bg: color-mix(in srgb, var(--sy-color-red) 10%, var(--sy-bg));
+  --sy-color-orange-bg: color-mix(in srgb, var(--sy-color-orange) 10%, var(--sy-bg));
+  --sy-color-yellow-bg: color-mix(in srgb, var(--sy-color-yellow) 10%, var(--sy-bg));
+  --sy-color-green-bg: color-mix(in srgb, var(--sy-color-green) 10%, var(--sy-bg));
+  --sy-color-blue-bg: color-mix(in srgb, var(--sy-color-blue) 10%, var(--sy-bg));
+  --sy-color-violet-bg: color-mix(in srgb, var(--sy-color-violet) 10%, var(--sy-bg));
+  --sy-color-gray-bg: color-mix(in srgb, var(--sy-color-gray) 10%, var(--sy-bg));
+  --sy-color-red-text: var(--sy-color-red);
+  --sy-color-orange-text: var(--sy-color-orange);
+  --sy-color-yellow-text: var(--sy-color-yellow);
+  --sy-color-green-text: var(--sy-color-green);
+  --sy-color-blue-text: var(--sy-color-blue);
+  --sy-color-violet-text: var(--sy-color-violet);
+  --sy-color-gray-text: var(--sy-color-gray);
+  /* Status colors track the palette so palette overrides flow through. */
+  --sy-info: var(--sy-color-blue);
+  --sy-success: var(--sy-color-green);
+  --sy-warning: var(--sy-color-orange);
+  --sy-error: var(--sy-color-red);
+  --sy-link: var(--sy-accent);
   --sy-sidebar-bg: #f8f9fb;
   --sy-hover: rgba(0,0,0,.04);
+  --sy-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  --sy-font-heading: var(--sy-font);
+  --sy-font-code: ui-monospace, "Cascadia Code", "Consolas", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -51,7 +127,7 @@ body {
   margin: 0;
   background: var(--sy-bg);
   color: var(--sy-fg);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  font-family: var(--sy-font);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -97,6 +173,9 @@ body {
 
 #syralit-sidebar {
   display: none;
+  /* Re-applied here (not just inherited from body) so sidebar-scoped
+     --sy-font overrides take effect. */
+  font-family: var(--sy-font);
 }
 
 #syralit-root.has-sidebar #syralit-sidebar {
@@ -613,6 +692,12 @@ body {
 
 /* --- Typography -------------------------------------------------------- */
 
+.sy-title, .sy-header, .sy-subheader,
+.sy-markdown h1, .sy-markdown h2, .sy-markdown h3,
+.sy-markdown h4, .sy-markdown h5, .sy-markdown h6 {
+  font-family: var(--sy-font-heading);
+}
+
 .sy-title {
   font-size: 1.85rem;
   font-weight: 700;
@@ -645,6 +730,9 @@ body {
   padding: .25rem 1rem;
   color: var(--sy-muted);
 }
+.sy-markdown pre, .sy-markdown code {
+  font-family: var(--sy-font-code);
+}
 .sy-markdown pre {
   background: var(--sy-sidebar-bg);
   padding: .75rem 1rem;
@@ -662,7 +750,7 @@ body {
   background: none;
   padding: 0;
 }
-.sy-markdown a { color: var(--sy-accent); text-decoration: none; }
+.sy-markdown a { color: var(--sy-link); text-decoration: none; }
 .sy-markdown a:hover { text-decoration: underline; }
 .sy-markdown img { max-width: 100%; border-radius: var(--sy-radius); }
 .sy-markdown table {
@@ -693,24 +781,24 @@ body {
   border: 1px solid transparent;
 }
 .sy-status-info {
-  background: color-mix(in srgb, var(--sy-info) 10%, var(--sy-bg));
+  background: var(--sy-color-blue-bg);
   border-color: color-mix(in srgb, var(--sy-info) 22%, transparent);
-  color: var(--sy-info);
+  color: var(--sy-color-blue-text);
 }
 .sy-status-success {
-  background: color-mix(in srgb, var(--sy-success) 10%, var(--sy-bg));
+  background: var(--sy-color-green-bg);
   border-color: color-mix(in srgb, var(--sy-success) 22%, transparent);
-  color: var(--sy-success);
+  color: var(--sy-color-green-text);
 }
 .sy-status-warning {
-  background: color-mix(in srgb, var(--sy-warning) 10%, var(--sy-bg));
+  background: var(--sy-color-orange-bg);
   border-color: color-mix(in srgb, var(--sy-warning) 22%, transparent);
-  color: var(--sy-warning);
+  color: var(--sy-color-orange-text);
 }
 .sy-status-error {
-  background: color-mix(in srgb, var(--sy-error) 10%, var(--sy-bg));
+  background: var(--sy-color-red-bg);
   border-color: color-mix(in srgb, var(--sy-error) 22%, transparent);
-  color: var(--sy-error);
+  color: var(--sy-color-red-text);
 }
 
 /* --- Form Controls ----------------------------------------------------- */
@@ -773,7 +861,7 @@ body {
   justify-content: center;
   padding: .55rem 1.15rem;
   border: none;
-  border-radius: var(--sy-radius);
+  border-radius: var(--sy-btn-radius, var(--sy-radius));
   background: var(--sy-accent);
   color: #fff;
   font: inherit;
@@ -846,7 +934,7 @@ body {
 .sy-exception-body {
   margin: 0;
   padding: 0 .8rem .7rem;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -1057,7 +1145,7 @@ body {
 }
 
 .sy-color-hex {
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   color: var(--sy-muted);
 }
@@ -1250,7 +1338,7 @@ body {
 .sy-table th, .sy-table td {
   padding: .5rem .75rem;
   text-align: left;
-  border-bottom: 1px solid var(--sy-border);
+  border-bottom: 1px solid var(--sy-df-border, var(--sy-border));
 }
 
 .sy-table th {
@@ -1259,7 +1347,7 @@ body {
   color: var(--sy-muted);
   text-transform: uppercase;
   letter-spacing: .04em;
-  background: var(--sy-hover);
+  background: var(--sy-df-header-bg, var(--sy-hover));
 }
 
 .sy-table tbody tr:hover {
@@ -1317,7 +1405,7 @@ body {
   padding: .85rem 1rem;
   margin: 0;
   overflow-x: auto;
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.5;
 }
@@ -1347,7 +1435,7 @@ body {
   border: 1px solid var(--sy-border);
   border-right: none;
   border-radius: var(--sy-radius) 0 0 var(--sy-radius);
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.5;
   color: var(--sy-muted);
@@ -1368,7 +1456,7 @@ body {
   background: var(--sy-hover);
   border: 1px solid var(--sy-border);
   border-radius: var(--sy-radius);
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
   font-size: .85rem;
   line-height: 1.55;
   overflow-x: auto;
@@ -1458,7 +1546,7 @@ body {
 /* --- Display: Link ----------------------------------------------------- */
 
 .sy-link {
-  color: var(--sy-accent);
+  color: var(--sy-link);
   text-decoration: none;
   font-weight: 500;
 }
@@ -1704,7 +1792,7 @@ body {
 
 .sy-dataframe-wrap {
   margin: .75rem 0;
-  border: 1px solid var(--sy-border);
+  border: 1px solid var(--sy-df-border, var(--sy-border));
   border-radius: var(--sy-radius);
   overflow: hidden;
 }
@@ -1931,6 +2019,132 @@ body {
   animation: sy-fade-in .15s ease;
 }
 
+/* --- Collapsed sidebar (initial_sidebar_state) -------------------------- */
+
+#syralit-root.has-sidebar.sidebar-collapsed #syralit-sidebar {
+  display: none;
+}
+#syralit-root.has-sidebar.sidebar-collapsed .sy-sidebar-toggle {
+  display: flex;
+}
+
+/* --- App menu (ConfigMenuItems) ----------------------------------------- */
+
+.sy-app-menu {
+  position: fixed;
+  top: .9rem;
+  right: .9rem;
+  z-index: 300;
+}
+.sy-app-menu-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--sy-border);
+  border-radius: 50%;
+  background: var(--sy-bg);
+  color: var(--sy-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.sy-app-menu-btn:hover { color: var(--sy-fg); }
+.sy-app-menu-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40px;
+  min-width: 160px;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  padding: .35rem;
+  flex-direction: column;
+}
+.sy-app-menu-dropdown.open { display: flex; }
+.sy-app-menu-item {
+  display: block;
+  padding: .45rem .7rem;
+  border: none;
+  border-radius: calc(var(--sy-radius) - 4px);
+  background: none;
+  color: var(--sy-fg);
+  font: inherit;
+  font-size: .9rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sy-app-menu-item:hover { background: var(--sy-hover); }
+.sy-app-about-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(0,0,0,.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sy-app-about-box {
+  max-width: 480px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 12px 48px rgba(0,0,0,.25);
+}
+
+/* --- Bottom bar (sy.Bottom) ---------------------------------------------- */
+
+.sy-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 150;
+  background: var(--sy-bg);
+  border-top: 1px solid var(--sy-border);
+  padding: .75rem 2rem;
+}
+#syralit-root.has-sidebar .sy-bottom {
+  left: 260px;
+}
+@media (max-width: 768px) {
+  #syralit-root.has-sidebar .sy-bottom { left: 0; }
+}
+#syralit-root.has-sidebar.sidebar-collapsed .sy-bottom { left: 0; }
+.sy-bottom > * { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+/* --- Menu button (sy.MenuButton) ----------------------------------------- */
+
+.sy-menu-button-wrap {
+  position: relative;
+  display: inline-block;
+}
+.sy-menu-button-dropdown {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  min-width: 160px;
+  z-index: 250;
+  background: var(--sy-bg);
+  border: 1px solid var(--sy-border);
+  border-radius: var(--sy-radius);
+  box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  padding: .35rem;
+  flex-direction: column;
+}
+.sy-menu-button-dropdown.open { display: flex; }
+
+/* --- Multi-select free entry -------------------------------------------- */
+
+.sy-multi-new {
+  margin-top: .4rem;
+}
+
 /* --- Mobile Sidebar ---------------------------------------------------- */
 
 .sy-sidebar-toggle {
@@ -2019,7 +2233,7 @@ body {
   color: #f5f5f5;
   padding: 2.5rem;
   overflow: auto;
-  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-family: var(--sy-font-code);
 }
 .sy-dev-overlay-title {
   color: #ff6b6b;

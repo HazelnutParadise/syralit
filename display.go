@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"strings"
+	"time"
 )
 
 // Table renders a static data table.
@@ -154,9 +155,15 @@ func DataFrame(headers []string, rows [][]any, opts ...Option) []int {
 	if o.colConfig != nil {
 		props["column_config"] = colConfigProps(o.colConfig)
 	}
+	if len(o.columnOrder) > 0 {
+		props["column_order"] = o.columnOrder
+	}
 	if !o.selectable {
 		rc.add(&Node{Type: "dataframe", Props: props})
 		return nil
+	}
+	if o.selectionMode != "" {
+		props["selection_mode"] = o.selectionMode
 	}
 	id := rc.widgetID("dataframe", o.key)
 	var selected []int
@@ -411,6 +418,30 @@ func applyMediaProps(props map[string]any, o widgetOpts) {
 	if o.muted {
 		props["muted"] = true
 	}
+	if o.startTime > 0 {
+		props["start_time"] = o.startTime
+	}
+	if o.endTime > 0 {
+		props["end_time"] = o.endTime
+	}
+	if o.subtitles != "" {
+		props["subtitles"] = o.subtitles
+	}
+}
+
+// PDF embeds a PDF viewer (the browser's built-in renderer). src can be a URL,
+// a path served by the app (e.g. from public/), or a data URI. Use
+// sy.Height(800) to change the viewer height (default 600).
+func PDF(src string, opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{"src": src}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "pdf", Props: props})
 }
 
 // Echo displays source code alongside its output. Pass the code text and a
@@ -500,6 +531,12 @@ func Toast(text string, levelAndIcon ...string) {
 	if icon != "" {
 		msg["icon"] = icon
 	}
+	// Optional third element: display duration, e.g. "8s" (default 3s).
+	if len(levelAndIcon) > 2 && levelAndIcon[2] != "" {
+		if d, err := time.ParseDuration(levelAndIcon[2]); err == nil && d > 0 {
+			msg["duration"] = d.Milliseconds()
+		}
+	}
 	rc.sess.mu.Lock()
 	rc.sess.pendingToasts = append(rc.sess.pendingToasts, msg)
 	rc.sess.mu.Unlock()
@@ -530,6 +567,24 @@ func BackgroundColor(color string) PageConfigOption {
 // TextColor sets the primary text color.
 func TextColor(color string) PageConfigOption {
 	return func(c *pageConfig) { c.textColor = color }
+}
+
+// InitialSidebarState sets whether the sidebar starts "expanded" (default) or
+// "collapsed". A collapsed sidebar can be reopened with the floating toggle.
+func InitialSidebarState(state string) PageConfigOption {
+	return func(c *pageConfig) { c.sidebarState = state }
+}
+
+// ConfigMenuItems configures the app menu (⋮ button in the top-right corner).
+// helpURL adds a "Get help" link, bugURL a "Report a bug" link, and
+// aboutMarkdown fills an "About" dialog. Pass "" to omit any of them; the
+// menu only appears when at least one is set.
+func ConfigMenuItems(helpURL, bugURL, aboutMarkdown string) PageConfigOption {
+	return func(c *pageConfig) {
+		c.menuHelpURL = helpURL
+		c.menuBugURL = bugURL
+		c.menuAbout = aboutMarkdown
+	}
 }
 
 // SetPageConfig configures page-level settings such as the browser tab title

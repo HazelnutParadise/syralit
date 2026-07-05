@@ -22,6 +22,7 @@ type session struct {
 	pageConfig    *pageConfig
 	needsRerun    bool // set by SwitchPage to re-render after stop
 	queryParams   map[string]string
+	queryDirty    bool // SetQueryParam called; push the URL update to the client
 	reqCtx        RequestContext
 
 	fragmentFns     map[string]func() // fragment key -> registered function
@@ -38,10 +39,14 @@ type pageConfig struct {
 	title        string
 	icon         string
 	layout       string // "centered" or "wide"
+	sidebarState string // "expanded" (default) or "collapsed"
 	logo         string // sidebar logo URL
 	primaryColor string
 	bgColor      string
 	textColor    string
+	menuHelpURL  string // "Get help" link in the app menu
+	menuBugURL   string // "Report a bug" link in the app menu
+	menuAbout    string // markdown for the About dialog
 }
 
 func newSession(appFn func()) *session {
@@ -85,6 +90,18 @@ func (s *session) setWidget(id string, v any) {
 	s.mu.Lock()
 	s.widgets[id] = v
 	s.mu.Unlock()
+}
+
+// takeWidget returns and removes a widget value — one-shot semantics for
+// button-like widgets that carry a payload (e.g. MenuButton).
+func (s *session) takeWidget(id string) any {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.widgets[id]
+	if ok {
+		delete(s.widgets, id)
+	}
+	return v
 }
 
 func (s *session) pressButton(id string) {
@@ -242,6 +259,14 @@ func (s *session) clearFormWidgets(formID string) {
 			delete(s.widgets, wid)
 		}
 	}
+}
+
+func cloneStrMap(m map[string]string) map[string]string {
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
 
 func cloneAnyMap(m map[string]any) map[string]any {

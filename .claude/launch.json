@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "streamlit-parity",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./examples/streamlit-parity"],
+      "port": 8600
+    }
+  ]
+}

@@ -63,12 +63,14 @@ func main() { sy.App(nil) }
 | `Toggle(label, opts...)` | `bool` | Toggle switch |
 | `Radio(label, options, opts...)` | `string` | Radio group |
 | `SelectBox(label, options, opts...)` | `string` | Dropdown (auto-searchable at 20+ items) |
-| `MultiSelect(label, options, opts...)` | `[]string` | Multi-select |
+| `MultiSelect(label, options, opts...)` | `[]string` | Multi-select; `sy.AcceptNewOptions()` allows typing new values |
 | `DateInput(label, opts...)` | `string` | Date picker (YYYY-MM-DD) |
+| `DatetimeInput(label, opts...)` | `string` | Date+time picker (YYYY-MM-DD HH:MM) |
 | `DateRangeInput(label, opts...)` | `(string, string)` | Start/end date pickers |
 | `TimeInput(label, opts...)` | `string` | Time picker (HH:MM) |
 | `ColorPicker(label, opts...)` | `string` | Color hex |
 | `FileUploader(label, opts...)` | `*UploadedFile` | File upload (nil if empty) |
+| `FileUploaderMultiple(label, opts...)` | `[]*UploadedFile` | Multi-file upload (empty slice if none) |
 | `CameraInput(label, opts...)` | `string` | Webcam capture (base64 data URI) |
 | `AudioInput(label, opts...)` | `string` | Microphone recording (base64) |
 | `ChatInput(placeholder, opts...)` | `string` | Chat input box |
@@ -76,6 +78,7 @@ func main() { sy.App(nil) }
 | `SegmentedControl(label, options, opts...)` | `string` | Segmented buttons (`SegmentedControlMulti` → `[]string`) |
 | `Pills(label, options, opts...)` | `string` | Pill buttons (`PillsMulti` → `[]string`) |
 | `Pagination(totalPages, opts...)` | `int` | Page selector (1-based) |
+| `MenuButton(label, options, opts...)` | `string` | Dropdown button; returns clicked option for one rerun |
 | `DownloadButton(label, data, filename, opts...)` | — | File download |
 | `LinkButton(label, url, opts...)` | — | External link button |
 | `PageLink(label, page, opts...)` | — | Internal page link |
@@ -108,6 +111,9 @@ sy.UseContainerWidth()        // button spans its container
 sy.Border()                   // bordered Metric card (also container border)
 sy.MinDate("2026-01-01")      // DateInput/DateRangeInput lower bound
 sy.MaxDate("2026-12-31")      // DateInput/DateRangeInput upper bound
+sy.StartTime(2), sy.EndTime(5) // Audio/Video playback range (seconds)
+sy.Subtitles("/subs.vtt")     // Video subtitle track (WebVTT)
+sy.AcceptNewOptions()         // MultiSelect: allow typing new values
 ```
 
 ### Display
@@ -137,6 +143,7 @@ sy.WriteStream(id, func(w func(string)) { w("token") })  // streaming text
 sy.ArtifactCanvas(store, opts...)  // shared, animated agent-updatable canvas
 sy.Component(html, opts...)        // custom HTML/JS in iframe
 sy.IFrame(url, opts...)
+sy.PDF(src, sy.Height(600))        // embedded PDF viewer (browser renderer)
 ```
 
 ### Data
@@ -148,6 +155,8 @@ sy.Table(headers []string, rows [][]string)
 // selected indices into the original rows); sy.ColConfig renders cells by type.
 sy.DataFrame(headers []string, rows [][]any, opts...)
 selected := sy.DataFrame(headers, rows, sy.Selectable(), sy.Key("df")) // []int
+// sy.SelectionMode("single-row") limits selection to one row;
+// sy.ColumnOrder("B", "A") reorders/filters displayed columns.
 
 // Editable data editor — returns current rows
 edited := sy.DataEditor(headers, rows, opts...)
@@ -155,7 +164,8 @@ edited := sy.DataEditor(headers, rows, opts...)
 // Column configuration for DataEditor and DataFrame. Fields: Type, Options,
 // Width, Min, Max, Step, Format ("$%.2f"/"%d%%"), Label, Help, Color.
 // Types: text/number/checkbox/select/date/time/datetime/link/image/progress/
-// list, plus display-only bar_chart / line_chart (cell value = []float64).
+// list, json, plus display-only bar_chart / line_chart / area_chart
+// (cell value = []float64).
 sy.ColConfig(map[string]sy.ColumnConfig{
     "Score":  {Type: "number", Min: 0, Max: 100, Format: "%.1f"},
     "Pass":   {Type: "checkbox"},
@@ -171,6 +181,11 @@ sy.ColConfig(map[string]sy.ColumnConfig{
 ### Charts (all powered by Chart.js, interactive)
 ```go
 sy.LineChart(map[string][]float64{"Series": {1,2,3}}, opts...)
+// Line/Bar/Area/Scatter/Pie charts accept sy.Selectable() and then return a
+// *sy.ChartSelection (nil until the user clicks a point):
+if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
+    sy.Textf("%s at %s = %v", sel.Series, sel.X, sel.Value) // Series/Index/X/Value
+}
 sy.BarChart(data, opts...)
 sy.AreaChart(data, opts...)
 sy.PieChart(map[string]float64{"A": 30, "B": 70}, opts...)
@@ -213,6 +228,11 @@ tab("Tab1", func() { sy.Text("Content 1") })
 tab("Tab2", func() { sy.Text("Content 2") })
 
 // Sidebar
+sy.Space()                     // vertical whitespace (sy.Height(32) to size)
+sy.Bottom(func() {             // pin content to the bottom of the viewport
+    msg := sy.ChatInput("Message...")
+    _ = msg
+})
 sy.Sidebar(func() { sy.Text("Sidebar content") })
 
 // Expander
@@ -281,7 +301,7 @@ sy.Info("Note: ...")
 sy.Warning("Watch out")
 sy.Error("Failed")
 sy.Exception(err)               // styled monospace error box; nil renders nothing
-sy.Toast("Message", "success")  // "success", "info", "warning", "error"
+sy.Toast("Message", "success")  // level: "success"/"info"/"warning"/"error"; optional 3rd/4th args: icon, duration ("8s")
 sy.Balloons()
 sy.Snow()
 sy.Status("Loading data", "running", func() {
@@ -318,6 +338,7 @@ sy.Session().Get("key")
 // Query parameters
 val := sy.QueryParam("page")
 all := sy.QueryParams()
+sy.SetQueryParam("page", "2")  // updates the browser URL (deep linking); "" removes
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -482,10 +503,23 @@ sy.SetPageConfig(
     sy.PrimaryColor("#ff4b4b"),
     sy.BackgroundColor("#0e1117"),
     sy.TextColor("#fafafa"),
+    sy.InitialSidebarState("collapsed"),  // sidebar starts hidden; floating button reopens
+    sy.ConfigMenuItems(                   // top-right app menu (pass "" to omit an item)
+        "https://example.com/help",       // "Get help" link
+        "https://example.com/bugs",       // "Report a bug" link
+        "**My App** v1.0",                // About dialog (markdown)
+    ),
 )
 
 // Secrets (from syralit.toml [secrets] section)
 apiKey := sy.Secrets("api_key")
+
+// Read resolved config values ("title", "server.port", "theme.accent", ...)
+port := sy.GetOption("server.port")
+_ = port
+
+// Embed the app in an existing Go HTTP server (instead of sy.App)
+// mux.Handle("/dash/", http.StripPrefix("/dash", sy.Handler(sy.Config{}, myApp)))
 
 // Database connection
 db := sy.Connection("mydb")  // DSN from Secrets
@@ -532,11 +566,81 @@ host = "0.0.0.0"
 port = 8600
 
 [theme]
-primary_color = "#ff4b4b"
+mode = "system"        # "light" | "dark" | "system"
+accent = "#7C3AED"     # primary/accent color
+radius = "12px"        # base corner radius
+button_radius = "999px"             # button corners; defaults to radius
+background_color = "#ffffff"        # app background
+secondary_background_color = "#f8f9fb"  # widget/code/sidebar surface
+text_color = "#1f2329"
+link_color = "#2563eb"              # defaults to accent
+link_underline = true               # true: always, false: never, unset: on hover
+code_text_color = "#0f766e"
+code_background_color = "#f1f5f9"
+border_color = "#e5e7eb"
+dataframe_border_color = "#e5e7eb"      # defaults to border_color
+dataframe_header_background_color = "#f3f4f6"
+show_widget_border = true           # false hides input borders
+show_sidebar_border = true          # false removes the sidebar divider
+# Basic palette (used by badges, alerts, status colors). Each color also has
+# <name>_background_color (alert surface tint) and <name>_text_color:
+red_color = "#dc2626"               # also orange/yellow/blue/green/violet/gray
+blue_background_color = "#eff6ff"
+green_text_color = "#166534"
+# Chart palettes: categorical drives built-in chart series colors;
+# sequential/diverging are published to window.__SY_THEME for custom components.
+chart_categorical_colors = ["#7c3aed", "#2563eb", "#16a34a"]
+chart_sequential_colors = ["#f0fdfa", "#0f766e"]
+chart_diverging_colors = ["#dc2626", "#f8fafc", "#2563eb"]
+# Fonts: "sans-serif" | "serif" | "monospace" pick the built-in Source Sans 3 /
+# Source Serif 4 / Source Code Pro (embedded, no CDN); any other value is used
+# as a CSS font-family list.
+font = "sans-serif"
+heading_font = "serif"              # defaults to font
+code_font = "monospace"
+base_font_size = 16                 # root font size in px
+base_font_weight = 400
+heading_font_sizes = ["2rem", "1.5rem", "1.15rem"]  # h1..h6 (also Title/Header/Subheader)
+heading_font_weights = [700, 650, 600]
+code_font_size = "0.875rem"
+code_font_weight = 400
+
+[[theme.font_faces]]   # load custom fonts (otf/ttf/woff/woff2) — repeatable
+family = "Inter"
+url = "/fonts/inter.woff2"          # public/ path or absolute URL
+weight = "100 900"                  # optional
+style = "normal"                    # optional: normal | italic | oblique
+unicode_range = "U+0-10FFFF"        # optional
+
+[theme.sidebar]        # sidebar-only overrides — supports every color/font/radius
+font = "sans-serif"    # key above (inherits the main theme when unset)
+accent = "#f59e0b"
 
 [secrets]
 api_key = "sk-..."
 db_dsn = "postgres://..."
+
+[server]
+max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
+ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
+ssl_key_file = "key.pem"
+```
+
+### Headless App Testing (sy.AppTest)
+```go
+at := sy.NewAppTest(func() {
+    name := sy.TextInput("Name", sy.Key("name"))
+    if sy.Button("Greet", sy.Key("greet")) {
+        sy.Success("Hello, " + name)
+    }
+})
+at.Run()
+at.SetValue("name", "Ada")   // set widget value by sy.Key
+at.Click("greet")            // or at.ClickLabel("Greet")
+at.Run()
+at.Texts("status")           // -> ["Hello, Ada"]
+at.FindAll("title")          // nodes by type; at.FindByLabel(type, label)
+at.SwitchToPage("Settings")  // multi-page apps
 ```
 
 ## Patterns

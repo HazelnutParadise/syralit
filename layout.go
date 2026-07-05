@@ -101,6 +101,32 @@ func Sidebar(fn func()) {
 	rc.stack = rc.stack[:len(rc.stack)-1]
 }
 
+// Space inserts vertical whitespace (default 16px). Use sy.Height(px) for a
+// custom amount or sy.Width(px) for horizontal spacing inside columns.
+func Space(opts ...Option) {
+	o := applyOpts(opts)
+	props := map[string]any{}
+	if o.height > 0 {
+		props["height"] = o.height
+	}
+	if o.width > 0 {
+		props["width"] = o.width
+	}
+	current().add(&Node{Type: "space", Props: props})
+}
+
+// Bottom pins its content to the bottom of the viewport (Streamlit's
+// st.bottom) — typically a ChatInput in chat layouts. Content renders inside
+// a fixed bar aligned with the main area.
+func Bottom(fn func()) {
+	rc := current()
+	node := &Node{Type: "bottom"}
+	rc.add(node)
+	rc.stack = append(rc.stack, node)
+	fn()
+	rc.stack = rc.stack[:len(rc.stack)-1]
+}
+
 // Container groups widgets into a plain wrapper (useful for conditional blocks).
 // Use Border() to render a visible border and Height(px) for a scrollable area.
 func Container(fn func(), opts ...Option) {

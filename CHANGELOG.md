@@ -6,6 +6,91 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-05
+
+Streamlit parity release: full theming (fonts, color palette, chart colors,
+per-sidebar overrides), the remaining widget/display gaps (PDF viewer,
+multi-file upload, selectable charts, menu button, datetime input, bottom
+container), deployment features (sub-path mounting via `sy.Handler`, HTTPS,
+upload limits), a public headless testing API (`sy.AppTest`), and a
+browser-level UI test suite.
+
+### Added
+- **Font theming** (Streamlit parity): `Theme` gains `Font`, `HeadingFont`,
+  `CodeFont` (the keywords `"sans-serif"` / `"serif"` / `"monospace"` select
+  the embedded Source Sans 3 / Source Serif 4 / Source Code Pro — served
+  locally, no CDN; any other value is a CSS font-family list),
+  `BaseFontSize`, `BaseFontWeight`, `HeadingFontSizes`, `HeadingFontWeights`,
+  `CodeFontSize`, `CodeFontWeight`, custom `FontFaces` (`@font-face` from
+  OTF/TTF/WOFF/WOFF2 files or URLs) and sidebar-scoped overrides via
+  `Theme.Sidebar`. All configurable from `syralit.toml` (`[theme]`,
+  `[[theme.font_faces]]`, `[theme.sidebar]`). New example:
+  `examples/theme-fonts`.
+- **Full theme parity with Streamlit**: `Theme` (via the embedded `ThemeStyle`)
+  now also supports `BackgroundColor`, `SecondaryBackgroundColor`, `TextColor`,
+  `LinkColor`, `LinkUnderline`, `CodeTextColor`, `CodeBackgroundColor`,
+  `BorderColor`, `DataframeBorderColor`, `DataframeHeaderBackgroundColor`,
+  `ButtonRadius`, `ShowWidgetBorder`, `ShowSidebarBorder`, the basic color
+  palette (`red/orange/yellow/blue/green/violet/gray` base + background + text
+  variants, wired to badges, alerts and status colors via new `--sy-color-*`
+  CSS variables) and chart palettes (`ChartCategoricalColors` drives the
+  built-in Chart.js series colors; sequential/diverging are published on
+  `window.__SY_THEME`). Every color/font/radius option can be overridden for
+  the sidebar only via `Theme.Sidebar` / `[theme.sidebar]`.
+- **`sy.PDF(src)`**: embedded PDF viewer (browser renderer); `sy.Height`/`sy.Width`.
+- **`sy.FileUploaderMultiple`**: multi-file upload returning `[]*UploadedFile`.
+- **`[server] max_upload_size_mb`** (and `Config.MaxUploadSizeMB`): configurable
+  upload cap (default 10 MB), enforced in the browser and in the socket read limit.
+- **`sy.InitialSidebarState("collapsed")`**: sidebar starts hidden; the floating
+  toggle reopens it. Also fixes the mobile sidebar toggle, which was appended
+  outside `#syralit-root` and never matched its show/hide CSS.
+- **`sy.ConfigMenuItems(helpURL, bugURL, aboutMarkdown)`**: top-right app menu
+  with "Get help" / "Report a bug" links and an About dialog.
+- **`sy.AcceptNewOptions()`**: MultiSelect free entry (type new values + Enter).
+- **`sy.StartTime` / `sy.EndTime` / `sy.Subtitles`**: Audio/Video playback
+  clipping (media fragments) and WebVTT subtitle tracks.
+- **Toast duration**: optional 4th argument, e.g. `sy.Toast(msg, "success", "⏱", "8s")`.
+- New example: `examples/streamlit-parity`.
+- **`sy.Space()`**: vertical/horizontal whitespace element.
+- **`sy.Bottom(fn)`**: viewport-bottom pinned container (chat-input layouts);
+  the main area gains matching padding automatically.
+- **`sy.DatetimeInput`**: combined date+time picker returning "YYYY-MM-DD HH:MM".
+- **`sy.MenuButton(label, options)`**: dropdown button returning the clicked
+  option for exactly one rerun.
+- **`sy.Handler(cfg, fn)`**: mount a Syralit app as an `http.Handler` inside an
+  existing Go server.
+- **`sy.GetOption(key)`**: read resolved config values at runtime.
+- **`sy.AppTest`**: headless app-testing harness (`NewAppTest`, `Run`,
+  `SetValue`, `Click`/`ClickLabel`, `FindAll`/`FindByLabel`/`Texts`,
+  `SwitchToPage`) — the Go counterpart of Streamlit's `st.testing.v1.AppTest`.
+- **Selectable charts**: `LineChart`/`BarChart`/`AreaChart`/`ScatterChart`/
+  `PieChart` accept `sy.Selectable()` and return a `*ChartSelection`
+  (Series/Index/X/Value) when the user clicks a data point.
+- **`sy.SetQueryParam`**: writable URL query parameters — the browser address
+  bar updates via history.replaceState, making app state shareable.
+- **Sub-path mounting fixed**: assets, WebSocket, SSE and message endpoints now
+  resolve against the mount prefix, so `sy.Handler` works behind
+  `http.StripPrefix` (e.g. `/dashboard/`).
+- **DataFrame**: `sy.ColumnOrder(...)` reorders/filters columns;
+  `sy.SelectionMode("single-row")` limits row selection.
+- **Column config**: new `area_chart` and `json` cell types.
+- **HTTPS**: `[server] ssl_cert_file` / `ssl_key_file` (and
+  `Config.SSLCertFile/SSLKeyFile`) serve the app over TLS.
+- **`sy.ShowTime()`** on `SpinnerWith`: shows elapsed time next to the spinner.
+- **Browser UI test suite** (`uitest/`, separate Go module): headless-Chrome
+  tests covering widget round-trips, sidebar collapse, toast visibility and
+  duration, canvas chart click selection, multi-file upload, and sub-path
+  mounting.
+
+### Fixed
+- Toasts never became visible in hidden/backgrounded tabs (the show class was
+  added via requestAnimationFrame, which does not fire there).
+
+### Fixed
+- README and skill docs showed nonexistent `[theme]` keys (`primary_color`,
+  `background_color`, `text_color`); corrected to the real `mode` / `accent` /
+  `radius` keys.
+
 ## [0.5.0] - 2026-07-03
 
 Insyra DSL brings dynamic, safe, server-side computation to Syralit widgets and

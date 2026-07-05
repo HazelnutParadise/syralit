@@ -11,6 +11,7 @@
 // {type:"page_change", page} and the server reruns the target page.
 
 (function () {
+  var SY_BASE = window.__SY_BASE || "";
   "use strict";
 
   var root = document.getElementById("syralit-app");
@@ -38,11 +39,13 @@
           renderSidebar(msg.pages || [], msg.active_page || "", msg.sidebar || []);
         }
         if (msg.page_config) applyPageConfig(msg.page_config);
+        if (msg.set_query) applyQueryParams(msg.set_query);
         render(msg.nodes || []);
         if (msg.toasts) msg.toasts.forEach(handleToast);
         break;
       case "fragment_patch":
         patchFragment(msg.fragment_key, msg.nodes || []);
+        if (msg.set_query) applyQueryParams(msg.set_query);
         if (msg.toasts) msg.toasts.forEach(handleToast);
         break;
       case "stream_append":
@@ -65,7 +68,7 @@
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
     var qs = location.search || "";
     try {
-      ws = new WebSocket(proto + "//" + location.host + "/_syralit/ws" + qs);
+      ws = new WebSocket(proto + "//" + location.host + SY_BASE + "/_syralit/ws" + qs);
     } catch (e) {
       startSSE();
       return;
@@ -86,7 +89,7 @@
     if (usingSSE) return;
     usingSSE = true;
     ws = null;
-    var es = new EventSource("/_syralit/sse" + (location.search || ""));
+    var es = new EventSource(SY_BASE + "/_syralit/sse" + (location.search || ""));
     es.addEventListener("session", function (e) { sessionId = e.data; });
     es.onmessage = function (e) { handleServerMsg(JSON.parse(e.data)); };
     // EventSource auto-reconnects; the server starts a fresh session on
@@ -99,7 +102,7 @@
       ws.send(JSON.stringify(obj));
     } else if (usingSSE) {
       obj.session_id = sessionId;
-      fetch("/_syralit/msg", {
+      fetch(SY_BASE + "/_syralit/msg", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(obj),
@@ -206,8 +209,17 @@
     btn.id = "syralit-sidebar-toggle";
     btn.className = "sy-sidebar-toggle";
     btn.textContent = "☰";
-    btn.onclick = function () { layoutRoot.classList.toggle("sidebar-open"); };
-    document.body.appendChild(btn);
+    btn.onclick = function () {
+      if (layoutRoot.classList.contains("sidebar-collapsed")) {
+        layoutRoot.classList.remove("sidebar-collapsed");
+        return;
+      }
+      layoutRoot.classList.toggle("sidebar-open");
+    };
+    // Must live inside #syralit-root: the CSS that shows/hides it keys off
+    // the root's has-sidebar / sidebar-collapsed classes with a descendant
+    // selector. (position:fixed, so layout is unaffected.)
+    layoutRoot.appendChild(btn);
   }
 
   function ensureBackdrop() {
@@ -391,6 +403,7 @@
       case "radio":         return radio(node, p);
       case "multi_select":  return multiSelect(node, p);
       case "date_input":    return dateInput(node, p);
+      case "datetime_input": return datetimeInput(node, p);
       case "date_range_input": return dateRangeInput(node, p);
       case "time_input":    return timeInput(node, p);
       case "color_picker":  return colorPicker(node, p);
@@ -403,6 +416,8 @@
       case "tabs":      return tabs(node, p);
       case "tab_panel": return tabPanel(node, p);
       case "container": return container(node);
+      case "space":     return spaceEl(node, p);
+      case "bottom":    return bottomEl(node);
       case "artifact_canvas": return artifactCanvasEl(node, p);
       case "fragment":  return fragmentEl(node);
       case "form":      return formContainer(node);
@@ -428,6 +443,8 @@
       case "html":       return htmlEl(node, p);
       case "component":  return componentEl(node, p);
       case "iframe":     return iframeEl(node, p);
+      case "pdf":        return pdfEl(node, p);
+      case "menu_button": return menuButtonEl(node, p);
       case "latex":      return latexEl(node, p);
       case "chat_message": return chatMessageEl(node, p);
       case "chat_input":   return chatInputEl(node, p);
@@ -818,6 +835,21 @@
       };
       wrap.appendChild(sel);
     }
+    if (p.accept_new && !p.disabled && !atLimit) {
+      var newInput = document.createElement("input");
+      newInput.type = "text";
+      newInput.className = "sy-input sy-multi-new";
+      newInput.placeholder = "Add new…";
+      newInput.onkeydown = function (ev) {
+        if (ev.key !== "Enter") return;
+        var v = newInput.value.trim();
+        if (!v || vals.indexOf(v) >= 0) return;
+        newInput.value = "";
+        var next = vals.concat([v]);
+        if (!inForm(wrap)) send(node.id, next, false);
+      };
+      wrap.appendChild(newInput);
+    }
 
     return field(p.label, wrap, p.help);
   }
@@ -825,6 +857,21 @@
   function dateInput(node, p) {
     var input = document.createElement("input");
     input.type = "date";
+    input.className = "sy-input";
+    input.dataset.id = node.id;
+    input.value = p.value || "";
+    if (p.min) input.min = p.min;
+    if (p.max) input.max = p.max;
+    if (p.disabled) input.disabled = true;
+    input.onchange = function () {
+      if (!inForm(input)) send(node.id, input.value, false);
+    };
+    return field(p.label, input, p.help);
+  }
+
+  function datetimeInput(node, p) {
+    var input = document.createElement("input");
+    input.type = "datetime-local";
     input.className = "sy-input";
     input.dataset.id = node.id;
     input.value = p.value || "";
@@ -1107,6 +1154,27 @@
     if (p.height) { div.style.maxHeight = p.height + "px"; div.style.overflowY = "auto"; }
     childNodes(node).forEach(function (c) { div.appendChild(c); });
     return div;
+  }
+
+  function spaceEl(node, p) {
+    var div = el("div", "sy-space");
+    div.style.height = (p.height || 16) + "px";
+    if (p.width) { div.style.display = "inline-block"; div.style.width = p.width + "px"; }
+    return div;
+  }
+
+  function bottomEl(node) {
+    var bar = el("div", "sy-bottom");
+    childNodes(node).forEach(function (c) { bar.appendChild(c); });
+    // Reserve space in the main area so content never hides behind the bar.
+    // Deferred: the node is appended to the DOM after this function returns.
+    setTimeout(function () {
+      var app = document.getElementById("syralit-app");
+      if (app && bar.isConnected && bar.offsetHeight) {
+        app.style.paddingBottom = (bar.offsetHeight + 24) + "px";
+      }
+    }, 50);
+    return bar;
   }
 
   function artifactCanvasEl(node, p) {
@@ -1691,9 +1759,17 @@
     var c = (color || "var(--sy-accent)");
     function x(i) { return pad + (nums.length === 1 ? (w - 2 * pad) / 2 : i * (w - 2 * pad) / (nums.length - 1)); }
     function y(v) { return h - pad - (v - min) / range * (h - 2 * pad); }
-    if (type === "line_chart") {
+    if (type === "line_chart" || type === "area_chart") {
+      var pts = nums.map(function (v, i) { return x(i) + "," + y(v); }).join(" ");
+      if (type === "area_chart") {
+        var pg = document.createElementNS(ns, "polygon");
+        pg.setAttribute("points", x(0) + "," + (h - pad) + " " + pts + " " + x(nums.length - 1) + "," + (h - pad));
+        pg.setAttribute("fill", c);
+        pg.setAttribute("opacity", "0.25");
+        svg.appendChild(pg);
+      }
       var pl = document.createElementNS(ns, "polyline");
-      pl.setAttribute("points", nums.map(function (v, i) { return x(i) + "," + y(v); }).join(" "));
+      pl.setAttribute("points", pts);
       pl.setAttribute("fill", "none");
       pl.setAttribute("stroke", c);
       pl.setAttribute("stroke-width", "1.5");
@@ -1743,8 +1819,14 @@
       if (cfg.format) { var lbl = el("span", "sy-progress-label", applyNumFormat(cfg.format, cell)); td.appendChild(lbl); }
     } else if (colType === "list") {
       td.textContent = Array.isArray(cell) ? cell.join(", ") : String(cell == null ? "" : cell);
-    } else if (colType === "bar_chart" || colType === "line_chart") {
+    } else if (colType === "bar_chart" || colType === "line_chart" || colType === "area_chart") {
       td.appendChild(sparkline(cell, colType, cfg.color));
+    } else if (colType === "json") {
+      var codeEl = document.createElement("code");
+      codeEl.className = "sy-json-cell";
+      try { codeEl.textContent = typeof cell === "string" ? cell : JSON.stringify(cell); }
+      catch (e) { codeEl.textContent = String(cell); }
+      td.appendChild(codeEl);
     } else if (colType === "number" && cfg.format) {
       td.textContent = applyNumFormat(cfg.format, cell);
     } else {
@@ -1755,6 +1837,14 @@
   function dataframeEl(node, p) {
     var headers = p.headers || [];
     var colCfg = p.column_config || {};
+    // column_order reorders and filters columns; colIdx maps display position
+    // back to the original column index.
+    var colIdx = headers.map(function (_, i) { return i; });
+    if (p.column_order && p.column_order.length) {
+      colIdx = p.column_order.map(function (h) { return headers.indexOf(h); })
+        .filter(function (i) { return i >= 0; });
+    }
+    var singleRow = p.selection_mode === "single-row";
     var selectable = !!p.selectable;
     var selected = {};
     (p.selected || []).forEach(function (i) { selected[i] = true; });
@@ -1778,7 +1868,8 @@
       var thead = document.createElement("thead");
       var tr = document.createElement("tr");
       if (selectable) tr.appendChild(el("th", "sy-df-header sy-df-select"));
-      headers.forEach(function (h, ci) {
+      colIdx.forEach(function (ci) {
+        var h = headers[ci];
         var hcfg = colCfg[h] || {};
         var label = hcfg.label || h;
         var th = el("th", "sy-df-header", label + (ci === sortCol ? (sortAsc ? " ▲" : " ▼") : ""));
@@ -1811,6 +1902,16 @@
           cb.type = "checkbox";
           cb.checked = !!selected[oi];
           function toggle(checked) {
+            if (singleRow && checked) {
+              selected = {};
+              // Clear every other row's visual state on next rebuild; do it
+              // live for the current table too.
+              [].forEach.call(tbody.querySelectorAll("tr"), function (row) {
+                row.classList.remove("sy-df-row-selected");
+                var box = row.querySelector(".sy-df-select input");
+                if (box) box.checked = false;
+              });
+            }
             selected[oi] = checked;
             cb.checked = checked;
             tr2.classList.toggle("sy-df-row-selected", checked);
@@ -1822,7 +1923,8 @@
           tr2.appendChild(selTd);
           tr2.onclick = function () { toggle(!cb.checked); };
         }
-        (row || []).forEach(function (cell, ci) {
+        colIdx.forEach(function (ci) {
+          var cell = (row || [])[ci];
           var td = document.createElement("td");
           var cfg = colCfg[headers[ci]] || {};
           renderReadonlyCell(td, cell, cfg.type || "text", cfg);
@@ -2219,12 +2321,57 @@
     return iframe;
   }
 
+  function pdfEl(node, p) {
+    var iframe = document.createElement("iframe");
+    iframe.className = "sy-pdf";
+    iframe.style.border = "1px solid var(--sy-border)";
+    iframe.style.borderRadius = "var(--sy-radius)";
+    iframe.style.width = (p.width ? p.width + "px" : "100%");
+    iframe.style.height = (p.height || 600) + "px";
+    iframe.src = p.src || "";
+    return iframe;
+  }
+
+  function menuButtonEl(node, p) {
+    var wrap = el("div", "sy-menu-button-wrap");
+    var btn = document.createElement("button");
+    btn.className = "sy-button sy-menu-button";
+    btn.textContent = (p.label || "") + " ▾";
+    if (p.disabled) btn.disabled = true;
+    var dd = el("div", "sy-menu-button-dropdown");
+    (p.options || []).forEach(function (opt) {
+      var item = document.createElement("button");
+      item.className = "sy-app-menu-item";
+      item.textContent = opt;
+      item.onclick = function (ev) {
+        ev.stopPropagation();
+        dd.classList.remove("open");
+        send(node.id, opt, false);
+      };
+      dd.appendChild(item);
+    });
+    btn.onclick = function (ev) { ev.stopPropagation(); dd.classList.toggle("open"); };
+    document.addEventListener("click", function () { dd.classList.remove("open"); });
+    wrap.appendChild(btn);
+    wrap.appendChild(dd);
+    return wrap;
+  }
+
   // --- Audio / Video -----------------------------------------------------
+
+  function mediaSrc(p) {
+    // Clip playback with a media fragment: #t=start[,end]
+    var src = p.src || "";
+    if (p.start_time || p.end_time) {
+      src += "#t=" + (p.start_time || 0) + (p.end_time ? "," + p.end_time : "");
+    }
+    return src;
+  }
 
   function audioEl(node, p) {
     var audio = document.createElement("audio");
     audio.className = "sy-audio";
-    audio.src = p.src;
+    audio.src = mediaSrc(p);
     audio.controls = true;
     if (p.autoplay) audio.autoplay = true;
     if (p.loop) audio.loop = true;
@@ -2236,7 +2383,15 @@
     var wrap = el("div", "sy-video-wrap");
     var video = document.createElement("video");
     video.className = "sy-video";
-    video.src = p.src;
+    video.src = mediaSrc(p);
+    if (p.subtitles) {
+      var track = document.createElement("track");
+      track.kind = "subtitles";
+      track.src = p.subtitles;
+      track.default = true;
+      video.appendChild(track);
+      video.crossOrigin = "anonymous";
+    }
     video.controls = true;
     if (p.width) video.style.maxWidth = p.width + "px";
     if (p.autoplay) video.autoplay = true;
@@ -2262,12 +2417,15 @@
       document.body.appendChild(container);
     }
     container.appendChild(toast);
-    requestAnimationFrame(function () { toast.classList.add("sy-toast-show"); });
+    // setTimeout, not requestAnimationFrame: rAF doesn't fire in hidden or
+    // backgrounded tabs, which would leave the toast permanently invisible
+    // while its removal timer still runs.
+    setTimeout(function () { toast.classList.add("sy-toast-show"); }, 20);
     setTimeout(function () {
       toast.classList.remove("sy-toast-show");
       toast.classList.add("sy-toast-hide");
       setTimeout(function () { toast.remove(); }, 300);
-    }, 3000);
+    }, t.duration || 3000);
   }
 
   function showBalloons() {
@@ -2308,10 +2466,87 @@
     }
   }
 
+  // --- App menu (SetPageConfig ConfigMenuItems) ---------------------------
+
+  function ensureAppMenu(cfg) {
+    var has = cfg.menu_help_url || cfg.menu_bug_url || cfg.menu_about;
+    var existing = document.getElementById("syralit-app-menu");
+    if (!has) { if (existing) existing.remove(); return; }
+    var sig = JSON.stringify([cfg.menu_help_url || "", cfg.menu_bug_url || "", cfg.menu_about || ""]);
+    if (existing) {
+      if (existing.dataset.sig === sig) return; // unchanged — keep open state
+      existing.remove();
+    }
+
+    var wrap = document.createElement("div");
+    wrap.id = "syralit-app-menu";
+    wrap.className = "sy-app-menu";
+    var btn = document.createElement("button");
+    btn.className = "sy-app-menu-btn";
+    btn.textContent = "⋮";
+    btn.title = "Menu";
+    var dd = document.createElement("div");
+    dd.className = "sy-app-menu-dropdown";
+
+    function addLink(label, url) {
+      var a = document.createElement("a");
+      a.className = "sy-app-menu-item";
+      a.textContent = label;
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      dd.appendChild(a);
+    }
+    if (cfg.menu_help_url) addLink("Get help", cfg.menu_help_url);
+    if (cfg.menu_bug_url) addLink("Report a bug", cfg.menu_bug_url);
+    if (cfg.menu_about) {
+      var about = document.createElement("button");
+      about.className = "sy-app-menu-item";
+      about.textContent = "About";
+      about.onclick = function () {
+        dd.classList.remove("open");
+        var overlay = document.createElement("div");
+        overlay.className = "sy-app-about-overlay";
+        var box = document.createElement("div");
+        box.className = "sy-app-about-box sy-markdown";
+        box.innerHTML = cfg.menu_about; // server-rendered markdown HTML
+        overlay.onclick = function (ev) { if (ev.target === overlay) overlay.remove(); };
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+      };
+      dd.appendChild(about);
+    }
+
+    btn.onclick = function (ev) { ev.stopPropagation(); dd.classList.toggle("open"); };
+    document.addEventListener("click", function () { dd.classList.remove("open"); });
+    wrap.dataset.sig = sig;
+    wrap.appendChild(btn);
+    wrap.appendChild(dd);
+    document.body.appendChild(wrap);
+  }
+
   // --- Page Config -------------------------------------------------------
+
+  function applyQueryParams(params) {
+    var qs = Object.keys(params).map(function (k) {
+      return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+    }).join("&");
+    var url = location.pathname + (qs ? "?" + qs : "") + location.hash;
+    try { history.replaceState(null, "", url); } catch (e) {}
+  }
+
+  var sidebarStateApplied = false;
 
   function applyPageConfig(cfg) {
     if (cfg.title) document.title = cfg.title;
+    if (cfg.sidebar_state === "collapsed" && !sidebarStateApplied) {
+      sidebarStateApplied = true;
+      layoutRoot.classList.add("sidebar-collapsed");
+      ensureMobileToggle();
+    } else if (cfg.sidebar_state) {
+      sidebarStateApplied = true;
+    }
+    ensureAppMenu(cfg);
     if (cfg.icon) setFavicon(cfg.icon);
     if (cfg.layout === "wide") {
       root.style.maxWidth = "100%";
@@ -2509,8 +2744,10 @@
 
   function badgeEl(node, p) {
     var colorMap = {
-      blue: "#1f77b4", green: "#2ca02c", red: "#d62728",
-      orange: "#ff7f0e", gray: "#6b7280", violet: "#9467bd"
+      blue: "var(--sy-color-blue)", green: "var(--sy-color-green)",
+      red: "var(--sy-color-red)", orange: "var(--sy-color-orange)",
+      yellow: "var(--sy-color-yellow)", gray: "var(--sy-color-gray)",
+      violet: "var(--sy-color-violet)"
     };
     var c = p.color || "blue";
     var bg = colorMap[c] || c;
@@ -2551,7 +2788,16 @@
     var wrap = el("div", "sy-spinner-wrap");
     var dot = el("div", "sy-spinner");
     wrap.appendChild(dot);
-    wrap.appendChild(el("span", "sy-spinner-text", p.text || "Loading…"));
+    var label = p.text || "Loading…";
+    var txt = el("span", "sy-spinner-text", label);
+    wrap.appendChild(txt);
+    if (p.show_time) {
+      var start = Date.now();
+      var timer = setInterval(function () {
+        if (!txt.isConnected) { clearInterval(timer); return; }
+        txt.textContent = label + " (" + ((Date.now() - start) / 1000).toFixed(1) + "s)";
+      }, 100);
+    }
     return wrap;
   }
 
@@ -2585,6 +2831,12 @@
 
   function fileUploader(node, p) {
     var wrap = el("div", "sy-file-uploader-wrap");
+    var maxSize = p.max_size || 10 * 1024 * 1024;
+    if (p.file_names && p.file_names.length) {
+      var infoM = el("div", "sy-file-info");
+      infoM.textContent = p.file_names.join(", ") + " (" + formatSize(p.file_size || 0) + ")";
+      wrap.appendChild(infoM);
+    }
     if (p.file_name) {
       var info = el("div", "sy-file-info");
       info.textContent = "📄 " + p.file_name + " (" + formatSize(p.file_size || 0) + ")";
@@ -2592,21 +2844,38 @@
     }
     var input = document.createElement("input");
     input.type = "file";
+    if (p.multiple) input.multiple = true;
     input.className = "sy-file-input";
     input.dataset.id = node.id;
+
+    function readOne(file) {
+      return new Promise(function (resolve) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          var b64 = reader.result.split(",")[1] || "";
+          resolve({ name: file.name, size: file.size, type: file.type, data: b64 });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
     input.onchange = function () {
       if (!input.files || !input.files.length) return;
-      var file = input.files[0];
-      if (file.size > 10 * 1024 * 1024) {
-        alert("File too large (max 10 MB)");
+      var files = Array.prototype.slice.call(input.files);
+      var total = files.reduce(function (sum, f) { return sum + f.size; }, 0);
+      if (total > maxSize) {
+        alert("File too large (max " + formatSize(maxSize) + ")");
         return;
       }
-      var reader = new FileReader();
-      reader.onload = function () {
-        var b64 = reader.result.split(",")[1] || "";
-        send(node.id, { name: file.name, size: file.size, type: file.type, data: b64 }, false);
-      };
-      reader.readAsDataURL(file);
+      if (p.multiple) {
+        Promise.all(files.map(readOne)).then(function (payloads) {
+          send(node.id, payloads, false);
+        });
+      } else {
+        readOne(files[0]).then(function (payload) {
+          send(node.id, payload, false);
+        });
+      }
     };
     wrap.appendChild(input);
     return field(p.label, wrap, p.help);
@@ -2620,7 +2889,12 @@
 
   // --- Charts (Chart.js) ------------------------------------------------
 
-  var CHART_COLORS = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+  var DEFAULT_CHART_COLORS = ["#7c3aed", "#2563eb", "#16a34a", "#d97706", "#dc2626", "#0891b2", "#be185d", "#4f46e5"];
+  // Theme override (theme.chart_categorical_colors) injected via window.__SY_THEME.
+  function CHART_PALETTE() {
+    var t = (window.__SY_THEME || {}).chart_categorical_colors;
+    return (t && t.length) ? t : DEFAULT_CHART_COLORS;
+  }
   var chartjsState = "idle";
   var chartjsQueue = [];
 
@@ -2695,7 +2969,7 @@
     var labels = p.x_labels && p.x_labels.length > 0
       ? p.x_labels
       : Array.from({ length: maxLen }, function (_, i) { return String(i + 1); });
-    var palette = (p.colors && p.colors.length) ? p.colors : CHART_COLORS;
+    var palette = (p.colors && p.colors.length) ? p.colors : CHART_PALETTE();
     var datasets = names.map(function (name, si) {
       var color = palette[si % palette.length];
       var ds = { label: name, data: series[name], borderColor: color, backgroundColor: color };
@@ -2743,24 +3017,51 @@
     return opts;
   }
 
+  // applyChartSelect wires a click handler onto a selectable chart config: the
+  // nearest element's series/index/label/value is sent as the widget value.
+  function applyChartSelect(cfg, node, p, kind) {
+    if (!p.selectable || !node.id) return cfg;
+    cfg.options = cfg.options || {};
+    cfg.options.onClick = function (evt, elements, chart) {
+      var els = elements && elements.length ? elements
+        : chart.getElementsAtEventForMode(evt.native || evt, "nearest", { intersect: true }, true);
+      if (!els || !els.length) return;
+      var dsi = els[0].datasetIndex, idx = els[0].index;
+      var ds = chart.data.datasets[dsi] || {};
+      var sel;
+      if (kind === "pie") {
+        sel = { series: String(chart.data.labels[idx]), index: idx,
+                x: String(chart.data.labels[idx]), value: Number(ds.data[idx]) || 0 };
+      } else if (kind === "scatter") {
+        var pt = ds.data[idx] || {};
+        sel = { series: ds.label || "", index: idx, x: String(pt.x), value: Number(pt.y) || 0 };
+      } else {
+        sel = { series: ds.label || "", index: idx,
+                x: String((chart.data.labels || [])[idx]), value: Number(ds.data[idx]) || 0 };
+      }
+      send(node.id, sel, false);
+    };
+    return cfg;
+  }
+
   function lineChartEl(node, p) {
     return makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "line");
-      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line", p) };
+      return applyChartSelect({ type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "line", p) }, node, p, "line");
     });
   }
 
   function barChartEl(node, p) {
     return makeChartJS("bar", p, function () {
       var d = seriesDatasets(p, "bar");
-      return { type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar", p) };
+      return applyChartSelect({ type: "bar", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "bar", p) }, node, p, "bar");
     });
   }
 
   function areaChartEl(node, p) {
     return makeChartJS("line", p, function () {
       var d = seriesDatasets(p, "area");
-      return { type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area", p) };
+      return applyChartSelect({ type: "line", data: { labels: d.labels, datasets: d.datasets }, options: chartOptions(d.title, "area", p) }, node, p, "area");
     });
   }
 
@@ -2768,17 +3069,17 @@
     var data = p.data || {};
     var names = Object.keys(data);
     return makeChartJS("pie", p, function () {
-      return {
+      return applyChartSelect({
         type: "pie",
         data: {
           labels: names,
           datasets: [{
             data: names.map(function (n) { return data[n]; }),
-            backgroundColor: names.map(function (_, i) { return CHART_COLORS[i % CHART_COLORS.length]; }),
+            backgroundColor: names.map(function (_, i) { var cp = CHART_PALETTE(); return cp[i % cp.length]; }),
           }],
         },
         options: chartOptions(p.title, "pie"),
-      };
+      }, node, p, "pie");
     });
   }
 
@@ -2788,9 +3089,9 @@
     return makeChartJS("scatter", p, function () {
       var datasets = names.map(function (name, si) {
         var pts = (series[name] || []).map(function (pt) { return { x: pt[0], y: pt[1] }; });
-        return { label: name, data: pts, backgroundColor: CHART_COLORS[si % CHART_COLORS.length], pointRadius: 5 };
+        return { label: name, data: pts, backgroundColor: CHART_PALETTE()[si % CHART_PALETTE().length], pointRadius: 5 };
       });
-      return { type: "scatter", data: { datasets: datasets }, options: chartOptions(p.title, "scatter") };
+      return applyChartSelect({ type: "scatter", data: { datasets: datasets }, options: chartOptions(p.title, "scatter") }, node, p, "scatter");
     });
   }
 
@@ -2818,7 +3119,7 @@
         type: "bar",
         data: {
           labels: labels,
-          datasets: [{ label: "Frequency", data: counts, backgroundColor: CHART_COLORS[0] + "cc" }],
+          datasets: [{ label: "Frequency", data: counts, backgroundColor: CHART_PALETTE()[0] + "cc" }],
         },
         options: chartOptions(p.title, "bar"),
       };
@@ -2835,7 +3136,7 @@
           labels: names,
           datasets: [{
             data: names.map(function (n) { return data[n]; }),
-            backgroundColor: names.map(function (_, i) { return CHART_COLORS[i % CHART_COLORS.length]; }),
+            backgroundColor: names.map(function (_, i) { var cp = CHART_PALETTE(); return cp[i % cp.length]; }),
           }],
         },
         options: chartOptions(p.title, "doughnut"),
@@ -2849,7 +3150,7 @@
     var labels = p.labels || [];
     return makeChartJS("radar", p, function () {
       var datasets = names.map(function (name, si) {
-        var color = CHART_COLORS[si % CHART_COLORS.length];
+        var color = CHART_PALETTE()[si % CHART_PALETTE().length];
         return {
           label: name,
           data: series[name],

@@ -1,6 +1,7 @@
 package syralit
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,15 +12,36 @@ import (
 	"strings"
 
 	"github.com/coder/websocket"
+	"github.com/yuin/goldmark"
 )
 
-// Config controls the dev server. Fields beyond these (Theme, upload limits) are
-// reserved for later stages; see SPEC §6.1 / §15.
+// Config controls the dev server.
 type Config struct {
 	Title string
 	Host  string
 	Port  int
 	Theme Theme
+
+	// MaxUploadSizeMB caps FileUploader/CameraInput payloads, in megabytes.
+	// 0 means the default (10 MB). Configurable via [server] max_upload_size_mb
+	// in syralit.toml.
+	MaxUploadSizeMB int
+
+	// SSLCertFile / SSLKeyFile serve the app over HTTPS when both are set
+	// (PEM files). Configurable via [server] ssl_cert_file / ssl_key_file.
+	SSLCertFile string
+	SSLKeyFile  string
+}
+
+// uploadLimitBytes is the resolved upload cap, set when the server starts and
+// read by the uploader widgets (sent to the browser) and the socket read limit.
+var uploadLimitBytes int64 = 10 << 20
+
+func (c *Config) uploadLimit() int64 {
+	if c.MaxUploadSizeMB > 0 {
+		return int64(c.MaxUploadSizeMB) << 20
+	}
+	return 10 << 20
 }
 
 func (c *Config) applyDefaults() {
@@ -56,17 +78,63 @@ func App(fn func()) {
 // and honor the dev control messages on the WebSocket (state dump/restore).
 const envDevAddr = "SYRALIT_DEV_ADDR"
 
+// resolvedConfig holds the effective config after file/default resolution,
+// for GetOption.
+var resolvedConfig Config
+
 // Run starts a Syralit app with explicit config. Values left unset are filled
 // from syralit.toml in the working directory if present, then by defaults.
 func Run(cfg Config, fn func()) error {
 	loadFileConfig(".").applyToConfig(&cfg)
 	cfg.applyDefaults()
+	uploadLimitBytes = cfg.uploadLimit()
+	resolvedConfig = cfg
 	s := &server{cfg: cfg, appFn: fn}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
 		return http.ListenAndServe(addr, s.handler())
 	}
 	return s.listenAndServe()
+}
+
+// Handler returns the app as an http.Handler, so a Syralit app can be mounted
+// inside an existing Go HTTP server instead of owning the process:
+//
+//	mux.Handle("/dashboard/", http.StripPrefix("/dashboard", sy.Handler(sy.Config{}, myApp)))
+//
+// Config resolution matches Run (syralit.toml, then defaults); Host/Port are
+// ignored since the caller owns the listener.
+func Handler(cfg Config, fn func()) http.Handler {
+	loadFileConfig(".").applyToConfig(&cfg)
+	cfg.applyDefaults()
+	uploadLimitBytes = cfg.uploadLimit()
+	resolvedConfig = cfg
+	s := &server{cfg: cfg, appFn: fn}
+	return s.handler()
+}
+
+// GetOption returns a resolved configuration value by key: "title",
+// "server.host", "server.port", "server.max_upload_size_mb", "theme.mode",
+// "theme.accent", "theme.radius". Unknown keys return nil. Values reflect the
+// running server's effective config (code > syralit.toml > defaults).
+func GetOption(key string) any {
+	switch key {
+	case "title":
+		return resolvedConfig.Title
+	case "server.host":
+		return resolvedConfig.Host
+	case "server.port":
+		return resolvedConfig.Port
+	case "server.max_upload_size_mb":
+		return int(resolvedConfig.uploadLimit() >> 20)
+	case "theme.mode":
+		return resolvedConfig.Theme.Mode
+	case "theme.accent":
+		return resolvedConfig.Theme.Accent
+	case "theme.radius":
+		return resolvedConfig.Theme.Radius
+	}
+	return nil
 }
 
 type server struct {
@@ -100,8 +168,26 @@ func (s *server) handler() http.Handler {
 
 func (s *server) listenAndServe() error {
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
+	if s.cfg.SSLCertFile != "" && s.cfg.SSLKeyFile != "" {
+		log.Printf("syralit: %q running on https://%s", s.cfg.Title, addr)
+		return http.ListenAndServeTLS(addr, s.cfg.SSLCertFile, s.cfg.SSLKeyFile, s.handler())
+	}
 	log.Printf("syralit: %q running on http://%s", s.cfg.Title, addr)
 	return http.ListenAndServe(addr, s.handler())
+}
+
+// requestBasePath recovers the mount prefix when the app runs behind
+// http.StripPrefix (sy.Handler under a sub-path): RequestURI keeps the
+// original path while URL.Path has been stripped.
+func requestBasePath(r *http.Request) string {
+	orig := r.RequestURI
+	if i := strings.IndexByte(orig, '?'); i >= 0 {
+		orig = orig[:i]
+	}
+	if orig != r.URL.Path && strings.HasSuffix(orig, r.URL.Path) {
+		return strings.TrimSuffix(orig, r.URL.Path)
+	}
+	return ""
 }
 
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +201,7 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(renderIndex(s.cfg.Title, s.cfg.Theme)))
+	_, _ = w.Write([]byte(renderIndex(s.cfg.Title, s.cfg.Theme, requestBasePath(r))))
 }
 
 // inbound message from the browser (SPEC §13). The __dev_* fields are only used
@@ -144,7 +230,11 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	c.SetReadLimit(32 << 20) // dev restore payloads can be large
+	limit := int64(32 << 20) // dev restore payloads can be large
+	if l := uploadLimitBytes + (4 << 20); l > limit {
+		limit = l // base64 upload + envelope headroom
+	}
+	c.SetReadLimit(limit)
 	defer c.CloseNow()
 
 	ctx := context.Background()
@@ -311,6 +401,10 @@ func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 	}
 
 	sess.mu.Lock()
+	if sess.queryDirty {
+		msg["set_query"] = cloneStrMap(sess.queryParams)
+		sess.queryDirty = false
+	}
 	if len(sess.pendingToasts) > 0 {
 		msg["toasts"] = sess.pendingToasts
 		sess.pendingToasts = nil
@@ -338,6 +432,21 @@ func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 		if sess.pageConfig.textColor != "" {
 			pc["text_color"] = sess.pageConfig.textColor
 		}
+		if sess.pageConfig.sidebarState != "" {
+			pc["sidebar_state"] = sess.pageConfig.sidebarState
+		}
+		if sess.pageConfig.menuHelpURL != "" {
+			pc["menu_help_url"] = sess.pageConfig.menuHelpURL
+		}
+		if sess.pageConfig.menuBugURL != "" {
+			pc["menu_bug_url"] = sess.pageConfig.menuBugURL
+		}
+		if sess.pageConfig.menuAbout != "" {
+			var buf bytes.Buffer
+			if err := goldmark.Convert([]byte(sess.pageConfig.menuAbout), &buf); err == nil {
+				pc["menu_about"] = buf.String()
+			}
+		}
 		if len(pc) > 0 {
 			msg["page_config"] = pc
 		}
@@ -362,6 +471,10 @@ func pushFragmentUI(sink uiSink, sess *session, key string, fn func()) error {
 	}
 
 	sess.mu.Lock()
+	if sess.queryDirty {
+		msg["set_query"] = cloneStrMap(sess.queryParams)
+		sess.queryDirty = false
+	}
 	if len(sess.pendingToasts) > 0 {
 		msg["toasts"] = sess.pendingToasts
 		sess.pendingToasts = nil

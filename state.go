@@ -127,6 +127,24 @@ func QueryParams() map[string]string {
 	return cp
 }
 
+// SetQueryParam sets (or, with value "", removes) a URL query parameter. The
+// browser's address bar updates after this rerun via history.replaceState, so
+// app state becomes shareable as a link.
+func SetQueryParam(key, value string) {
+	rc := current()
+	rc.sess.mu.Lock()
+	defer rc.sess.mu.Unlock()
+	if rc.sess.queryParams == nil {
+		rc.sess.queryParams = map[string]string{}
+	}
+	if value == "" {
+		delete(rc.sess.queryParams, key)
+	} else {
+		rc.sess.queryParams[key] = value
+	}
+	rc.sess.queryDirty = true
+}
+
 // QueryParam returns a single URL query parameter value.
 func QueryParam(key string) string {
 	rc := current()

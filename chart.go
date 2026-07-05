@@ -1,5 +1,40 @@
 package syralit
 
+// ChartSelection is the point a user clicked on a selectable chart (see
+// sy.Selectable() on LineChart/BarChart/AreaChart/ScatterChart/PieChart).
+// Series is the series (or pie slice) name, Index the point's position along
+// the x axis (or slice index), X its label, and Value the y (or slice) value.
+// The selection persists across reruns until the user clicks another point.
+type ChartSelection struct {
+	Series string
+	Index  int
+	X      string
+	Value  float64
+}
+
+// chartSelection wires a selectable chart's widget ID into props and reads the
+// stored click. Returns ("", nil) when the chart is not selectable.
+func chartSelection(o widgetOpts, typ string, props map[string]any) (string, *ChartSelection) {
+	if !o.selectable {
+		return "", nil
+	}
+	rc := current()
+	id := rc.widgetID(typ, o.key)
+	props["selectable"] = true
+	val, _ := rc.sess.widgetValue(id)
+	m, ok := val.(map[string]any)
+	if !ok {
+		return id, nil
+	}
+	sel := &ChartSelection{
+		Index: int(toFloat64(m["index"])),
+		Value: toFloat64(m["value"]),
+	}
+	sel.Series, _ = m["series"].(string)
+	sel.X, _ = m["x"].(string)
+	return id, sel
+}
+
 func chartProps(o widgetOpts, data any) map[string]any {
 	props := map[string]any{"series": data}
 	if o.height > 0 {
@@ -32,15 +67,24 @@ func chartProps(o widgetOpts, data any) map[string]any {
 //	    "Revenue": {10, 20, 30, 25, 35},
 //	    "Cost":    {5, 8, 12, 10, 15},
 //	})
-func LineChart(data map[string][]float64, opts ...Option) {
+//
+// With sy.Selectable(), the chart reports the clicked point (nil until then).
+func LineChart(data map[string][]float64, opts ...Option) *ChartSelection {
 	o := applyOpts(opts)
-	current().add(&Node{Type: "line_chart", Props: chartProps(o, data)})
+	props := chartProps(o, data)
+	id, sel := chartSelection(o, "line_chart", props)
+	current().add(&Node{ID: id, Type: "line_chart", Props: props})
+	return sel
 }
 
-// BarChart renders a bar chart from named series.
-func BarChart(data map[string][]float64, opts ...Option) {
+// BarChart renders a bar chart from named series. With sy.Selectable(), the
+// chart reports the clicked bar (nil until then).
+func BarChart(data map[string][]float64, opts ...Option) *ChartSelection {
 	o := applyOpts(opts)
-	current().add(&Node{Type: "bar_chart", Props: chartProps(o, data)})
+	props := chartProps(o, data)
+	id, sel := chartSelection(o, "bar_chart", props)
+	current().add(&Node{ID: id, Type: "bar_chart", Props: props})
+	return sel
 }
 
 // ScatterChart renders a scatter plot. Each series maps to a slice of [x, y]
@@ -49,7 +93,7 @@ func BarChart(data map[string][]float64, opts ...Option) {
 //	sy.ScatterChart(map[string][][2]float64{
 //	    "Group A": {{1, 2}, {3, 4}, {5, 6}},
 //	})
-func ScatterChart(data map[string][][2]float64, opts ...Option) {
+func ScatterChart(data map[string][][2]float64, opts ...Option) *ChartSelection {
 	o := applyOpts(opts)
 	series := make(map[string]any, len(data))
 	for name, points := range data {
@@ -59,7 +103,10 @@ func ScatterChart(data map[string][][2]float64, opts ...Option) {
 		}
 		series[name] = ps
 	}
-	current().add(&Node{Type: "scatter_chart", Props: chartProps(o, series)})
+	props := chartProps(o, series)
+	id, sel := chartSelection(o, "scatter_chart", props)
+	current().add(&Node{ID: id, Type: "scatter_chart", Props: props})
+	return sel
 }
 
 // PieChart renders a pie chart from labelled values.
@@ -69,18 +116,24 @@ func ScatterChart(data map[string][][2]float64, opts ...Option) {
 //	    "Python": 35,
 //	    "Rust": 20,
 //	})
-func PieChart(data map[string]float64, opts ...Option) {
+func PieChart(data map[string]float64, opts ...Option) *ChartSelection {
 	o := applyOpts(opts)
 	props := chartProps(o, nil)
 	props["data"] = data
 	delete(props, "series")
-	current().add(&Node{Type: "pie_chart", Props: props})
+	id, sel := chartSelection(o, "pie_chart", props)
+	current().add(&Node{ID: id, Type: "pie_chart", Props: props})
+	return sel
 }
 
-// AreaChart renders an area chart (filled line chart) from named series.
-func AreaChart(data map[string][]float64, opts ...Option) {
+// AreaChart renders an area chart (filled line chart) from named series. With
+// sy.Selectable(), the chart reports the clicked point (nil until then).
+func AreaChart(data map[string][]float64, opts ...Option) *ChartSelection {
 	o := applyOpts(opts)
-	current().add(&Node{Type: "area_chart", Props: chartProps(o, data)})
+	props := chartProps(o, data)
+	id, sel := chartSelection(o, "area_chart", props)
+	current().add(&Node{ID: id, Type: "area_chart", Props: props})
+	return sel
 }
 
 // HistogramChart renders a histogram from raw data values. The bins parameter

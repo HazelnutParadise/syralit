@@ -136,6 +136,8 @@ if job.Running() {
 - **Automatic SSE fallback** — when a WebSocket can't be established (e.g. a
   proxy that blocks WS upgrades), the client transparently switches to a plain
   HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
+- **`sy.Handler(cfg, fn)`** — mount a Syralit app as a plain `http.Handler`
+  inside an existing Go server (works behind `http.StripPrefix` sub-paths).
 - **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
 
 ## Features
@@ -160,10 +162,12 @@ if job.Running() {
 | `SelectBox` | `string` | Dropdown (auto-searchable at 20+ items) |
 | `MultiSelect` | `[]string` | Multi-select dropdown |
 | `DateInput` | `string` | Date picker (YYYY-MM-DD) |
+| `DatetimeInput` | `string` | Date+time picker (YYYY-MM-DD HH:MM) |
 | `DateRangeInput` | `(string, string)` | Start/end date pickers |
 | `TimeInput` | `string` | Time picker (HH:MM) |
 | `ColorPicker` | `string` | Color hex picker |
 | `FileUploader` | `*UploadedFile` | File upload |
+| `FileUploaderMultiple` | `[]*UploadedFile` | Multi-file upload |
 | `CameraInput` | `string` | Webcam capture |
 | `AudioInput` | `string` | Microphone recording |
 | `ChatInput` | `string` | Chat message input |
@@ -171,12 +175,13 @@ if job.Running() {
 | `SegmentedControl` | `string` | Segmented buttons (`SegmentedControlMulti` → `[]string`) |
 | `Pills` | `string` | Pill-style buttons (`PillsMulti` → `[]string`) |
 | `Pagination` | `int` | Page selector |
+| `MenuButton` | `string` | Dropdown button returning the clicked option |
 
 Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.
 
 ### Display
 
-Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, Exception (styled Go `error` box).
+Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, PDF (embedded viewer), Exception (styled Go `error` box).
 
 ### Agent Artifacts
 
@@ -259,7 +264,7 @@ Full DSL reference: [`docs/artifact-dsl.md`](docs/artifact-dsl.md)
 | Widget | Description |
 |--------|-------------|
 | `Table` | Static string table |
-| `DataFrame` | Sortable table; optional row selection (`sy.Selectable()` → returns selected indices) and typed display via `sy.ColConfig` |
+| `DataFrame` | Sortable table; optional row selection (`sy.Selectable()` → returns selected indices; `sy.SelectionMode("single-row")` for one), `sy.ColumnOrder(...)` to reorder/filter columns, typed display via `sy.ColConfig` |
 | `DataEditor` | Editable table with 11 column types |
 
 Column configuration (`sy.ColConfig`, shared by DataFrame and DataEditor) supports types `text`, `number`, `checkbox`, `select`, `date`, `time`, `datetime`, `link`, `image`, `progress`, `list`, plus the display-only mini-chart columns `bar_chart` / `line_chart` (cell value is a `[]float64`). Each column may set `Format` (printf-style, e.g. `"$%.2f"`, `"%d%%"`), `Label` (header override), `Help` (header tooltip), `Width`, `Min`/`Max`/`Step`, and `Color` (chart columns). Dynamic row add/delete with `sy.DynamicRows()`.
@@ -293,6 +298,14 @@ Built-in interactive charts powered by **Chart.js**:
 
 Bar/area/line charts accept `sy.Stacked()`, `sy.Horizontal()` (bar), `sy.Colors([]string{...})`, `sy.XLabels(...)`, and `sy.ChartTitle(...)`.
 
+Line/Bar/Area/Scatter/Pie charts are **selectable**: add `sy.Selectable()` and the call returns a `*sy.ChartSelection` (`Series`/`Index`/`X`/`Value`) when the user clicks a data point:
+
+```go
+if sel := sy.BarChart(data, sy.Selectable(), sy.Key("sales")); sel != nil {
+    sy.Textf("%s at %s = %v", sel.Series, sel.X, sel.Value)
+}
+```
+
 External charting library integrations (CDN-loaded, accepting JSON specs):
 
 | Chart | Library | Streamlit Equivalent |
@@ -323,6 +336,8 @@ sy.Container(func() { ... }, sy.Border())
 sy.Form("key", func() { ... }, sy.ClearOnSubmit())  // ClearOnSubmit optional
 sy.Status("Loading", "running", func() { ... })
 sy.Fragment("key", func() { ... })  // partial rerun
+sy.Space(sy.Height(32))             // vertical whitespace
+sy.Bottom(func() { ... })           // pin content to the bottom of the viewport
 ```
 
 ### State & Session
@@ -333,8 +348,9 @@ count := sy.State("count", 0)
 count.Get()
 count.Set(42)
 
-// Query parameters
+// Query parameters (SetQueryParam updates the browser URL — shareable state)
 val := sy.QueryParam("page")
+sy.SetQueryParam("page", "2")
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -568,13 +584,61 @@ host = "0.0.0.0"
 port = 8600
 
 [theme]
-primary_color = "#ff4b4b"
-background_color = "#0e1117"
-text_color = "#fafafa"
+mode = "system"        # "light" | "dark" | "system"
+accent = "#7C3AED"
+radius = "12px"
+button_radius = "999px"                 # defaults to radius
+background_color = "#ffffff"
+secondary_background_color = "#f8f9fb"  # widget/code/sidebar surface
+text_color = "#1f2329"
+link_color = "#2563eb"                  # defaults to accent
+link_underline = true                   # true: always, false: never, unset: on hover
+code_text_color = "#0f766e"
+code_background_color = "#f1f5f9"
+border_color = "#e5e7eb"
+dataframe_border_color = "#e5e7eb"
+dataframe_header_background_color = "#f3f4f6"
+show_widget_border = true
+show_sidebar_border = true
+# Basic palette (badges, alerts, status colors); each of red/orange/yellow/
+# blue/green/violet/gray also has <name>_background_color and <name>_text_color.
+red_color = "#dc2626"
+blue_background_color = "#eff6ff"
+# Chart palettes (categorical drives built-in chart series colors).
+chart_categorical_colors = ["#7c3aed", "#2563eb", "#16a34a"]
+chart_sequential_colors = ["#f0fdfa", "#0f766e"]
+chart_diverging_colors = ["#dc2626", "#f8fafc", "#2563eb"]
+# Fonts: "sans-serif" | "serif" | "monospace" select the built-in Source Sans 3 /
+# Source Serif 4 / Source Code Pro (embedded, served locally — no CDN); any
+# other value is used as a CSS font-family list.
+font = "sans-serif"
+heading_font = "serif"
+code_font = "monospace"
+base_font_size = 16
+base_font_weight = 400
+heading_font_sizes = ["2rem", "1.5rem", "1.15rem"]  # h1..h6
+heading_font_weights = [700, 650, 600]
+code_font_size = "0.875rem"
+code_font_weight = 400
+
+[[theme.font_faces]]   # load custom fonts (otf/ttf/woff/woff2)
+family = "Inter"
+url = "/fonts/inter.woff2"   # public/ path or absolute URL
+weight = "100 900"
+style = "normal"
+
+[theme.sidebar]        # sidebar-only overrides — every color/font/radius key
+font = "sans-serif"    # above works here too (inherits main theme when unset)
+accent = "#f59e0b"
 
 [secrets]
 api_key = "sk-..."
 db_dsn = "postgres://..."
+
+[server]
+max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
+ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
+ssl_key_file = "key.pem"
 ```
 
 ### Runtime Configuration
@@ -585,6 +649,8 @@ sy.SetPageConfig(
     sy.PageLayout("wide"),
     sy.ConfigIcon("🚀"),
     sy.PrimaryColor("#ff4b4b"),
+    sy.InitialSidebarState("collapsed"),
+    sy.ConfigMenuItems("https://…/help", "https://…/issues", "**About** markdown"),
 )
 
 apiKey := sy.Secrets("api_key")
@@ -618,12 +684,39 @@ root) and `sy.StaticAssets(fsys)` (overrides the built-in front-end assets).
 
 ## Testing
 
-`sy.RenderOnce(appFn) *Node` runs an app function once in an isolated session
-and returns the UI tree — no server needed. Walk it with `Node.Find(type)`:
+`sy.AppTest` is a headless testing harness (the Go counterpart of Streamlit's
+`st.testing.v1.AppTest`): render without a server, simulate widget input and
+button clicks, and assert on the resulting tree.
+
+```go
+at := sy.NewAppTest(func() {
+    name := sy.TextInput("Name", sy.Key("name"))
+    if sy.Button("Greet", sy.Key("greet")) {
+        sy.Success("Hello, " + name)
+    }
+})
+at.Run()
+at.SetValue("name", "Ada")
+at.Click("greet") // or at.ClickLabel("Greet")
+at.Run()
+// at.Texts("status") -> ["Hello, Ada"]
+```
+
+For a single render, `sy.RenderOnce(appFn) *Node` returns the UI tree directly:
 
 ```go
 tree := sy.RenderOnce(func() { sy.Metric("Users", "24,891") })
 if len(tree.Find("metric")) != 1 { t.Fatal("expected a metric") }
+```
+
+The repo also ships a browser-level UI suite under [`uitest/`](uitest/) — a
+separate Go module (so its chromedp dependency never touches the framework's
+`go.mod`) that drives headless Chrome against an in-process app and asserts on
+real rendered behavior: widget round-trips over WebSocket, CSS visibility,
+canvas chart clicks, multi-file uploads, and sub-path mounting.
+
+```bash
+cd uitest && go test ./...   # requires a local Chrome/Chromium
 ```
 
 ## Examples
@@ -644,6 +737,8 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
+| [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
+| [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
 
 Run any example:
 

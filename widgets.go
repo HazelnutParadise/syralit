@@ -60,6 +60,14 @@ type widgetOpts struct {
 	zoom              int
 	runEvery          int // fragment auto-refresh interval in ms
 	clearOnSubmit     bool
+	startTime         float64
+	endTime           float64
+	subtitles         string
+	acceptNew         bool
+	multipleFiles     bool
+	columnOrder       []string
+	selectionMode     string
+	showTime          bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -126,6 +134,28 @@ func Colors(c []string) Option { return func(o *widgetOpts) { o.colors = c } }
 func Autoplay() Option { return func(o *widgetOpts) { o.autoplay = true } }
 func Loop() Option     { return func(o *widgetOpts) { o.loop = true } }
 func Muted() Option    { return func(o *widgetOpts) { o.muted = true } }
+
+// StartTime / EndTime clip Audio/Video playback to a range (seconds).
+func StartTime(seconds float64) Option { return func(o *widgetOpts) { o.startTime = seconds } }
+func EndTime(seconds float64) Option   { return func(o *widgetOpts) { o.endTime = seconds } }
+
+// Subtitles adds a subtitle track (WebVTT URL) to a Video.
+func Subtitles(vttURL string) Option { return func(o *widgetOpts) { o.subtitles = vttURL } }
+
+// AcceptNewOptions lets a MultiSelect accept values typed by the user in
+// addition to the predefined options.
+func AcceptNewOptions() Option { return func(o *widgetOpts) { o.acceptNew = true } }
+
+// ColumnOrder reorders (and filters) the displayed columns of a DataFrame /
+// DataEditor; columns not listed are hidden.
+func ColumnOrder(cols ...string) Option { return func(o *widgetOpts) { o.columnOrder = cols } }
+
+// SelectionMode sets how DataFrame rows are selected with sy.Selectable():
+// "multi-row" (default) or "single-row".
+func SelectionMode(mode string) Option { return func(o *widgetOpts) { o.selectionMode = mode } }
+
+// ShowTime makes a Spinner display the elapsed time next to its label.
+func ShowTime() Option { return func(o *widgetOpts) { o.showTime = true } }
 
 // LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
 // lines instead of scrolling horizontally.
@@ -580,6 +610,9 @@ func MultiSelect(label string, options []string, opts ...Option) []string {
 		selected = []string{}
 	}
 	props := map[string]any{"label": label, "options": options, "value": selected}
+	if o.acceptNew {
+		props["accept_new"] = true
+	}
 	if o.disabled {
 		props["disabled"] = true
 	}
@@ -609,6 +642,54 @@ func DateInput(label string, opts ...Option) string {
 	applyDateBounds(props, o)
 	rc.add(&Node{ID: id, Type: "date_input", Props: props})
 	return s
+}
+
+// DatetimeInput renders a combined date-and-time picker and returns the value
+// as "YYYY-MM-DD HH:MM" ("" until the user picks one). Supports MinDate /
+// MaxDate ("YYYY-MM-DD" or "YYYY-MM-DDTHH:MM") bounds and DefaultValue.
+func DatetimeInput(label string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("datetime_input", o.key)
+	val, ok := rc.sess.widgetValue(id)
+	s, _ := val.(string)
+	if !ok {
+		if d, isStr := o.defaultVal.(string); isStr {
+			s = d
+		}
+	}
+	// The browser control uses "YYYY-MM-DDTHH:MM"; normalize to a space.
+	s = strings.ReplaceAll(s, "T", " ")
+	props := map[string]any{"label": label, "value": strings.ReplaceAll(s, " ", "T")}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	applyDateBounds(props, o)
+	rc.add(&Node{ID: id, Type: "datetime_input", Props: props})
+	return s
+}
+
+// MenuButton renders a button that opens a dropdown of options and returns the
+// clicked option for exactly one rerun ("" otherwise) — like Button, but with
+// a choice attached.
+func MenuButton(label string, options []string, opts ...Option) string {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("menu_button", o.key)
+	choice, _ := rc.sess.takeWidget(id).(string) // one-shot, like a button press
+	props := map[string]any{"label": label, "options": options}
+	if o.disabled {
+		props["disabled"] = true
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	applyButtonProps(props, o)
+	rc.add(&Node{ID: id, Type: "menu_button", Props: props})
+	return choice
 }
 
 // applyDateBounds copies min/max date bounds onto a date widget's props.
@@ -729,19 +810,9 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 	id := rc.widgetID("file_uploader", o.key)
 	val, _ := rc.sess.widgetValue(id)
 
-	var file *UploadedFile
-	if m, ok := val.(map[string]any); ok {
-		name, _ := m["name"].(string)
-		size := toFloat64(m["size"])
-		typ, _ := m["type"].(string)
-		dataStr, _ := m["data"].(string)
-		data, err := base64.StdEncoding.DecodeString(dataStr)
-		if err == nil && name != "" {
-			file = &UploadedFile{Name: name, Size: int64(size), Type: typ, Data: data}
-		}
-	}
+	file := decodeUploadedFile(val)
 
-	props := map[string]any{"label": label}
+	props := map[string]any{"label": label, "max_size": uploadLimitBytes}
 	if file != nil {
 		props["file_name"] = file.Name
 		props["file_size"] = file.Size
@@ -751,6 +822,58 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 	}
 	rc.add(&Node{ID: id, Type: "file_uploader", Props: props})
 	return file
+}
+
+// FileUploaderMultiple renders a file upload widget that accepts several files
+// at once and returns all of them (empty slice when none are uploaded yet).
+func FileUploaderMultiple(label string, opts ...Option) []*UploadedFile {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("file_uploader", o.key)
+	val, _ := rc.sess.widgetValue(id)
+
+	var files []*UploadedFile
+	if list, ok := val.([]any); ok {
+		for _, item := range list {
+			if f := decodeUploadedFile(item); f != nil {
+				files = append(files, f)
+			}
+		}
+	}
+
+	props := map[string]any{"label": label, "multiple": true, "max_size": uploadLimitBytes}
+	if len(files) > 0 {
+		names := make([]string, len(files))
+		var total int64
+		for i, f := range files {
+			names[i] = f.Name
+			total += f.Size
+		}
+		props["file_names"] = names
+		props["file_size"] = total
+	}
+	if o.helpText != "" {
+		props["help"] = o.helpText
+	}
+	rc.add(&Node{ID: id, Type: "file_uploader", Props: props})
+	return files
+}
+
+// decodeUploadedFile converts a browser upload payload into an UploadedFile.
+func decodeUploadedFile(val any) *UploadedFile {
+	m, ok := val.(map[string]any)
+	if !ok {
+		return nil
+	}
+	name, _ := m["name"].(string)
+	size := toFloat64(m["size"])
+	typ, _ := m["type"].(string)
+	dataStr, _ := m["data"].(string)
+	data, err := base64.StdEncoding.DecodeString(dataStr)
+	if err != nil || name == "" {
+		return nil
+	}
+	return &UploadedFile{Name: name, Size: int64(size), Type: typ, Data: data}
 }
 
 // LinkButton renders a button-styled hyperlink that opens in a new tab.
@@ -876,12 +999,21 @@ func ChatInput(placeholder string, opts ...Option) string {
 }
 
 // Spinner renders a loading indicator with optional text.
-func Spinner(text ...string) {
+func Spinner(text ...string) { spinnerOpts(nil, text...) }
+
+// SpinnerWith renders a spinner with options, e.g. sy.ShowTime().
+func SpinnerWith(opts []Option, text ...string) { spinnerOpts(opts, text...) }
+
+func spinnerOpts(opts []Option, text ...string) {
 	label := "Loading..."
 	if len(text) > 0 && text[0] != "" {
 		label = text[0]
 	}
-	current().add(&Node{Type: "spinner", Props: map[string]any{"text": label}})
+	props := map[string]any{"text": label}
+	if applyOpts(opts).showTime {
+		props["show_time"] = true
+	}
+	current().add(&Node{Type: "spinner", Props: props})
 }
 
 // Popover renders a button that shows a floating panel with the content

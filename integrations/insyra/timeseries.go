@@ -82,23 +82,24 @@ func PctChangeChart(dt *insyra.DataTable, xCol, yCol string, periods int, opts .
 	return sy.BarChart(series, withXLabels(dt, xCol, opts)...)
 }
 
-// FormulaColumn adds a computed column to a copy of the DataTable using an
-// Insyra CCL formula (Excel-like, e.g. "A + B * 2"), and renders a text input
-// so the user can type the formula interactively. Returns the table with the
-// new column (the original is untouched), or the original table when the
-// formula is empty or fails.
+// AddFormulaColumn renders a formula editor (CCL expression + column name)
+// and returns a NEW DataTable with the computed column appended — the source
+// table is untouched, and it comes back unchanged while the formula is empty
+// or invalid. Columns are referenced by letter (A, B, ...) or by name in
+// brackets: ["Revenue"] - ["Cost"].
 //
 // The evaluation runs in a goroutine guarded by a timeout: CCL can loop on
 // certain malformed inputs, and a UI must never hang on user input. On
 // timeout the goroutine is abandoned (it may leak until it finishes) and the
 // user sees an error instead.
-func FormulaColumn(dt *insyra.DataTable, key string) *insyra.DataTable {
+func AddFormulaColumn(dt *insyra.DataTable, key string) *insyra.DataTable {
 	if dt == nil {
 		sy.Warning("nil DataTable")
 		return nil
 	}
-	formula := sy.TextInput("CCL formula (new column)",
-		sy.Key(key+"_formula"), sy.Placeholder("e.g. IF(A > 100, 'high', 'low')"))
+	formula := sy.TextInput("ƒx CCL formula (new column)",
+		sy.Key(key+"_formula"), sy.Mono(),
+		sy.Placeholder(`["Revenue"] - ["Cost"]  ·  IF(["Revenue"] > 1000, 'high', 'low')`))
 	name := sy.TextInput("Column name",
 		sy.Key(key+"_name"), sy.Placeholder("computed"))
 	if formula == "" {

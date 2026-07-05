@@ -551,7 +551,7 @@ syi.DownloadCSV("Export", dt, "data.csv")            // CSV download button
 syi.RollingMeanChart(dt, "Month", "Revenue", 7)      // raw + rolling mean overlay
 syi.CumSumChart(dt, "Month", "Revenue")              // cumulative sum
 syi.PctChangeChart(dt, "Month", "Revenue", 1)        // percent change bars
-out := syi.FormulaColumn(dt, "ccl")                  // interactive CCL formula column
+out := syi.AddFormulaColumn(dt, "ccl")               // interactive CCL formula column
 
 // DataList (single series) — the symmetric counterpart
 syi.List(dl)                            // single-column table

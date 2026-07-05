@@ -114,6 +114,7 @@ sy.MaxDate("2026-12-31")      // DateInput/DateRangeInput upper bound
 sy.StartTime(2), sy.EndTime(5) // Audio/Video playback range (seconds)
 sy.Subtitles("/subs.vtt")     // Video subtitle track (WebVTT)
 sy.AcceptNewOptions()         // MultiSelect: allow typing new values
+sy.Mono()                     // TextInput/TextArea in the code font (formulas, IDs)
 ```
 
 ### Display
@@ -723,8 +724,8 @@ syi.DownloadCSV("Export", dt, "data.csv")           // download button for a Dat
 syi.RollingMeanChart(dt, "Month", "Revenue", 7)     // raw + rolling mean overlay
 syi.CumSumChart(dt, "Month", "Revenue")             // cumulative sum line
 syi.PctChangeChart(dt, "Month", "Revenue", 1)       // percent change bars
-out := syi.FormulaColumn(dt, "ccl")                 // interactive CCL formula column
-                                                    // (timeout-guarded evaluation)
+out := syi.AddFormulaColumn(dt, "ccl")              // interactive CCL formula column
+                                                    // (columns as A/B or ["Name"]; timeout-guarded)
 // sy.ResetWidget("by_region") clears a stored selection (del st.session_state equivalent)
 
 // DataList (single series) — symmetric helpers

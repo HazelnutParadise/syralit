@@ -79,9 +79,9 @@ func TestEvalCCL(t *testing.T) {
 	}
 }
 
-func TestFormulaColumnWidget(t *testing.T) {
+func TestAddFormulaColumnWidget(t *testing.T) {
 	at := sy.NewAppTest(func() {
-		out := FormulaColumn(tsData(), "ccl")
+		out := AddFormulaColumn(tsData(), "ccl")
 		Table(out)
 	})
 	at.Run()

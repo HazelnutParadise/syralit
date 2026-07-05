@@ -69,6 +69,7 @@ type widgetOpts struct {
 	selectionMode     string
 	showTime          bool
 	rangeSelectable   bool
+	mono              bool
 }
 
 func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
@@ -167,6 +168,10 @@ func SelectionMode(mode string) Option { return func(o *widgetOpts) { o.selectio
 
 // ShowTime makes a Spinner display the elapsed time next to its label.
 func ShowTime() Option { return func(o *widgetOpts) { o.showTime = true } }
+
+// Mono renders a TextInput / TextArea in the code font — for formulas,
+// identifiers, or anything typed character-by-character.
+func Mono() Option { return func(o *widgetOpts) { o.mono = true } }
 
 // LineNumbers shows a line-number gutter on a Code block; Wrap soft-wraps long
 // lines instead of scrolling horizontally.
@@ -281,6 +286,9 @@ func TextInput(label string, opts ...Option) string {
 	}
 	if o.maxChars > 0 {
 		props["max_chars"] = o.maxChars
+	}
+	if o.mono {
+		props["mono"] = true
 	}
 	applyCommonProps(props, o)
 	rc.add(&Node{ID: id, Type: "text_input", Props: props})

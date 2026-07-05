@@ -519,7 +519,7 @@
   function textInput(node, p) {
     var input = document.createElement("input");
     input.type = p.input_type || "text";
-    input.className = "sy-input";
+    input.className = "sy-input" + (p.mono ? " sy-input-mono" : "");
     input.dataset.id = node.id;
     input.value = p.value || "";
     if (p.placeholder) input.placeholder = p.placeholder;

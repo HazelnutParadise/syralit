@@ -37,8 +37,10 @@ scaffold.
   labels/upload errors), published to the front end as `window.__SY_I18N`.
 - **Insyra time-series & export helpers**: `syi.DownloadCSV`,
   `syi.RollingMeanChart`, `syi.CumSumChart`, `syi.PctChangeChart`, and
-  `syi.FormulaColumn` (interactive CCL formula column with timeout-guarded
-  evaluation, since CCL can hang on malformed input).
+  `syi.AddFormulaColumn` (interactive CCL formula column — monospace `ƒx`
+  editor, columns addressable as `A`/`B` or `["Name"]`, timeout-guarded
+  evaluation since CCL can hang on malformed input). New `sy.Mono()` option
+  renders TextInput/TextArea in the code font.
 - `syralit new` scaffold: generated syralit.toml now documents the full
   theme/server/secrets option surface.
 - UI test suite: added chart range-drag and Insyra click-to-filter coverage

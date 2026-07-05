@@ -2139,6 +2139,13 @@ body {
 }
 .sy-menu-button-dropdown.open { display: flex; }
 
+/* --- Monospace / formula inputs ------------------------------------------- */
+
+.sy-input-mono {
+  font-family: var(--sy-font-code);
+  font-size: .88rem;
+}
+
 /* --- Chart range selection ------------------------------------------------ */
 
 .sy-chart-wrap { position: relative; }

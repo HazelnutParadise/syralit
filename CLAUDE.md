@@ -47,8 +47,19 @@ cd uitest && go test ./...   # browser-level UI tests (separate module,
                              # needs local Chrome; run before releases and
                              # after any assets/runtime.js|css change)
 
+cd integrations/desktop && SYRALIT_DESKTOP_E2E=1 go test ./...
+                             # desktop (Wails) e2e — Windows only, opens real
+                             # windows; without the env var those tests skip.
+                             # Run after touching integrations/desktop or the
+                             # dev supervisor's child-spawn env contract.
+
 cd examples/hello && go run .   # run an example (defaults to http://localhost:8600)
 ```
+
+Separate-module boundary: `integrations/oidc`, `integrations/desktop`,
+`uitest`, and `examples/desktop-demo`/`examples/oidc-login` each have their own
+`go.mod` so heavy deps (go-oidc, Wails, chromedp) never enter the core module.
+Core must not import them; when core's `go.mod` changes, re-tidy these modules.
 
 Examples default to port 8600 unless config or CLI flags choose another port.
 Do not hardcode 8600 into agent/API examples; use the actual app URL or request

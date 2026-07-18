@@ -45,13 +45,22 @@ type opts struct {
 	minWidth, minHeight int
 	frameless           bool
 	icon                []byte
+	allowBrowser        bool
 }
 
 // Config passes an explicit Syralit config through to the app (theme, upload
-// limit, UI strings, ...). Host/Port are ignored — the desktop shell always
-// binds a random loopback port. Values left unset resolve from syralit.toml
-// and defaults, exactly like sy.Run.
+// limit, UI strings, ...). Values left unset resolve from syralit.toml and
+// defaults, exactly like sy.Run. Host is ignored — a desktop app always binds
+// loopback only. An explicitly set Port pins the port (useful so agents can
+// reach the /api/ endpoints on a stable address across launches); left zero,
+// a random free port is used.
 func Config(cfg sy.Config) Option { return func(o *opts) { o.cfg = cfg } }
+
+// AllowBrowser lets other local browsers open the app too. By default the
+// loopback server only answers its own window: requests without the window's
+// per-launch token are rejected (except /api/ endpoints, which carry their
+// own authentication).
+func AllowBrowser() Option { return func(o *opts) { o.allowBrowser = true } }
 
 // WindowTitle sets the native window title. Defaults to the resolved Syralit
 // app title (code > syralit.toml > "Syralit App").
@@ -117,11 +126,28 @@ func Run(fn func(), options ...Option) error {
 		}
 	}
 
-	// Loopback only: a desktop app must not expose itself to the network.
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	// Loopback only: a desktop app must not expose itself to the network. An
+	// explicit Config Port pins the port; otherwise the OS picks a free one.
+	listenAddr := "127.0.0.1:0"
+	if o.cfg.Port > 0 {
+		listenAddr = fmt.Sprintf("127.0.0.1:%d", o.cfg.Port)
+	}
+	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
 	}
+	url := "http://" + ln.Addr().String()
+	windowURL := url
+	if !o.allowBrowser {
+		token := newLockdownToken()
+		handler = lockdown(handler, token)
+		windowURL = url + "/?" + lockdownParam + "=" + token
+	}
+	// Publish the app's URL the way the dev supervisor does, so agent
+	// subprocesses this app spawns can find the /api/ endpoints.
+	_ = os.Setenv(envDevURL, url)
+	log.Printf("sydesktop: %q running on %s (loopback only)", o.title, url)
+
 	srv := &http.Server{Handler: handler}
 	serveErr := make(chan error, 1)
 	go func() {
@@ -130,7 +156,7 @@ func Run(fn func(), options ...Option) error {
 		}
 	}()
 
-	app := newWindowApp(o, "http://"+ln.Addr().String())
+	app := newWindowApp(o, windowURL)
 
 	runErr := app.Run()
 

@@ -595,15 +595,22 @@ func main() {
         sydesktop.WindowSize(1200, 800),   // initial size (default 1024×768)
         sydesktop.MinSize(640, 480),       // minimum size
         sydesktop.WindowTitle("My tool"),  // default: resolved app title
-        sydesktop.Config(sy.Config{}),     // theme etc.; Host/Port ignored
+        sydesktop.Config(sy.Config{}),     // theme etc.; Host ignored (always loopback),
+                                           //   explicit Port pins the port for /api/ agents
         sydesktop.Frameless(),             // remove the native frame
         sydesktop.Icon(pngBytes),          // app icon (PNG bytes)
+        sydesktop.AllowBrowser(),          // opt out of browser lockdown (see below)
     )
 }
 // sydesktop.Run(fn, opts...) error  — same, error returned instead of fatal.
 ```
 The app serves on a loopback-only random port and the window points at it;
-closing the window shuts the server down. Call from the main goroutine (macOS
+closing the window shuts the server down. **Browser lockdown (default)**: the
+server only answers its own window (per-launch token; other local browsers get
+403) — pass sydesktop.AllowBrowser() to open it up. `/api/` endpoints are
+exempt so agent artifact endpoints stay reachable with their own bearer auth;
+SYRALIT_URL is set in the app's environment so spawned agent subprocesses can
+find them, and Config(sy.Config{Port: N}) pins the port for external agents. Call from the main goroutine (macOS
 needs the event loop on the main thread). The Go code runs on the user's
 machine, so local paths (os.ReadFile etc.) work directly — no FileUploader
 round-trip. Build needs: nothing extra on Windows (WebView2 is preinstalled on

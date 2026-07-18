@@ -19,7 +19,11 @@ All notable changes to Syralit are documented here. The format is based on
   the supervisor and survives rebuilds like a browser tab (state preserved,
   build-error overlay); it auto-quits when the supervisor stops. The
   supervisor now exports `SYRALIT_URL` and `SYRALIT_DEV_SESSION` to its child
-  to support this.
+  to support this. **Browser lockdown by default**: the loopback server only
+  answers its own window (per-launch token; opt out with
+  `sydesktop.AllowBrowser()`); `/api/` endpoints stay open for agents with
+  their own bearer auth, `SYRALIT_URL` is set for agent subprocesses, and an
+  explicit `Config` Port pins the listen port.
 
 ### Fixed
 - `sy.TextInput`, `sy.TextArea` and `sy.PasswordInput` now honor

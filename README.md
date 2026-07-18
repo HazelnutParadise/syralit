@@ -659,9 +659,17 @@ func main() {
 The app serves on a loopback-only random port, the window renders it through
 the OS webview, and closing the window shuts everything down. Options:
 `WindowTitle`, `WindowSize`, `MinSize`, `Frameless`, `Icon(pngBytes)`,
-`Config(sy.Config)`. `sydesktop.Run` is the error-returning variant. Because
-the Go process runs on the user's machine, local files are directly readable —
-no upload round-trip (see `examples/desktop-demo`).
+`Config(sy.Config)`, `AllowBrowser()`. `sydesktop.Run` is the error-returning
+variant. Because the Go process runs on the user's machine, local files are
+directly readable — no upload round-trip (see `examples/desktop-demo`).
+
+By default the server is **locked to its window**: requests without the
+window's per-launch token get 403, so other local browsers can't open the app
+(pass `AllowBrowser()` to permit it). `/api/` endpoints are exempt — agent
+artifact endpoints keep working with their own bearer auth. The app's
+environment gets `SYRALIT_URL` so agent subprocesses it spawns can find those
+endpoints, and an explicit `Config(sy.Config{Port: N})` pins the port when
+external agents need a stable address.
 
 Build requirements (Wails v3's): nothing extra on Windows (WebView2 ships with
 Windows 10/11), Xcode command-line tools on macOS, webkit2gtk on Linux. For

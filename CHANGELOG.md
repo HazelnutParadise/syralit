@@ -6,6 +6,14 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-18
+
+Desktop release: ship the same Syralit app as a native desktop window via the
+new `integrations/desktop` module (Wails v3) — with `syralit dev` hot reload
+attached to the window, browser lockdown by default, an agent artifact channel
+that works under lockdown, and a real-window e2e suite in CI. Also bumps
+Insyra to v0.3.0 and makes `DefaultValue` work on text inputs.
+
 ### Added
 - **Desktop apps** — new standalone module `integrations/desktop`
   (import alias `sydesktop`) ships any Syralit app as a native desktop window

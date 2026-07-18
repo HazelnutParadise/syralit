@@ -6,6 +6,49 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-07-18
+
+Desktop release: ship the same Syralit app as a native desktop window via the
+new `integrations/desktop` module (Wails v3) — with `syralit dev` hot reload
+attached to the window, browser lockdown by default, an agent artifact channel
+that works under lockdown, and a real-window e2e suite in CI. Also bumps
+Insyra to v0.3.0 and makes `DefaultValue` work on text inputs.
+
+### Added
+- **Desktop apps** — new standalone module `integrations/desktop`
+  (import alias `sydesktop`) ships any Syralit app as a native desktop window
+  via Wails v3: `sydesktop.App(fn, opts...)` / `sydesktop.Run` start the app on
+  a loopback-only random port and open a native webview pointing at it; closing
+  the window shuts the server down. Options: `WindowTitle`, `WindowSize`,
+  `MinSize`, `Frameless`, `Icon`, `Config`. Multi-page apps (`sy.AddPage`) work
+  unchanged. New example `examples/desktop-demo` shows direct local-file access
+  (the Go process runs on the user's machine — no upload round-trip).
+  **Hot reload included**: under `syralit dev` the native window attaches to
+  the supervisor and survives rebuilds like a browser tab (state preserved,
+  build-error overlay); it auto-quits when the supervisor stops. The
+  supervisor now exports `SYRALIT_URL` and `SYRALIT_DEV_SESSION` to its child
+  to support this. **Browser lockdown by default**: the loopback server only
+  answers its own window (per-launch token; opt out with
+  `sydesktop.AllowBrowser()`); `/api/` endpoints stay open for agents with
+  their own bearer auth, `SYRALIT_URL` is set for agent subprocesses, and an
+  explicit `Config` Port pins the listen port. A Windows e2e suite
+  (`SYRALIT_DESKTOP_E2E=1`, run in CI) opens real windows to cover production
+  launch, lockdown, artifact auth, graceful close, and dev hot reload.
+
+### Fixed
+- `sy.TextInput`, `sy.TextArea` and `sy.PasswordInput` now honor
+  `sy.DefaultValue("...")` as the initial value, as the docs already promised.
+  The default applies only until the user first edits the field, so clearing it
+  sticks.
+
+### Changed
+- **Insyra bumped to v0.3.0** (from v0.2.19). Two upstream behaviour changes
+  surface through the integration: CSV/JSON files loaded via
+  `syi.UploadTable`/`syi.ParseTable` now use column-level type inference, so
+  integer columns arrive as `int64` instead of `float64` (charts, metrics and
+  the DSL already coerce both); and `syi.ListDescribe` quartiles now follow
+  R type-7, matching pandas' default `describe()`.
+
 ## [0.7.0] - 2026-07-05
 
 Interactive-data release: click-to-filter and drag-range chart selections

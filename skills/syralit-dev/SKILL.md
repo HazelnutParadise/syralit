@@ -581,6 +581,47 @@ syralit dev          # hot reload with state preservation
 syralit run          # production mode
 ```
 
+### Desktop App (native window)
+```go
+// Ship the same app as a native desktop window (Wails v3) — separate module
+// so the Wails dependency tree stays out of the core:
+import sydesktop "github.com/HazelnutParadise/syralit/integrations/desktop"
+
+func main() {
+    sydesktop.App(func() {          // desktop counterpart of sy.App (fatal on error)
+        sy.Title("My tool")
+        // ... any Syralit app; nil + sy.AddPage for multi-page
+    },
+        sydesktop.WindowSize(1200, 800),   // initial size (default 1024×768)
+        sydesktop.MinSize(640, 480),       // minimum size
+        sydesktop.WindowTitle("My tool"),  // default: resolved app title
+        sydesktop.Config(sy.Config{}),     // theme etc.; Host ignored (always loopback),
+                                           //   explicit Port pins the port for /api/ agents
+        sydesktop.Frameless(),             // remove the native frame
+        sydesktop.Icon(pngBytes),          // app icon (PNG bytes)
+        sydesktop.AllowBrowser(),          // opt out of browser lockdown (see below)
+    )
+}
+// sydesktop.Run(fn, opts...) error  — same, error returned instead of fatal.
+```
+The app serves on a loopback-only random port and the window points at it;
+closing the window shuts the server down. **Browser lockdown (default)**: the
+server only answers its own window (per-launch token; other local browsers get
+403) — pass sydesktop.AllowBrowser() to open it up. `/api/` endpoints are
+exempt so agent artifact endpoints stay reachable with their own bearer auth;
+SYRALIT_URL is set in the app's environment so spawned agent subprocesses can
+find them, and Config(sy.Config{Port: N}) pins the port for external agents. Call from the main goroutine (macOS
+needs the event loop on the main thread). The Go code runs on the user's
+machine, so local paths (os.ReadFile etc.) work directly — no FileUploader
+round-trip. Build needs: nothing extra on Windows (WebView2 is preinstalled on
+10/11), Xcode CLT on macOS, webkit2gtk on Linux. Example: examples/desktop-demo.
+
+`syralit dev` hot reload works for desktop apps: the window connects to the
+supervisor and survives rebuilds exactly like a browser tab (state preserved,
+build-error overlay). One window opens per dev session; if the user closes it,
+the session keeps running and stays reachable in a browser at the printed URL.
+The window auto-quits a few seconds after the supervisor stops.
+
 ### File Config (syralit.toml)
 ```toml
 title = "My App"

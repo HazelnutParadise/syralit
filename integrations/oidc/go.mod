@@ -3,7 +3,7 @@
 // use SSO never pull it.
 module github.com/HazelnutParadise/syralit/integrations/oidc
 
-go 1.25.11
+go 1.25.12
 
 require (
 	github.com/HazelnutParadise/syralit v0.0.0
@@ -17,8 +17,8 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
 
 replace github.com/HazelnutParadise/syralit => ../../

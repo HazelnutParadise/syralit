@@ -89,6 +89,7 @@ func startSupervisor(opts DevOptions) (*supervisor, http.Handler, error) {
 		opts:      opts,
 		binPath:   bin,
 		childAddr: childAddr,
+		sessionID: fmt.Sprintf("%d-%d", os.Getpid(), time.Now().UnixNano()),
 		ctx:       context.Background(),
 		browsers:  map[*browserConn]struct{}{},
 		stateCh:   make(chan json.RawMessage, 1),
@@ -133,6 +134,7 @@ type supervisor struct {
 	opts      DevOptions
 	binPath   string
 	childAddr string
+	sessionID string
 	ctx       context.Context
 
 	mu           sync.Mutex
@@ -162,7 +164,11 @@ func (s *supervisor) build() (string, error) {
 
 func (s *supervisor) spawnChild() error {
 	cmd := exec.Command(s.binPath)
-	cmd.Env = append(os.Environ(), envDevAddr+"="+s.childAddr)
+	cmd.Env = append(os.Environ(),
+		envDevAddr+"="+s.childAddr,
+		envDevURL+"="+s.outwardURL(),
+		envDevSession+"="+s.sessionID,
+	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
@@ -479,6 +485,16 @@ func addTree(w *fsnotify.Watcher, root string) {
 }
 
 // --- helpers ---
+
+// outwardURL is the URL browsers reach the supervisor on, with wildcard binds
+// mapped to loopback so the value is always connectable from this machine.
+func (s *supervisor) outwardURL() string {
+	host := s.opts.Host
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "127.0.0.1"
+	}
+	return fmt.Sprintf("http://%s:%d", host, s.opts.Port)
+}
 
 func (s *supervisor) setBuildErr(msg string) {
 	s.mu.Lock()

@@ -150,6 +150,11 @@ if job.Running() {
   HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
 - **`sy.Handler(cfg, fn)`** — mount a Syralit app as a plain `http.Handler`
   inside an existing Go server (works behind `http.StripPrefix` sub-paths).
+- **Native desktop apps** — ship the exact same app code as a desktop window
+  via `integrations/desktop` (Wails v3): `sydesktop.App(fn)` instead of
+  `sy.App(fn)`, and the Go code runs on the user's machine with direct local
+  file access. Packaging a Streamlit app as a desktop binary is famously
+  painful; here it's one import swap.
 - **Typed state** via generics (`sy.State[T]`) and typed `sy.Task[T]` results.
 
 ## Features
@@ -631,6 +636,51 @@ agent can POST a spec that computes live instead of only binding static data:
     "render": "bar_chart", "output": "t", "x": "region", "y": "deals"}}
 ```
 
+## Desktop Apps
+
+`integrations/desktop` ships a Syralit app as a native desktop window
+([Wails v3](https://v3.wails.io)). It is a separate Go module — webapps never
+pull the Wails dependency tree:
+
+```go
+import (
+    sy "github.com/HazelnutParadise/syralit"
+    sydesktop "github.com/HazelnutParadise/syralit/integrations/desktop"
+)
+
+func main() {
+    sydesktop.App(func() {
+        sy.Title("My tool")
+        // ... exactly the same code as a webapp
+    }, sydesktop.WindowSize(1200, 800), sydesktop.MinSize(640, 480))
+}
+```
+
+The app serves on a loopback-only random port, the window renders it through
+the OS webview, and closing the window shuts everything down. Options:
+`WindowTitle`, `WindowSize`, `MinSize`, `Frameless`, `Icon(pngBytes)`,
+`Config(sy.Config)`, `AllowBrowser()`. `sydesktop.Run` is the error-returning
+variant. Because the Go process runs on the user's machine, local files are
+directly readable — no upload round-trip (see `examples/desktop-demo`).
+
+By default the server is **locked to its window**: requests without the
+window's per-launch token get 403, so other local browsers can't open the app
+(pass `AllowBrowser()` to permit it). `/api/` endpoints are exempt — agent
+artifact endpoints keep working with their own bearer auth. The app's
+environment gets `SYRALIT_URL` so agent subprocesses it spawns can find those
+endpoints, and an explicit `Config(sy.Config{Port: N})` pins the port when
+external agents need a stable address.
+
+Build requirements (Wails v3's): nothing extra on Windows (WebView2 ships with
+Windows 10/11), Xcode command-line tools on macOS, webkit2gtk on Linux. For
+icons/installers use the [`wails3` CLI](https://v3.wails.io) packaging tooling.
+
+**Hot reload**: `syralit dev` works for desktop apps too — the native window
+attaches to the dev supervisor and survives rebuilds like a browser tab would
+(session state preserved, build errors overlay in the window). Closing the
+window leaves the dev session running; it auto-closes when the supervisor
+stops.
+
 ## Configuration
 
 ### syralit.toml
@@ -780,6 +830,16 @@ canvas chart clicks, multi-file uploads, and sub-path mounting.
 cd uitest && go test ./...   # requires a local Chrome/Chromium
 ```
 
+The desktop module has its own e2e suite (Windows) that opens real native
+windows: production launch + browser lockdown + agent artifact auth + graceful
+close, and `syralit dev` hot reload with the window surviving rebuilds. It is
+gated so plain test runs stay headless:
+
+```bash
+cd integrations/desktop
+SYRALIT_DESKTOP_E2E=1 go test ./...   # opens real windows briefly
+```
+
 ## Examples
 
 The [`examples/`](examples/) directory contains runnable demo apps:
@@ -803,6 +863,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-interactive`](examples/insyra-interactive/) | Click-to-filter dashboard: selectable GroupBy chart drives an Insyra-filtered table, metrics, and deep-linkable URL state |
 | [`data-studio`](examples/data-studio/) | Full upload → explore workflow: file upload, column pickers, aggregate switch, selectable GroupBy chart, drill-down detail and statistics |
 | [`oidc-login`](examples/oidc-login/) | OIDC single sign-on via `integrations/oidc` (standalone module) |
+| [`desktop-demo`](examples/desktop-demo/) | Native desktop window via `integrations/desktop` (standalone module): same app code, direct local file access |
 
 Run any example:
 

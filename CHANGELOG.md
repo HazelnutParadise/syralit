@@ -6,6 +6,14 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- **Insyra bumped to v0.3.0** (from v0.2.19). Two upstream behaviour changes
+  surface through the integration: CSV/JSON files loaded via
+  `syi.UploadTable`/`syi.ParseTable` now use column-level type inference, so
+  integer columns arrive as `int64` instead of `float64` (charts, metrics and
+  the DSL already coerce both); and `syi.ListDescribe` quartiles now follow
+  R type-7, matching pandas' default `describe()`.
+
 ## [0.7.0] - 2026-07-05
 
 Interactive-data release: click-to-filter and drag-range chart selections

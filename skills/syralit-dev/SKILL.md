@@ -581,6 +581,34 @@ syralit dev          # hot reload with state preservation
 syralit run          # production mode
 ```
 
+### Desktop App (native window)
+```go
+// Ship the same app as a native desktop window (Wails v3) — separate module
+// so the Wails dependency tree stays out of the core:
+import sydesktop "github.com/HazelnutParadise/syralit/integrations/desktop"
+
+func main() {
+    sydesktop.App(func() {          // desktop counterpart of sy.App (fatal on error)
+        sy.Title("My tool")
+        // ... any Syralit app; nil + sy.AddPage for multi-page
+    },
+        sydesktop.WindowSize(1200, 800),   // initial size (default 1024×768)
+        sydesktop.MinSize(640, 480),       // minimum size
+        sydesktop.WindowTitle("My tool"),  // default: resolved app title
+        sydesktop.Config(sy.Config{}),     // theme etc.; Host/Port ignored
+        sydesktop.Frameless(),             // remove the native frame
+        sydesktop.Icon(pngBytes),          // app icon (PNG bytes)
+    )
+}
+// sydesktop.Run(fn, opts...) error  — same, error returned instead of fatal.
+```
+The app serves on a loopback-only random port and the window points at it;
+closing the window shuts the server down. Call from the main goroutine (macOS
+needs the event loop on the main thread). The Go code runs on the user's
+machine, so local paths (os.ReadFile etc.) work directly — no FileUploader
+round-trip. Build needs: nothing extra on Windows (WebView2 is preinstalled on
+10/11), Xcode CLT on macOS, webkit2gtk on Linux. Example: examples/desktop-demo.
+
 ### File Config (syralit.toml)
 ```toml
 title = "My App"

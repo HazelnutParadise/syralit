@@ -6,6 +6,22 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Desktop apps** — new standalone module `integrations/desktop`
+  (import alias `sydesktop`) ships any Syralit app as a native desktop window
+  via Wails v3: `sydesktop.App(fn, opts...)` / `sydesktop.Run` start the app on
+  a loopback-only random port and open a native webview pointing at it; closing
+  the window shuts the server down. Options: `WindowTitle`, `WindowSize`,
+  `MinSize`, `Frameless`, `Icon`, `Config`. Multi-page apps (`sy.AddPage`) work
+  unchanged. New example `examples/desktop-demo` shows direct local-file access
+  (the Go process runs on the user's machine — no upload round-trip).
+
+### Fixed
+- `sy.TextInput`, `sy.TextArea` and `sy.PasswordInput` now honor
+  `sy.DefaultValue("...")` as the initial value, as the docs already promised.
+  The default applies only until the user first edits the field, so clearing it
+  sticks.
+
 ### Changed
 - **Insyra bumped to v0.3.0** (from v0.2.19). Two upstream behaviour changes
   surface through the integration: CSV/JSON files loaded via

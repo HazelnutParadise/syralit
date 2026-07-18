@@ -284,8 +284,15 @@ func TextInput(label string, opts ...Option) string {
 	rc := current()
 	o := applyOpts(opts)
 	id := rc.widgetID("text_input", o.key)
-	val, _ := rc.sess.widgetValue(id)
+	val, exists := rc.sess.widgetValue(id)
 	s, _ := val.(string)
+	if !exists {
+		// Initial value only: once the user has edited (even to empty), the
+		// stored value wins, so the field stays clearable.
+		if dv, ok := o.defaultVal.(string); ok {
+			s = dv
+		}
+	}
 	props := map[string]any{"label": label, "value": s}
 	if o.placeholder != "" {
 		props["placeholder"] = o.placeholder
@@ -309,8 +316,13 @@ func PasswordInput(label string, opts ...Option) string {
 	rc := current()
 	o := applyOpts(opts)
 	id := rc.widgetID("password_input", o.key)
-	val, _ := rc.sess.widgetValue(id)
+	val, exists := rc.sess.widgetValue(id)
 	s, _ := val.(string)
+	if !exists {
+		if dv, ok := o.defaultVal.(string); ok {
+			s = dv
+		}
+	}
 	props := map[string]any{"label": label, "value": s, "input_type": "password"}
 	if o.placeholder != "" {
 		props["placeholder"] = o.placeholder
@@ -576,8 +588,13 @@ func TextArea(label string, opts ...Option) string {
 	rc := current()
 	o := applyOpts(opts)
 	id := rc.widgetID("textarea", o.key)
-	val, _ := rc.sess.widgetValue(id)
+	val, exists := rc.sess.widgetValue(id)
 	s, _ := val.(string)
+	if !exists {
+		if dv, ok := o.defaultVal.(string); ok {
+			s = dv
+		}
+	}
 	props := map[string]any{"label": label, "value": s}
 	if o.height > 0 {
 		props["height"] = o.height

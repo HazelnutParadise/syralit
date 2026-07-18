@@ -67,6 +67,33 @@ func TestAppTestBasics(t *testing.T) {
 	}
 }
 
+func TestTextInputDefaultValue(t *testing.T) {
+	var got string
+	at := NewAppTest(func() {
+		got = TextInput("Dir", Key("dir"), DefaultValue("."))
+	})
+
+	// First render: no stored value yet, the default applies.
+	at.Run()
+	if got != "." {
+		t.Fatalf("initial value = %q, want %q", got, ".")
+	}
+
+	// A user edit wins over the default.
+	at.SetValue("dir", "/tmp")
+	at.Run()
+	if got != "/tmp" {
+		t.Fatalf("edited value = %q, want %q", got, "/tmp")
+	}
+
+	// Clearing the field must stick — the default is initial-only.
+	at.SetValue("dir", "")
+	at.Run()
+	if got != "" {
+		t.Fatalf("cleared value = %q, want empty", got)
+	}
+}
+
 func TestGetOption(t *testing.T) {
 	resolvedConfig = Config{Title: "X", Host: "127.0.0.1", Port: 9000}
 	if GetOption("title") != "X" || GetOption("server.port") != 9000 {

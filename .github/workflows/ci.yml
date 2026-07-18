@@ -24,6 +24,31 @@ jobs:
         run: go test ./...
         working-directory: integrations/oidc
 
+  desktop:
+    # Desktop shell (integrations/desktop is a separate module). Runs on
+    # Windows because Wails v3 is pure Go there — no webkit2gtk/Xcode system
+    # deps like the Linux/macOS builds need.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: integrations/desktop/go.mod
+          cache: true
+          cache-dependency-path: integrations/desktop/go.sum
+      - name: Build integrations/desktop
+        run: go build ./...
+        working-directory: integrations/desktop
+      - name: Vet integrations/desktop
+        run: go vet ./...
+        working-directory: integrations/desktop
+      - name: Test integrations/desktop
+        run: go test ./...
+        working-directory: integrations/desktop
+      - name: Build examples/desktop-demo
+        run: go build ./...
+        working-directory: examples/desktop-demo
+
   uitest:
     # Browser-level UI tests (uitest/ is a separate module; drives the
     # ubuntu runner's preinstalled Chrome headlessly).

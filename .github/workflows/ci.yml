@@ -42,9 +42,11 @@ jobs:
       - name: Vet integrations/desktop
         run: go vet ./...
         working-directory: integrations/desktop
-      - name: Test integrations/desktop
-        run: go test ./...
+      - name: Test integrations/desktop (incl. e2e — real windows on the runner)
+        run: go test -timeout 20m ./...
         working-directory: integrations/desktop
+        env:
+          SYRALIT_DESKTOP_E2E: "1"
       - name: Build examples/desktop-demo
         run: go build ./...
         working-directory: examples/desktop-demo

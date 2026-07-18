@@ -830,6 +830,16 @@ canvas chart clicks, multi-file uploads, and sub-path mounting.
 cd uitest && go test ./...   # requires a local Chrome/Chromium
 ```
 
+The desktop module has its own e2e suite (Windows) that opens real native
+windows: production launch + browser lockdown + agent artifact auth + graceful
+close, and `syralit dev` hot reload with the window surviving rebuilds. It is
+gated so plain test runs stay headless:
+
+```bash
+cd integrations/desktop
+SYRALIT_DESKTOP_E2E=1 go test ./...   # opens real windows briefly
+```
+
 ## Examples
 
 The [`examples/`](examples/) directory contains runnable demo apps:

@@ -23,7 +23,9 @@ All notable changes to Syralit are documented here. The format is based on
   answers its own window (per-launch token; opt out with
   `sydesktop.AllowBrowser()`); `/api/` endpoints stay open for agents with
   their own bearer auth, `SYRALIT_URL` is set for agent subprocesses, and an
-  explicit `Config` Port pins the listen port.
+  explicit `Config` Port pins the listen port. A Windows e2e suite
+  (`SYRALIT_DESKTOP_E2E=1`, run in CI) opens real windows to cover production
+  launch, lockdown, artifact auth, graceful close, and dev hot reload.
 
 ### Fixed
 - `sy.TextInput`, `sy.TextArea` and `sy.PasswordInput` now honor

@@ -84,6 +84,15 @@ func App(fn func()) {
 // and honor the dev control messages on the WebSocket (state dump/restore).
 const envDevAddr = "SYRALIT_DEV_ADDR"
 
+// envDevURL and envDevSession are also set by the dev supervisor for its child:
+// the outward URL browsers use (the documented $SYRALIT_URL convention), and an
+// identifier that is unique per supervisor run but stable across child rebuilds.
+// integrations/desktop uses them to keep one native window alive per dev session.
+const (
+	envDevURL     = "SYRALIT_URL"
+	envDevSession = "SYRALIT_DEV_SESSION"
+)
+
 // resolvedConfig holds the effective config after file/default resolution,
 // for GetOption.
 var resolvedConfig Config

@@ -667,6 +667,12 @@ Build requirements (Wails v3's): nothing extra on Windows (WebView2 ships with
 Windows 10/11), Xcode command-line tools on macOS, webkit2gtk on Linux. For
 icons/installers use the [`wails3` CLI](https://v3.wails.io) packaging tooling.
 
+**Hot reload**: `syralit dev` works for desktop apps too — the native window
+attaches to the dev supervisor and survives rebuilds like a browser tab would
+(session state preserved, build errors overlay in the window). Closing the
+window leaves the dev session running; it auto-closes when the supervisor
+stops.
+
 ## Configuration
 
 ### syralit.toml

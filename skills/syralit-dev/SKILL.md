@@ -609,6 +609,12 @@ machine, so local paths (os.ReadFile etc.) work directly — no FileUploader
 round-trip. Build needs: nothing extra on Windows (WebView2 is preinstalled on
 10/11), Xcode CLT on macOS, webkit2gtk on Linux. Example: examples/desktop-demo.
 
+`syralit dev` hot reload works for desktop apps: the window connects to the
+supervisor and survives rebuilds exactly like a browser tab (state preserved,
+build-error overlay). One window opens per dev session; if the user closes it,
+the session keeps running and stays reachable in a browser at the printed URL.
+The window auto-quits a few seconds after the supervisor stops.
+
 ### File Config (syralit.toml)
 ```toml
 title = "My App"

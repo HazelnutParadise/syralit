@@ -15,6 +15,11 @@ All notable changes to Syralit are documented here. The format is based on
   `MinSize`, `Frameless`, `Icon`, `Config`. Multi-page apps (`sy.AddPage`) work
   unchanged. New example `examples/desktop-demo` shows direct local-file access
   (the Go process runs on the user's machine — no upload round-trip).
+  **Hot reload included**: under `syralit dev` the native window attaches to
+  the supervisor and survives rebuilds like a browser tab (state preserved,
+  build-error overlay); it auto-quits when the supervisor stops. The
+  supervisor now exports `SYRALIT_URL` and `SYRALIT_DEV_SESSION` to its child
+  to support this.
 
 ### Fixed
 - `sy.TextInput`, `sy.TextArea` and `sy.PasswordInput` now honor

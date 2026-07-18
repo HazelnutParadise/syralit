@@ -27,6 +27,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	sy "github.com/HazelnutParadise/syralit"
@@ -81,10 +82,30 @@ func App(fn func(), options ...Option) {
 }
 
 // Run is App with the error returned instead of being fatal.
+//
+// Under `syralit dev` the process is a hot-reload child: it serves the
+// supervisor like sy.Run does, and the native window is handed to a detached
+// helper process that outlives rebuilds — so the window gets the same
+// hot-reload experience as a browser tab (state preserved, error overlays).
+// Closing that window leaves the dev session running; closing it is for the
+// session (the app stays reachable in a browser at $SYRALIT_URL).
 func Run(fn func(), options ...Option) error {
 	o := &opts{width: 1024, height: 768}
 	for _, apply := range options {
 		apply(o)
+	}
+
+	// Window-host mode (internal): render the dev window only; the supervisor
+	// owns the server. Entered by the helper process spawnDevWindow starts.
+	if url := os.Getenv(envWindowHost); url != "" {
+		return runWindowHost(url, o)
+	}
+
+	// Dev-child mode under `syralit dev`: spawn the window helper (once per
+	// dev session), then serve the supervisor's internal address via sy.Run.
+	if os.Getenv(envDevAddr) != "" {
+		spawnDevWindow()
+		return sy.Run(o.cfg, fn)
 	}
 
 	// sy.Handler resolves config (code > syralit.toml > defaults) as a side
@@ -109,6 +130,25 @@ func Run(fn func(), options ...Option) error {
 		}
 	}()
 
+	app := newWindowApp(o, "http://"+ln.Addr().String())
+
+	runErr := app.Run()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(ctx)
+
+	select {
+	case err := <-serveErr:
+		return err
+	default:
+	}
+	return runErr
+}
+
+// newWindowApp builds the Wails application with a single webview window
+// pointed at url, from the shared window options.
+func newWindowApp(o *opts, url string) *application.App {
 	app := application.New(application.Options{
 		Name: o.title,
 		Icon: o.icon,
@@ -123,19 +163,7 @@ func Run(fn func(), options ...Option) error {
 		MinWidth:  o.minWidth,
 		MinHeight: o.minHeight,
 		Frameless: o.frameless,
-		URL:       "http://" + ln.Addr().String(),
+		URL:       url,
 	})
-
-	runErr := app.Run()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	_ = srv.Shutdown(ctx)
-
-	select {
-	case err := <-serveErr:
-		return err
-	default:
-	}
-	return runErr
+	return app
 }

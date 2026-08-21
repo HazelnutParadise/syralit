@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"log"
 	"mime"
 	"strings"
 	"sync"
@@ -59,16 +60,17 @@ func assetOverridesScript() string {
 	return "\n<script>window.__SY_ASSETS=" + string(b) + ";</script>"
 }
 
-// indexHTML is the app shell. The two %s slots are the page title and an optional
-// inline <style> block carrying theme overrides. The client runtime is loaded
-// from /_syralit/assets and opens the WebSocket back to the server.
+// indexHTML is the app shell. The %s slots are the <html> attributes, the page
+// title, an optional inline <style> block carrying theme overrides, and the
+// app's own <head> markup. The client runtime is loaded from /_syralit/assets
+// and opens the WebSocket back to the server.
 const indexHTML = `<!doctype html>
-<html lang="en"%[1]s>
+<html%[1]s>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>%[2]s</title>
-<link rel="stylesheet" href="%[4]s/_syralit/assets/runtime.css">%[3]s
+<link rel="stylesheet" href="%[4]s/_syralit/assets/runtime.css">%[3]s%[7]s
 </head>
 <body>
 <div id="syralit-root">
@@ -82,6 +84,40 @@ const indexHTML = `<!doctype html>
 // uiStrings holds the [i18n] overrides for built-in UI text; nil means the
 // English defaults. Published to the front end as window.__SY_I18N.
 var uiStrings map[string]string
+
+// docLang, docDir and headHTML carry Config.Lang / Config.Dir / Config.HeadHTML
+// into the shell. Like uiStrings they are package level, so the dev supervisor
+// renders the same document as the app server without threading them through
+// renderIndex's signature. Write them through setShellConfig, which is where
+// they get validated.
+var (
+	docLang  string // "" means the "en" default
+	docDir   string // "" omits the attribute; otherwise ltr, rtl or auto
+	headHTML string
+)
+
+// setShellConfig resolves the document-level options once, when the server or
+// the dev supervisor starts. Validating here rather than per render means an
+// invalid value is reported a single time instead of on every page load.
+func setShellConfig(lang, dir, head string) {
+	docLang = ""
+	if v := strings.TrimSpace(lang); v != "" {
+		if langValueSafe(v) {
+			docLang = v
+		} else {
+			log.Printf("syralit: ignoring invalid lang %q", v)
+		}
+	}
+	docDir = ""
+	switch v := strings.ToLower(strings.TrimSpace(dir)); v {
+	case "":
+	case "ltr", "rtl", "auto":
+		docDir = v
+	default:
+		log.Printf("syralit: ignoring invalid dir %q (want ltr, rtl or auto)", dir)
+	}
+	headHTML = head
+}
 
 // Built-in font stacks selected by the "sans-serif" / "serif" / "monospace"
 // theme keywords. The named families are embedded (assets/fonts) and declared
@@ -310,9 +346,25 @@ func renderIndex(title string, th Theme, basePath ...string) string {
 	if v := uiStrings["connecting"]; v != "" {
 		connecting = v
 	}
-	htmlAttr := ""
+	// <html> attributes: language, writing direction, forced theme. The first
+	// two were validated by setShellConfig.
+	lang := docLang
+	if lang == "" {
+		lang = "en"
+	}
+	htmlAttr := ` lang="` + lang + `"`
+	if docDir != "" {
+		htmlAttr += ` dir="` + docDir + `"`
+	}
 	if th.Mode == "light" || th.Mode == "dark" {
-		htmlAttr = fmt.Sprintf(` data-theme=%q`, th.Mode)
+		htmlAttr += fmt.Sprintf(` data-theme=%q`, th.Mode)
+	}
+
+	// The app's own <head> markup goes in verbatim, after the theme block so
+	// that it can override the CSS variables the theme just declared.
+	head := ""
+	if headHTML != "" {
+		head = "\n" + headHTML
 	}
 
 	var css strings.Builder
@@ -384,7 +436,29 @@ func renderIndex(title string, th Theme, basePath ...string) string {
 		}
 	}
 
-	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript(), base, baseScript, htmlEscape(connecting))
+	return fmt.Sprintf(indexHTML, htmlAttr, htmlEscape(title), style+themeScript+assetOverridesScript(), base, baseScript, htmlEscape(connecting), head)
+}
+
+// langValueSafe validates a BCP 47 language tag conservatively: letters, digits
+// and hyphens only, starting with a letter. It is deliberately not a full BCP 47
+// parser — the job here is to keep the value inside the attribute it is written
+// into, not to certify the tag.
+func langValueSafe(v string) bool {
+	if v == "" || len(v) > 35 {
+		return false
+	}
+	for i, r := range v {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z':
+		case r >= '0' && r <= '9', r == '-':
+			if i == 0 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // fontValueSafe allows a CSS font-family list (quoted names, commas) while

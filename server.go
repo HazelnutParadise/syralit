@@ -32,6 +32,25 @@ type Config struct {
 	SSLCertFile string
 	SSLKeyFile  string
 
+	// Lang sets the document language of the app shell (the lang attribute on
+	// <html>). Defaults to "en". Configurable via the lang key in syralit.toml.
+	Lang string
+
+	// Dir sets the writing direction of the app shell (the dir attribute on
+	// <html>): "ltr", "rtl" or "auto". Empty omits the attribute, which the
+	// browser reads as "ltr". Arabic, Hebrew, Persian and Urdu apps need "rtl"
+	// explicitly — the language does not imply the direction. Configurable via
+	// the dir key in syralit.toml.
+	Dir string
+
+	// HeadHTML is inserted verbatim at the end of <head>, after the stylesheet
+	// link and the theme block: a description or Open Graph tag, a favicon
+	// link, a preconnect hint. It is neither escaped nor validated, exactly
+	// like sy.HTML(), so never build it out of user input. The value applies to
+	// every request; there is no per-request variant. Configurable via the
+	// head_html key in syralit.toml.
+	HeadHTML string
+
 	// UIStrings overrides the framework's built-in UI text (localization).
 	// Known keys: "connecting", "loading", "add_new", "file_too_large",
 	// "menu", "menu_get_help", "menu_report_bug", "menu_about".
@@ -105,6 +124,7 @@ func Run(cfg Config, fn func()) error {
 	uploadLimitBytes = cfg.uploadLimit()
 	resolvedConfig = cfg
 	uiStrings = cfg.UIStrings
+	setShellConfig(cfg.Lang, cfg.Dir, cfg.HeadHTML)
 	s := &server{cfg: cfg, appFn: fn}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
@@ -126,6 +146,7 @@ func Handler(cfg Config, fn func()) http.Handler {
 	uploadLimitBytes = cfg.uploadLimit()
 	resolvedConfig = cfg
 	uiStrings = cfg.UIStrings
+	setShellConfig(cfg.Lang, cfg.Dir, cfg.HeadHTML)
 	s := &server{cfg: cfg, appFn: fn}
 	return s.handler()
 }

@@ -1,6 +1,9 @@
 package syralit
 
 import (
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -300,5 +303,137 @@ func TestRenderIndexRejectsUnsafeTheme(t *testing.T) {
 	}
 	if strings.Contains(html, "--sy-accent") {
 		t.Fatalf("unsafe accent should have been rejected:\n%s", html)
+	}
+}
+
+func TestRenderIndexShellDefaults(t *testing.T) {
+	// An app that sets none of the shell options must render exactly what it
+	// rendered before Lang/Dir/HeadHTML existed.
+	defer restoreShell(saveShell())
+	setShellConfig("", "", "")
+
+	html := renderIndex("X", Theme{})
+	if !strings.Contains(html, `<html lang="en">`) {
+		t.Fatalf("default shell lost its lang attribute:\n%s", html)
+	}
+	if strings.Contains(html, " dir=") {
+		t.Fatalf("unset Dir must not emit the attribute:\n%s", html)
+	}
+	if !strings.Contains(html, "runtime.css\">\n</head>") {
+		t.Fatalf("default head gained unexpected markup:\n%s", html)
+	}
+}
+
+func TestRenderIndexLangAndDir(t *testing.T) {
+	defer restoreShell(saveShell())
+	setShellConfig("ar-EG", "rtl", "")
+
+	html := renderIndex("X", Theme{Mode: "dark"})
+	if !strings.Contains(html, `<html lang="ar-EG" dir="rtl" data-theme="dark">`) {
+		t.Fatalf("lang/dir/theme attributes wrong:\n%s", html)
+	}
+}
+
+func TestRenderIndexRejectsUnsafeLangAndDir(t *testing.T) {
+	defer restoreShell(saveShell())
+	setShellConfig(`en" onload="alert(1)`, `rtl"><script>alert(2)</script>`, "")
+
+	html := renderIndex("X", Theme{})
+	if !strings.Contains(html, `<html lang="en">`) {
+		t.Fatalf("invalid lang/dir should fall back to the default:\n%s", html)
+	}
+	if strings.Contains(html, "onload") || strings.Contains(html, "alert(") {
+		t.Fatalf("unsafe attribute value leaked into output:\n%s", html)
+	}
+
+	// "sideways" is a real CSS writing direction but not a valid dir value.
+	setShellConfig("en", "sideways", "")
+	if html := renderIndex("X", Theme{}); strings.Contains(html, " dir=") {
+		t.Fatalf("unknown dir value should have been dropped:\n%s", html)
+	}
+}
+
+func TestRenderIndexHeadHTML(t *testing.T) {
+	defer restoreShell(saveShell())
+	head := `<meta name="description" content="A & B">` + "\n" + `<link rel="icon" href="/icon.svg">`
+	setShellConfig("", "", head)
+
+	html := renderIndex("X", Theme{ThemeStyle: ThemeStyle{Accent: "#0F766E"}})
+	if !strings.Contains(html, head+"\n</head>") {
+		t.Fatalf("head html not emitted verbatim at the end of <head>:\n%s", html)
+	}
+	// It must land after the theme block so an app can override the CSS vars.
+	if strings.Index(html, "--sy-accent") > strings.Index(html, "rel=\"icon\"") {
+		t.Fatalf("head html must follow the theme style block:\n%s", html)
+	}
+}
+
+func TestShellConfigFromFile(t *testing.T) {
+	fc := &fileConfig{
+		Lang:     "zh-Hant-TW",
+		Dir:      "ltr",
+		HeadHTML: `<meta name="robots" content="noindex">`,
+		I18n:     map[string]string{"connecting": "連線中…"},
+	}
+
+	var cfg Config
+	fc.applyToConfig(&cfg)
+	if cfg.Lang != "zh-Hant-TW" || cfg.Dir != "ltr" || cfg.HeadHTML != fc.HeadHTML {
+		t.Fatalf("shell keys not applied to Config: %+v", cfg)
+	}
+
+	// Explicit code values win over the file.
+	cfg2 := Config{Lang: "ja", Dir: "auto", HeadHTML: "<meta name=\"x\">"}
+	fc.applyToConfig(&cfg2)
+	if cfg2.Lang != "ja" || cfg2.Dir != "auto" || cfg2.HeadHTML != "<meta name=\"x\">" {
+		t.Fatalf("file overrode explicit shell values: %+v", cfg2)
+	}
+
+	// The dev supervisor renders the same shell, so it needs the same values —
+	// including the [i18n] table, which it used to drop.
+	var dev DevOptions
+	fc.applyToDev(&dev)
+	if dev.Lang != "zh-Hant-TW" || dev.TextDir != "ltr" || dev.HeadHTML != fc.HeadHTML {
+		t.Fatalf("shell keys not applied to DevOptions: %+v", dev)
+	}
+	if dev.UIStrings["connecting"] != "連線中…" {
+		t.Fatalf("[i18n] not applied to DevOptions: %+v", dev.UIStrings)
+	}
+}
+
+func saveShell() (string, string, string) { return docLang, docDir, headHTML }
+
+func restoreShell(lang, dir, head string) { docLang, docDir, headHTML = lang, dir, head }
+
+func TestHandlerServesShellConfig(t *testing.T) {
+	// End to end: the values on Config must reach the very first HTML response,
+	// which is the whole point of the feature (crawlers never open a socket).
+	defer restoreShell(saveShell())
+
+	h := Handler(Config{
+		Title:    "My App",
+		Lang:     "ar-EG",
+		Dir:      "rtl",
+		HeadHTML: `<meta name="description" content="hi">`,
+	}, func() { Text("hi") })
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatalf("get index: %v", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	html := string(body)
+
+	for _, want := range []string{
+		`<html lang="ar-EG" dir="rtl">`,
+		"<title>My App</title>",
+		`<meta name="description" content="hi">` + "\n</head>",
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("first response missing %q:\n%s", want, html)
+		}
 	}
 }

@@ -521,6 +521,20 @@ sy.SetPageConfig(
     ),
 )
 
+// Document shell — the <html> attributes and <head> of the first HTML response,
+// so crawlers and link previews see them (SetPageConfig only reaches the browser
+// after the socket connects).
+sy.Run(sy.Config{
+    Lang: "zh-Hant-TW",   // <html lang>; default "en". Invalid values are logged and ignored.
+    Dir:  "rtl",          // <html dir>: "ltr" | "rtl" | "auto"; omitted when empty.
+                          // The language does not imply direction — Arabic/Hebrew need this.
+    HeadHTML: `<meta name="description" content="A Go data app">` + "\n" +
+        `<link rel="icon" href="/icon.svg">`,
+    // HeadHTML goes in verbatim after the theme block (so it can override the
+    // CSS vars). Not escaped, not validated, same trust level as sy.HTML() —
+    // never build it out of user input. Process-wide, not per request.
+}, myApp)
+
 // Secrets (from syralit.toml [secrets] section)
 apiKey := sy.Secrets("api_key")
 
@@ -627,6 +641,12 @@ The window auto-quits a few seconds after the supervisor stops.
 title = "My App"
 host = "0.0.0.0"
 port = 8600
+lang = "zh-Hant-TW"       # <html lang> (default "en")
+dir = "ltr"               # <html dir>: ltr | rtl | auto (omitted when unset)
+head_html = """
+<meta name="description" content="A Go data app">
+<link rel="icon" href="/icon.svg">
+"""                       # inserted verbatim at the end of <head>
 
 [theme]
 mode = "system"        # "light" | "dark" | "system"

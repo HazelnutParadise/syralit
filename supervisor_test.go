@@ -166,3 +166,59 @@ func TestHotReload(t *testing.T) {
 	writeApp(strings.Replace(devAppV1, `"V1"`, `"V3"`, 1))
 	readUntil(t, c, 30*time.Second, "V3", "Count: 2")
 }
+
+// TestDevSupervisorShell pins the shell the dev supervisor serves. It owns the
+// outward port and renders index.html itself, so every syralit.toml key that
+// shapes the document has to reach it too — otherwise dev and production show
+// different pages. The child is never built here: the supervisor serves its
+// shell whether or not the app compiles, which is the whole point.
+func TestDevSupervisorShell(t *testing.T) {
+	defer restoreShell(saveShell())
+	oldUI := uiStrings
+	defer func() { uiStrings = oldUI }()
+
+	appDir := "_devshell_app"
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(appDir)
+	toml := `title = "Dev Shell"
+lang = "he-IL"
+dir = "rtl"
+head_html = "<meta name=\"robots\" content=\"noindex\">"
+
+[i18n]
+connecting = "מתחבר…"
+`
+	if err := os.WriteFile(filepath.Join(appDir, ConfigFileName), []byte(toml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, mux, err := startSupervisor(DevOptions{Dir: appDir, Target: "."})
+	if err != nil {
+		t.Fatalf("startSupervisor: %v", err)
+	}
+	defer s.shutdown()
+
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatalf("get index: %v", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	html := string(body)
+
+	for _, want := range []string{
+		`<html lang="he-IL" dir="rtl">`,
+		"<title>Dev Shell</title>",
+		`<meta name="robots" content="noindex">` + "\n</head>",
+		"מתחבר…", // the [i18n] table used to be dropped on this path
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("dev shell missing %q:\n%s", want, html)
+		}
+	}
+}

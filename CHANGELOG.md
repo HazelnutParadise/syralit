@@ -6,6 +6,26 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Configurable app shell** (#1) — `Config.Lang` sets the `lang` attribute on
+  `<html>` (default `"en"`), `Config.Dir` sets `dir` (`"ltr"` / `"rtl"` /
+  `"auto"`; omitted when empty), and `Config.HeadHTML` is inserted verbatim at
+  the end of `<head>` for description and Open Graph tags, a favicon link or
+  resource hints. All three land in the first HTML response, so crawlers and
+  link previews see them; all three are also settable from `syralit.toml`
+  (`lang`, `dir`, `head_html`). `HeadHTML` is neither escaped nor validated —
+  same trust level as `sy.HTML()` — while an invalid `Lang` or `Dir` is logged
+  and ignored. `DevOptions` gains `Lang` / `TextDir` / `HeadHTML` / `UIStrings`
+  so `syralit dev` renders the same shell as `syralit run`.
+
+### Fixed
+- `syralit dev` now applies the `[i18n]` table to its own shell. The supervisor
+  reads `syralit.toml` separately from `Config`, and `applyToDev` never copied
+  the UI string overrides, so localized built-in text vanished in dev.
+
+### Changed
+- Insyra bumped to v0.3.1.
+
 ## [0.8.0] - 2026-07-18
 
 Desktop release: ship the same Syralit app as a native desktop window via the

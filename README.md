@@ -689,6 +689,12 @@ stops.
 title = "My App"
 host = "0.0.0.0"
 port = 8600
+lang = "zh-Hant-TW"       # <html lang> (default "en")
+dir = "ltr"               # <html dir>: ltr | rtl | auto (omitted when unset)
+head_html = """
+<meta name="description" content="A Go data app">
+<link rel="icon" href="/icon.svg">
+"""                       # inserted verbatim at the end of <head>
 
 [theme]
 mode = "system"        # "light" | "dark" | "system"
@@ -751,6 +757,29 @@ ssl_key_file = "key.pem"
 connecting = "連線中…"
 loading = "載入中…"
 ```
+
+### Document Shell
+
+`SetPageConfig` reaches the browser only after the socket connects, so the very
+first HTML response — the one a crawler, a link preview or `curl` sees — is
+configured on `Config` instead.
+
+```go
+sy.Run(sy.Config{
+    Lang: "zh-Hant-TW",   // <html lang>; default "en"
+    Dir:  "rtl",          // <html dir>: "ltr" | "rtl" | "auto"; omitted when empty
+    HeadHTML: `<meta name="description" content="A Go data app">` + "\n" +
+        `<link rel="icon" href="/icon.svg">`,
+}, myApp)
+```
+
+A language does not imply a writing direction, so Arabic, Hebrew, Persian and
+Urdu apps need `Dir: "rtl"` as well as `Lang`. `HeadHTML` is inserted verbatim
+at the end of `<head>`, after the theme block, so it can also override the
+theme's CSS variables. It is neither escaped nor validated — the same trust
+level as `sy.HTML()` — so never build it out of user input. All three apply to
+every request; there is no per-request variant, and `syralit dev` renders the
+same shell as `syralit run`.
 
 ### Runtime Configuration
 

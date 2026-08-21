@@ -177,7 +177,11 @@ type fileTheme struct {
 }
 
 type fileConfig struct {
-	Title   string            `toml:"title"`
+	Title    string `toml:"title"`
+	Lang     string `toml:"lang"`
+	Dir      string `toml:"dir"`
+	HeadHTML string `toml:"head_html"`
+
 	Host    string            `toml:"host"`
 	Port    int               `toml:"port"`
 	Secrets map[string]string `toml:"secrets"`
@@ -217,6 +221,15 @@ func (fc *fileConfig) applyToConfig(cfg *Config) {
 	if cfg.Title == "" {
 		cfg.Title = fc.Title
 	}
+	if cfg.Lang == "" {
+		cfg.Lang = fc.Lang
+	}
+	if cfg.Dir == "" {
+		cfg.Dir = fc.Dir
+	}
+	if cfg.HeadHTML == "" {
+		cfg.HeadHTML = fc.HeadHTML
+	}
 	if cfg.Host == "" {
 		cfg.Host = fc.Host
 	}
@@ -250,6 +263,18 @@ func (fc *fileConfig) applyToDev(o *DevOptions) {
 	}
 	if o.Port == 0 {
 		o.Port = fc.Port
+	}
+	if o.Lang == "" {
+		o.Lang = fc.Lang
+	}
+	if o.TextDir == "" {
+		o.TextDir = fc.Dir
+	}
+	if o.HeadHTML == "" {
+		o.HeadHTML = fc.HeadHTML
+	}
+	if o.UIStrings == nil {
+		o.UIStrings = fc.I18n
 	}
 	fc.applyTheme(&o.Theme)
 }

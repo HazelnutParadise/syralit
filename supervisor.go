@@ -31,6 +31,16 @@ type DevOptions struct {
 	Title     string // page title
 	AssetsDir string // optional: serve front-end assets from disk and hot-reload them
 	PublicDir string // optional: serve user static files (public/) from disk at site root
+
+	// The supervisor owns the outward port in dev, so it renders the app shell
+	// itself. These mirror Config.Lang / Config.Dir / Config.HeadHTML /
+	// Config.UIStrings so that `syralit dev` and `syralit run` produce the same
+	// document. TextDir is Config.Dir under another name, because Dir above is
+	// already the project directory.
+	Lang      string            // <html lang>; defaults to "en"
+	TextDir   string            // <html dir>: "ltr", "rtl" or "auto"
+	HeadHTML  string            // markup appended verbatim to <head>
+	UIStrings map[string]string // [i18n] overrides for built-in UI text
 	Theme     Theme
 }
 
@@ -75,6 +85,8 @@ func startSupervisor(opts DevOptions) (*supervisor, http.Handler, error) {
 	}
 	loadFileConfig(opts.Dir).applyToDev(&opts) // syralit.toml fills unset values
 	opts.applyDefaults()
+	uiStrings = opts.UIStrings
+	setShellConfig(opts.Lang, opts.TextDir, opts.HeadHTML)
 
 	childAddr, err := freePort()
 	if err != nil {

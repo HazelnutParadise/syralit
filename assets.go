@@ -81,42 +81,38 @@ const indexHTML = `<!doctype html>
 </body>
 </html>`
 
-// uiStrings holds the [i18n] overrides for built-in UI text; nil means the
-// English defaults. Published to the front end as window.__SY_I18N.
-var uiStrings map[string]string
+// shellConfig is everything the app shell needs beyond title and theme: the
+// <html> attributes, the app's own <head> markup and the [i18n] overrides for
+// built-in UI text (published to the front end as window.__SY_I18N). It is
+// resolved once per server or dev supervisor and then only read, so two
+// sy.Handler values in one process each keep the shell they were given.
+type shellConfig struct {
+	lang      string // "" means the "en" default
+	dir       string // "" omits the attribute; otherwise ltr, rtl or auto
+	headHTML  string
+	uiStrings map[string]string
+}
 
-// docLang, docDir and headHTML carry Config.Lang / Config.Dir / Config.HeadHTML
-// into the shell. Like uiStrings they are package level, so the dev supervisor
-// renders the same document as the app server without threading them through
-// renderIndex's signature. Write them through setShellConfig, which is where
-// they get validated.
-var (
-	docLang  string // "" means the "en" default
-	docDir   string // "" omits the attribute; otherwise ltr, rtl or auto
-	headHTML string
-)
-
-// setShellConfig resolves the document-level options once, when the server or
-// the dev supervisor starts. Validating here rather than per render means an
-// invalid value is reported a single time instead of on every page load.
-func setShellConfig(lang, dir, head string) {
-	docLang = ""
+// resolveShell validates the document-level options. Doing it here rather than
+// per render means an invalid value is reported a single time instead of on
+// every page load.
+func resolveShell(lang, dir, head string, ui map[string]string) shellConfig {
+	sc := shellConfig{headHTML: head, uiStrings: ui}
 	if v := strings.TrimSpace(lang); v != "" {
 		if langValueSafe(v) {
-			docLang = v
+			sc.lang = v
 		} else {
 			log.Printf("syralit: ignoring invalid lang %q", v)
 		}
 	}
-	docDir = ""
 	switch v := strings.ToLower(strings.TrimSpace(dir)); v {
 	case "":
 	case "ltr", "rtl", "auto":
-		docDir = v
+		sc.dir = v
 	default:
 		log.Printf("syralit: ignoring invalid dir %q (want ltr, rtl or auto)", dir)
 	}
-	headHTML = head
+	return sc
 }
 
 // Built-in font stacks selected by the "sans-serif" / "serif" / "monospace"
@@ -322,7 +318,7 @@ func chartColorsJSON(colors []string) []string {
 // values are validated before being inlined as CSS. basePath is the URL
 // prefix the app is mounted under ("" at the root; e.g. "/dash" behind
 // sy.Handler + http.StripPrefix) so assets and endpoints resolve correctly.
-func renderIndex(title string, th Theme, basePath ...string) string {
+func renderIndex(title string, th Theme, shell shellConfig, basePath ...string) string {
 	base := ""
 	if len(basePath) > 0 {
 		base = strings.TrimSuffix(basePath[0], "/")
@@ -337,24 +333,24 @@ func renderIndex(title string, th Theme, basePath ...string) string {
 	}
 	// [i18n] overrides for built-in UI text. json.Marshal escapes <, > and &,
 	// so the payload cannot break out of the script element.
-	if len(uiStrings) > 0 {
-		if b, err := json.Marshal(uiStrings); err == nil {
+	if len(shell.uiStrings) > 0 {
+		if b, err := json.Marshal(shell.uiStrings); err == nil {
 			baseScript += "<script>window.__SY_I18N=" + string(b) + ";</script>\n"
 		}
 	}
 	connecting := "Connecting…"
-	if v := uiStrings["connecting"]; v != "" {
+	if v := shell.uiStrings["connecting"]; v != "" {
 		connecting = v
 	}
 	// <html> attributes: language, writing direction, forced theme. The first
-	// two were validated by setShellConfig.
-	lang := docLang
+	// two were validated by resolveShell.
+	lang := shell.lang
 	if lang == "" {
 		lang = "en"
 	}
 	htmlAttr := ` lang="` + lang + `"`
-	if docDir != "" {
-		htmlAttr += ` dir="` + docDir + `"`
+	if shell.dir != "" {
+		htmlAttr += ` dir="` + shell.dir + `"`
 	}
 	if th.Mode == "light" || th.Mode == "dark" {
 		htmlAttr += fmt.Sprintf(` data-theme=%q`, th.Mode)
@@ -363,8 +359,8 @@ func renderIndex(title string, th Theme, basePath ...string) string {
 	// The app's own <head> markup goes in verbatim, after the theme block so
 	// that it can override the CSS variables the theme just declared.
 	head := ""
-	if headHTML != "" {
-		head = "\n" + headHTML
+	if shell.headHTML != "" {
+		head = "\n" + shell.headHTML
 	}
 
 	var css strings.Builder

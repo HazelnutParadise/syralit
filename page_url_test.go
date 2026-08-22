@@ -63,7 +63,6 @@ func TestPageInfosCarrySlug(t *testing.T) {
 
 func TestIndexServesPagePath(t *testing.T) {
 	defer resetPages()
-	defer restoreShell(saveShell())
 	AddPage("Home", func() { Title("home") })
 	AddPage("Data Explorer", func() { Title("explorer") })
 
@@ -209,10 +208,6 @@ func TestPageChangeAcceptsSlug(t *testing.T) {
 }
 
 func TestDevSupervisorServesPageURL(t *testing.T) {
-	defer restoreShell(saveShell())
-	oldUI := uiStrings
-	defer func() { uiStrings = oldUI }()
-
 	appDir := "_devpage_app"
 	if err := os.MkdirAll(appDir, 0o755); err != nil {
 		t.Fatal(err)

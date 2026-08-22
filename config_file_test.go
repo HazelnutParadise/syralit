@@ -58,7 +58,7 @@ func TestLoadFileConfigMissing(t *testing.T) {
 }
 
 func TestRenderIndexTheme(t *testing.T) {
-	html := renderIndex("My App", Theme{Mode: "dark", ThemeStyle: ThemeStyle{Accent: "#7C3AED", Radius: "12px"}})
+	html := renderIndex("My App", Theme{Mode: "dark", ThemeStyle: ThemeStyle{Accent: "#7C3AED", Radius: "12px"}}, shellConfig{})
 	for _, want := range []string{
 		"<title>My App</title>",
 		`data-theme="dark"`,
@@ -89,7 +89,7 @@ func TestRenderIndexFontTheme(t *testing.T) {
 			Weight: "200 900", Style: "italic", UnicodeRange: "U+0-10FFFF",
 		}},
 		Sidebar: ThemeStyle{Font: "sans-serif"},
-	})
+	}, shellConfig{})
 	for _, want := range []string{
 		`--sy-font:"Source Serif 4"`,
 		`--sy-font-heading:"My Brand", sans-serif`,
@@ -115,7 +115,7 @@ func TestRenderIndexRejectsUnsafeFontTheme(t *testing.T) {
 			Family: "Evil",
 			URL:    `x") format("woff2"); } </style><script>alert(2)</script>`,
 		}},
-	})
+	}, shellConfig{})
 	if strings.Contains(html, "<script>") {
 		t.Fatalf("unsafe font value leaked into output:\n%s", html)
 	}
@@ -156,7 +156,7 @@ func TestRenderIndexFullTheme(t *testing.T) {
 			RedColor:        "#ff0000",
 			BaseFontSize:    15,
 		},
-	})
+	}, shellConfig{})
 	for _, want := range []string{
 		"--sy-accent:#0F766E", "--sy-radius:8px", "--sy-btn-radius:999px",
 		"--sy-bg:#101418", "--sy-fg:#e6e8eb", "--sy-sidebar-bg:#1a1f26",
@@ -297,7 +297,7 @@ font = "sans-serif"
 
 func TestRenderIndexRejectsUnsafeTheme(t *testing.T) {
 	// A value trying to break out of the CSS context must be dropped.
-	html := renderIndex("X", Theme{ThemeStyle: ThemeStyle{Accent: "#fff}</style><script>alert(1)</script>"}})
+	html := renderIndex("X", Theme{ThemeStyle: ThemeStyle{Accent: "#fff}</style><script>alert(1)</script>"}}, shellConfig{})
 	if strings.Contains(html, "<script>") {
 		t.Fatalf("unsafe theme value leaked into output:\n%s", html)
 	}
@@ -309,10 +309,7 @@ func TestRenderIndexRejectsUnsafeTheme(t *testing.T) {
 func TestRenderIndexShellDefaults(t *testing.T) {
 	// An app that sets none of the shell options must render exactly what it
 	// rendered before Lang/Dir/HeadHTML existed.
-	defer restoreShell(saveShell())
-	setShellConfig("", "", "")
-
-	html := renderIndex("X", Theme{})
+	html := renderIndex("X", Theme{}, resolveShell("", "", "", nil))
 	if !strings.Contains(html, `<html lang="en">`) {
 		t.Fatalf("default shell lost its lang attribute:\n%s", html)
 	}
@@ -325,20 +322,14 @@ func TestRenderIndexShellDefaults(t *testing.T) {
 }
 
 func TestRenderIndexLangAndDir(t *testing.T) {
-	defer restoreShell(saveShell())
-	setShellConfig("ar-EG", "rtl", "")
-
-	html := renderIndex("X", Theme{Mode: "dark"})
+	html := renderIndex("X", Theme{Mode: "dark"}, resolveShell("ar-EG", "rtl", "", nil))
 	if !strings.Contains(html, `<html lang="ar-EG" dir="rtl" data-theme="dark">`) {
 		t.Fatalf("lang/dir/theme attributes wrong:\n%s", html)
 	}
 }
 
 func TestRenderIndexRejectsUnsafeLangAndDir(t *testing.T) {
-	defer restoreShell(saveShell())
-	setShellConfig(`en" onload="alert(1)`, `rtl"><script>alert(2)</script>`, "")
-
-	html := renderIndex("X", Theme{})
+	html := renderIndex("X", Theme{}, resolveShell(`en" onload="alert(1)`, `rtl"><script>alert(2)</script>`, "", nil))
 	if !strings.Contains(html, `<html lang="en">`) {
 		t.Fatalf("invalid lang/dir should fall back to the default:\n%s", html)
 	}
@@ -347,18 +338,15 @@ func TestRenderIndexRejectsUnsafeLangAndDir(t *testing.T) {
 	}
 
 	// "sideways" is a real CSS writing direction but not a valid dir value.
-	setShellConfig("en", "sideways", "")
-	if html := renderIndex("X", Theme{}); strings.Contains(html, " dir=") {
+	if html := renderIndex("X", Theme{}, resolveShell("en", "sideways", "", nil)); strings.Contains(html, " dir=") {
 		t.Fatalf("unknown dir value should have been dropped:\n%s", html)
 	}
 }
 
 func TestRenderIndexHeadHTML(t *testing.T) {
-	defer restoreShell(saveShell())
 	head := `<meta name="description" content="A & B">` + "\n" + `<link rel="icon" href="/icon.svg">`
-	setShellConfig("", "", head)
 
-	html := renderIndex("X", Theme{ThemeStyle: ThemeStyle{Accent: "#0F766E"}})
+	html := renderIndex("X", Theme{ThemeStyle: ThemeStyle{Accent: "#0F766E"}}, resolveShell("", "", head, nil))
 	if !strings.Contains(html, head+"\n</head>") {
 		t.Fatalf("head html not emitted verbatim at the end of <head>:\n%s", html)
 	}
@@ -401,15 +389,9 @@ func TestShellConfigFromFile(t *testing.T) {
 	}
 }
 
-func saveShell() (string, string, string) { return docLang, docDir, headHTML }
-
-func restoreShell(lang, dir, head string) { docLang, docDir, headHTML = lang, dir, head }
-
 func TestHandlerServesShellConfig(t *testing.T) {
 	// End to end: the values on Config must reach the very first HTML response,
 	// which is the whole point of the feature (crawlers never open a socket).
-	defer restoreShell(saveShell())
-
 	h := Handler(Config{
 		Title:    "My App",
 		Lang:     "ar-EG",
@@ -435,5 +417,39 @@ func TestHandlerServesShellConfig(t *testing.T) {
 		if !strings.Contains(html, want) {
 			t.Fatalf("first response missing %q:\n%s", want, html)
 		}
+	}
+}
+
+// TestHandlersKeepTheirOwnShell is the regression test for issue #2: shell
+// settings belong to the handler they were passed to. Creating a second
+// handler must not rewrite the first one's document.
+func TestHandlersKeepTheirOwnShell(t *testing.T) {
+	shellOf := func(h http.Handler) string {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		return rec.Body.String()
+	}
+
+	ja := Handler(Config{Title: "JA", Lang: "ja", HeadHTML: `<meta name="ja">`,
+		UIStrings: map[string]string{"connecting": "接続中…"}}, func() { Text("A") })
+	first := shellOf(ja)
+
+	de := Handler(Config{Title: "DE", Lang: "de", Dir: "rtl"}, func() { Text("B") })
+
+	if got := shellOf(ja); got != first {
+		t.Fatalf("first handler's shell changed after a second handler was built:\nbefore:\n%s\nafter:\n%s", first, got)
+	}
+	for _, want := range []string{`<html lang="ja">`, `<meta name="ja">`, "接続中…"} {
+		if !strings.Contains(first, want) {
+			t.Fatalf("first handler missing %q:\n%s", want, first)
+		}
+	}
+	second := shellOf(de)
+	if !strings.Contains(second, `<html lang="de" dir="rtl">`) {
+		t.Fatalf("second handler has the wrong <html>:\n%s", second)
+	}
+	if strings.Contains(second, `<meta name="ja">`) || strings.Contains(second, "接続中") {
+		t.Fatalf("second handler inherited the first one's shell:\n%s", second)
 	}
 }

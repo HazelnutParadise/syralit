@@ -173,10 +173,6 @@ func TestHotReload(t *testing.T) {
 // different pages. The child is never built here: the supervisor serves its
 // shell whether or not the app compiles, which is the whole point.
 func TestDevSupervisorShell(t *testing.T) {
-	defer restoreShell(saveShell())
-	oldUI := uiStrings
-	defer func() { uiStrings = oldUI }()
-
 	appDir := "_devshell_app"
 	if err := os.MkdirAll(appDir, 0o755); err != nil {
 		t.Fatal(err)

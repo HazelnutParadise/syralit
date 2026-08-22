@@ -49,29 +49,24 @@ func TestDataFrameColumnSelection(t *testing.T) {
 }
 
 func TestI18nInjection(t *testing.T) {
-	old := uiStrings
-	defer func() { uiStrings = old }()
-
-	uiStrings = map[string]string{"connecting": "連線中…", "loading": "載入中…"}
-	html := renderIndex("X", Theme{})
-	if !strings.Contains(html, "<p>連線中…</p>") {
-		t.Fatalf("connecting text not localized:\n%s", html)
-	}
-	if !strings.Contains(html, `window.__SY_I18N={"connecting":"連線中…","loading":"載入中…"}`) {
+	shell := resolveShell("", "", "", map[string]string{"connecting": "連線中…", "loading": "載入中…"})
+	html := renderIndex("X", Theme{}, shell)
+	if !strings.Contains(html, `window.__SY_I18N={"connecting":"連線中…","loading":"載入中…"}`) ||
+		!strings.Contains(html, "<p>連線中…</p>") {
 		t.Fatalf("i18n script missing:\n%s", html)
 	}
 
-	// A hostile value must not be able to close the script tag.
-	uiStrings = map[string]string{"loading": "</script><script>alert(1)</script>"}
-	html = renderIndex("X", Theme{})
-	if strings.Contains(html, "</script><script>alert(1)") {
+	// A value trying to break out of the script element must stay escaped.
+	shell = resolveShell("", "", "", map[string]string{"loading": "</script><script>alert(1)</script>"})
+	html = renderIndex("X", Theme{}, shell)
+	if strings.Contains(html, "</script><script>alert") {
 		t.Fatalf("i18n value broke out of script context:\n%s", html)
 	}
 
-	uiStrings = nil
-	html = renderIndex("X", Theme{})
-	if !strings.Contains(html, "<p>Connecting…</p>") || strings.Contains(html, "__SY_I18N") {
-		t.Fatalf("defaults not restored:\n%s", html)
+	// No overrides: no script, English default.
+	html = renderIndex("X", Theme{}, shellConfig{})
+	if strings.Contains(html, "__SY_I18N") || !strings.Contains(html, "<p>Connecting…</p>") {
+		t.Fatalf("unexpected i18n output without overrides:\n%s", html)
 	}
 }
 

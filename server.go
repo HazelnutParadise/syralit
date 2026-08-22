@@ -123,9 +123,7 @@ func Run(cfg Config, fn func()) error {
 	cfg.applyDefaults()
 	uploadLimitBytes = cfg.uploadLimit()
 	resolvedConfig = cfg
-	uiStrings = cfg.UIStrings
-	setShellConfig(cfg.Lang, cfg.Dir, cfg.HeadHTML)
-	s := &server{cfg: cfg, appFn: fn}
+	s := &server{cfg: cfg, appFn: fn, shell: resolveShell(cfg.Lang, cfg.Dir, cfg.HeadHTML, cfg.UIStrings)}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
 		return http.ListenAndServe(addr, s.handler())
@@ -145,9 +143,7 @@ func Handler(cfg Config, fn func()) http.Handler {
 	cfg.applyDefaults()
 	uploadLimitBytes = cfg.uploadLimit()
 	resolvedConfig = cfg
-	uiStrings = cfg.UIStrings
-	setShellConfig(cfg.Lang, cfg.Dir, cfg.HeadHTML)
-	s := &server{cfg: cfg, appFn: fn}
+	s := &server{cfg: cfg, appFn: fn, shell: resolveShell(cfg.Lang, cfg.Dir, cfg.HeadHTML, cfg.UIStrings)}
 	return s.handler()
 }
 
@@ -178,6 +174,7 @@ func GetOption(key string) any {
 type server struct {
 	cfg   Config
 	appFn func()
+	shell shellConfig // resolved from cfg once; read by every index render
 }
 
 func (s *server) handler() http.Handler {
@@ -265,7 +262,7 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		title = p.title
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(renderIndex(title, s.cfg.Theme, requestBasePath(r))))
+	_, _ = w.Write([]byte(renderIndex(title, s.cfg.Theme, s.shell, requestBasePath(r))))
 }
 
 // inbound message from the browser (SPEC §13). The __dev_* fields are only used

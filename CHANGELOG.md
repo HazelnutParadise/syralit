@@ -6,6 +6,18 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-08-22
+
+### Fixed
+- **Shell settings are per handler** (#2) — `Config.Lang`, `Config.Dir`,
+  `Config.HeadHTML` and `Config.UIStrings` were held in package-level
+  variables, so building a second `sy.Handler` silently rewrote the shell of
+  every handler built before it, and constructing one while another was
+  serving was a data race. They are now resolved once onto the handler (and
+  onto the dev supervisor) and only read after that, so a `Config` fully
+  determines the document of the handler it is passed to. `UIStrings` had the
+  same flaw before v0.9.0; it is fixed by the same change.
+
 ## [0.9.0] - 2026-08-22
 
 The document release: an app can finally control the HTML around it. The shell's

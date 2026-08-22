@@ -85,8 +85,6 @@ func startSupervisor(opts DevOptions) (*supervisor, http.Handler, error) {
 	}
 	loadFileConfig(opts.Dir).applyToDev(&opts) // syralit.toml fills unset values
 	opts.applyDefaults()
-	uiStrings = opts.UIStrings
-	setShellConfig(opts.Lang, opts.TextDir, opts.HeadHTML)
 
 	childAddr, err := freePort()
 	if err != nil {
@@ -99,6 +97,7 @@ func startSupervisor(opts DevOptions) (*supervisor, http.Handler, error) {
 
 	s := &supervisor{
 		opts:      opts,
+		shell:     resolveShell(opts.Lang, opts.TextDir, opts.HeadHTML, opts.UIStrings),
 		binPath:   bin,
 		childAddr: childAddr,
 		sessionID: fmt.Sprintf("%d-%d", os.Getpid(), time.Now().UnixNano()),
@@ -144,6 +143,7 @@ func (s *supervisor) shutdown() {
 
 type supervisor struct {
 	opts      DevOptions
+	shell     shellConfig
 	binPath   string
 	childAddr string
 	sessionID string
@@ -399,7 +399,7 @@ func (s *supervisor) handleIndex(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(renderIndex(s.opts.Title, s.opts.Theme)))
+	_, _ = w.Write([]byte(renderIndex(s.opts.Title, s.opts.Theme, s.shell)))
 }
 
 // servePublic serves a file from the project's public/ dir for the request path,

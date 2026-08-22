@@ -6,6 +6,13 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+- `syralit dev <dir>` and `syralit run <dir>` now run the app with the project
+  directory as its working directory. Before, the child inherited the
+  directory `syralit` was launched from, so a project's `syralit.toml` went
+  unread and relative paths the app opened resolved against the wrong place
+  unless the command was run from inside the project.
+
 ## [0.10.0] - 2026-08-22
 
 One handler, many documents: `Config.DocumentFunc` lets the title and `<head>`

@@ -306,3 +306,54 @@ func TestDevDocumentFromChild(t *testing.T) {
 		t.Fatalf("fallback shell wrong: %d\n%s", code, body)
 	}
 }
+
+const devAppReadsConfig = `package main
+
+import sy "github.com/HazelnutParadise/syralit"
+
+func main() {
+	sy.App(func() { sy.Textf("title=%v", sy.GetOption("title")) })
+}
+`
+
+// TestDevChildRunsInProjectDir pins the child's working directory: it must be
+// the project directory, not wherever `syralit dev` happened to be launched
+// from, or the child never finds the project's syralit.toml (and any
+// os.DirFS("public") the app opens points at the wrong place).
+func TestDevChildRunsInProjectDir(t *testing.T) {
+	if testing.Short() {
+		t.Skip("shells out to `go build`; skipped in -short")
+	}
+	appDir := "_devcwd_app"
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(appDir)
+	if err := os.WriteFile(filepath.Join(appDir, "main.go"), []byte(devAppReadsConfig), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, ConfigFileName), []byte("title = \"From Project Toml\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, mux, err := startSupervisor(DevOptions{Dir: appDir, Target: "."})
+	if err != nil {
+		t.Fatalf("startSupervisor: %v", err)
+	}
+	defer s.shutdown()
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	c.SetReadLimit(32 << 20)
+	defer c.CloseNow()
+
+	// The child resolves its Config from syralit.toml in its own cwd; only the
+	// project dir has one, so the title proves where the child is running.
+	readUntil(t, c, 10*time.Second, "title=From Project Toml")
+}

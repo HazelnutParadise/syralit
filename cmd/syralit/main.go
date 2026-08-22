@@ -102,7 +102,10 @@ func runOnce(args []string) {
 	if len(args) > 0 {
 		dir = args[0]
 	}
-	c := exec.Command("go", "run", dir)
+	// Run from inside the project so syralit.toml and relative paths resolve
+	// the same way they do under `syralit dev`.
+	c := exec.Command("go", "run", ".")
+	c.Dir = dir
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	c.Stdin = os.Stdin

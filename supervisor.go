@@ -179,6 +179,10 @@ func (s *supervisor) build() (string, error) {
 
 func (s *supervisor) spawnChild() error {
 	cmd := exec.Command(s.binPath)
+	// Run in the project directory, like `syralit run` and a plain `go run`
+	// would: that is where the child's syralit.toml lives and where any
+	// relative path the app opens (os.DirFS("public")) is meant to resolve.
+	cmd.Dir = s.opts.Dir
 	cmd.Env = append(os.Environ(),
 		envDevAddr+"="+s.childAddr,
 		envDevURL+"="+s.outwardURL(),

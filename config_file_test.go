@@ -1,6 +1,7 @@
 package syralit
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/coder/websocket"
 )
 
 func TestFileConfigPrecedence(t *testing.T) {
@@ -451,5 +455,47 @@ func TestHandlersKeepTheirOwnShell(t *testing.T) {
 	}
 	if strings.Contains(second, `<meta name="ja">`) || strings.Contains(second, "接続中") {
 		t.Fatalf("second handler inherited the first one's shell:\n%s", second)
+	}
+}
+
+// TestHandlersKeepTheirOwnConfig is the second half of issue #2: the values a
+// page function reads — the upload cap on an uploader widget and whatever
+// sy.GetOption returns — must come from the handler that owns the session,
+// not from whichever handler was built last.
+func TestHandlersKeepTheirOwnConfig(t *testing.T) {
+	app := func() {
+		FileUploader("F", Key("f"))
+		Textf("title=%v max=%v", GetOption("title"), GetOption("server.max_upload_size_mb"))
+	}
+	small := Handler(Config{Title: "Small", MaxUploadSizeMB: 2}, app)
+	big := Handler(Config{Title: "Big", MaxUploadSizeMB: 50}, app)
+
+	firstPatch := func(h http.Handler) string {
+		t.Helper()
+		srv := httptest.NewServer(h)
+		defer srv.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		c, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(srv.URL, "http")+"/_syralit/ws", nil)
+		if err != nil {
+			t.Fatalf("dial: %v", err)
+		}
+		defer c.CloseNow()
+		_, data, err := c.Read(ctx)
+		if err != nil {
+			t.Fatalf("read: %v", err)
+		}
+		return string(data)
+	}
+
+	for _, want := range []string{`"max_size":2097152`, "title=Small max=2"} {
+		if got := firstPatch(small); !strings.Contains(got, want) {
+			t.Fatalf("small handler missing %q:\n%s", want, got)
+		}
+	}
+	for _, want := range []string{`"max_size":52428800`, "title=Big max=50"} {
+		if got := firstPatch(big); !strings.Contains(got, want) {
+			t.Fatalf("big handler missing %q:\n%s", want, got)
+		}
 	}
 }

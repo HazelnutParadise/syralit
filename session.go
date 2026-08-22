@@ -12,6 +12,12 @@ import (
 type session struct {
 	id    string
 	appFn func() // the user's App function (nil in multi-page mode)
+	// cfg is the resolved config of the server this session belongs to. The
+	// page function reads it (sy.GetOption, the upload cap on uploader widgets),
+	// and it has to live here rather than in package state so two handlers in
+	// one process each see their own values. Zero for sessions without a server
+	// (RenderOnce, AppTest).
+	cfg Config
 
 	mu            sync.Mutex
 	widgets       map[string]any  // widget id -> persisted value (text, checkbox, select...)

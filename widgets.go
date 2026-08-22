@@ -14,33 +14,33 @@ import (
 type Option func(*widgetOpts)
 
 type widgetOpts struct {
-	key         string
-	min         *float64
-	max         *float64
-	step        *float64
-	height      int
-	width       int
-	maxChars    int
-	placeholder string
-	disabled    bool
-	delta       string
-	deltaColor  string
-	language    string
-	alt         string
-	caption     string
-	mime        string
-	helpText        string
-	defaultVal      any
-	border          bool
-	maxSelections   int
-	gap             int
-	labelVisibility string // "visible" (default), "hidden", "collapsed"
-	title           string
-	xLabels         []string
-	colConfig       map[string]ColumnConfig
-	color           string
-	dynamicRows     bool
-	verticalAlign   string
+	key               string
+	min               *float64
+	max               *float64
+	step              *float64
+	height            int
+	width             int
+	maxChars          int
+	placeholder       string
+	disabled          bool
+	delta             string
+	deltaColor        string
+	language          string
+	alt               string
+	caption           string
+	mime              string
+	helpText          string
+	defaultVal        any
+	border            bool
+	maxSelections     int
+	gap               int
+	labelVisibility   string // "visible" (default), "hidden", "collapsed"
+	title             string
+	xLabels           []string
+	colConfig         map[string]ColumnConfig
+	color             string
+	dynamicRows       bool
+	verticalAlign     string
 	icon              string
 	buttonType        string // "primary" (default), "secondary", "tertiary"
 	useContainerWidth bool
@@ -73,33 +73,33 @@ type widgetOpts struct {
 	formula           bool
 }
 
-func Key(k string) Option          { return func(o *widgetOpts) { o.key = k } }
-func Min(v float64) Option         { return func(o *widgetOpts) { o.min = &v } }
-func Max(v float64) Option         { return func(o *widgetOpts) { o.max = &v } }
-func Step(v float64) Option        { return func(o *widgetOpts) { o.step = &v } }
-func Height(v int) Option          { return func(o *widgetOpts) { o.height = v } }
-func Width(v int) Option           { return func(o *widgetOpts) { o.width = v } }
-func MaxChars(v int) Option        { return func(o *widgetOpts) { o.maxChars = v } }
-func Placeholder(v string) Option  { return func(o *widgetOpts) { o.placeholder = v } }
-func Disabled() Option             { return func(o *widgetOpts) { o.disabled = true } }
-func Delta(v string) Option        { return func(o *widgetOpts) { o.delta = v } }
-func DeltaColor(v string) Option   { return func(o *widgetOpts) { o.deltaColor = v } }
-func Language(v string) Option     { return func(o *widgetOpts) { o.language = v } }
-func Alt(v string) Option          { return func(o *widgetOpts) { o.alt = v } }
-func ImageCaption(v string) Option { return func(o *widgetOpts) { o.caption = v } }
-func MimeType(v string) Option     { return func(o *widgetOpts) { o.mime = v } }
-func Help(v string) Option         { return func(o *widgetOpts) { o.helpText = v } }
-func DefaultValue(v any) Option    { return func(o *widgetOpts) { o.defaultVal = v } }
-func Border() Option               { return func(o *widgetOpts) { o.border = true } }
-func MaxSelections(n int) Option   { return func(o *widgetOpts) { o.maxSelections = n } }
-func Gap(px int) Option            { return func(o *widgetOpts) { o.gap = px } }
-func LabelHidden() Option          { return func(o *widgetOpts) { o.labelVisibility = "hidden" } }
-func LabelCollapsed() Option       { return func(o *widgetOpts) { o.labelVisibility = "collapsed" } }
-func ChartTitle(t string) Option   { return func(o *widgetOpts) { o.title = t } }
-func Color(c string) Option        { return func(o *widgetOpts) { o.color = c } }
-func XLabels(l []string) Option    { return func(o *widgetOpts) { o.xLabels = l } }
-func Expanded() Option             { return DefaultValue(true) }
-func DynamicRows() Option          { return func(o *widgetOpts) { o.dynamicRows = true } }
+func Key(k string) Option                   { return func(o *widgetOpts) { o.key = k } }
+func Min(v float64) Option                  { return func(o *widgetOpts) { o.min = &v } }
+func Max(v float64) Option                  { return func(o *widgetOpts) { o.max = &v } }
+func Step(v float64) Option                 { return func(o *widgetOpts) { o.step = &v } }
+func Height(v int) Option                   { return func(o *widgetOpts) { o.height = v } }
+func Width(v int) Option                    { return func(o *widgetOpts) { o.width = v } }
+func MaxChars(v int) Option                 { return func(o *widgetOpts) { o.maxChars = v } }
+func Placeholder(v string) Option           { return func(o *widgetOpts) { o.placeholder = v } }
+func Disabled() Option                      { return func(o *widgetOpts) { o.disabled = true } }
+func Delta(v string) Option                 { return func(o *widgetOpts) { o.delta = v } }
+func DeltaColor(v string) Option            { return func(o *widgetOpts) { o.deltaColor = v } }
+func Language(v string) Option              { return func(o *widgetOpts) { o.language = v } }
+func Alt(v string) Option                   { return func(o *widgetOpts) { o.alt = v } }
+func ImageCaption(v string) Option          { return func(o *widgetOpts) { o.caption = v } }
+func MimeType(v string) Option              { return func(o *widgetOpts) { o.mime = v } }
+func Help(v string) Option                  { return func(o *widgetOpts) { o.helpText = v } }
+func DefaultValue(v any) Option             { return func(o *widgetOpts) { o.defaultVal = v } }
+func Border() Option                        { return func(o *widgetOpts) { o.border = true } }
+func MaxSelections(n int) Option            { return func(o *widgetOpts) { o.maxSelections = n } }
+func Gap(px int) Option                     { return func(o *widgetOpts) { o.gap = px } }
+func LabelHidden() Option                   { return func(o *widgetOpts) { o.labelVisibility = "hidden" } }
+func LabelCollapsed() Option                { return func(o *widgetOpts) { o.labelVisibility = "collapsed" } }
+func ChartTitle(t string) Option            { return func(o *widgetOpts) { o.title = t } }
+func Color(c string) Option                 { return func(o *widgetOpts) { o.color = c } }
+func XLabels(l []string) Option             { return func(o *widgetOpts) { o.xLabels = l } }
+func Expanded() Option                      { return DefaultValue(true) }
+func DynamicRows() Option                   { return func(o *widgetOpts) { o.dynamicRows = true } }
 func VerticalAlignment(align string) Option { return func(o *widgetOpts) { o.verticalAlign = align } }
 
 // Icon prefixes a button's label with an icon (emoji or short string).
@@ -230,7 +230,7 @@ func Title(text string)     { current().add(textNode("title", text)) }
 func Header(text string)    { current().add(textNode("header", text)) }
 func Subheader(text string) { current().add(textNode("subheader", text)) }
 func Text(text string)      { current().add(textNode("text", text)) }
-func Caption(text string) { current().add(textNode("caption", text)) }
+func Caption(text string)   { current().add(textNode("caption", text)) }
 
 // Badge renders a small colored label. Color can be "blue", "green", "red",
 // "orange", "gray", "violet", or any CSS color string.
@@ -857,7 +857,7 @@ func FileUploader(label string, opts ...Option) *UploadedFile {
 
 	file := decodeUploadedFile(val)
 
-	props := map[string]any{"label": label, "max_size": uploadLimitBytes}
+	props := map[string]any{"label": label, "max_size": rc.sess.cfg.uploadLimit()}
 	if file != nil {
 		props["file_name"] = file.Name
 		props["file_size"] = file.Size
@@ -886,7 +886,7 @@ func FileUploaderMultiple(label string, opts ...Option) []*UploadedFile {
 		}
 	}
 
-	props := map[string]any{"label": label, "multiple": true, "max_size": uploadLimitBytes}
+	props := map[string]any{"label": label, "multiple": true, "max_size": rc.sess.cfg.uploadLimit()}
 	if len(files) > 0 {
 		names := make([]string, len(files))
 		var total int64

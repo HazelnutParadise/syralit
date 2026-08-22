@@ -78,7 +78,7 @@ func (s *server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no") // disable proxy buffering
 
-	sess := newSession(s.appFn)
+	sess := s.newSession()
 	qp := make(map[string]string)
 	for k, v := range r.URL.Query() {
 		if len(v) > 0 {

@@ -6,6 +6,16 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+- **Upload cap and `sy.GetOption` are per handler** — the last two
+  process-wide values from #2. `MaxUploadSizeMB` (the cap an uploader widget
+  advertises and the socket enforces) and the config behind `sy.GetOption`
+  were package-level, so with two `sy.Handler` values the later one's settings
+  applied to both. A session now carries the config of the server that
+  created it, and both read from there. `sy.GetOption` outside a page function
+  now returns the zero config's values rather than whatever server started
+  last.
+
 ## [0.9.1] - 2026-08-22
 
 ### Fixed

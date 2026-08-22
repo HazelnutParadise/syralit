@@ -95,14 +95,26 @@ func TestTextInputDefaultValue(t *testing.T) {
 }
 
 func TestGetOption(t *testing.T) {
-	resolvedConfig = Config{Title: "X", Host: "127.0.0.1", Port: 9000}
-	if GetOption("title") != "X" || GetOption("server.port") != 9000 {
-		t.Fatalf("GetOption mismatch: %v %v", GetOption("title"), GetOption("server.port"))
+	var title, port, upload, nope any
+	sess := newSession(func() {
+		title = GetOption("title")
+		port = GetOption("server.port")
+		upload = GetOption("server.max_upload_size_mb")
+		nope = GetOption("nope")
+	})
+	sess.cfg = Config{Title: "X", Host: "127.0.0.1", Port: 9000}
+	runRerun(sess)
+	if title != "X" || port != 9000 {
+		t.Fatalf("GetOption mismatch: %v %v", title, port)
 	}
-	if GetOption("server.max_upload_size_mb") != 10 {
-		t.Fatalf("default upload option = %v", GetOption("server.max_upload_size_mb"))
+	if upload != 10 {
+		t.Fatalf("default upload option = %v", upload)
 	}
-	if GetOption("nope") != nil {
+	if nope != nil {
 		t.Fatal("unknown key should be nil")
+	}
+	// Outside a rerun there is no session, so the zero config answers.
+	if GetOption("title") != "" {
+		t.Fatalf("GetOption outside a rerun = %v", GetOption("title"))
 	}
 }

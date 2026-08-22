@@ -58,10 +58,6 @@ type Config struct {
 	UIStrings map[string]string
 }
 
-// uploadLimitBytes is the resolved upload cap, set when the server starts and
-// read by the uploader widgets (sent to the browser) and the socket read limit.
-var uploadLimitBytes int64 = 10 << 20
-
 func (c *Config) uploadLimit() int64 {
 	if c.MaxUploadSizeMB > 0 {
 		return int64(c.MaxUploadSizeMB) << 20
@@ -112,17 +108,11 @@ const (
 	envDevSession = "SYRALIT_DEV_SESSION"
 )
 
-// resolvedConfig holds the effective config after file/default resolution,
-// for GetOption.
-var resolvedConfig Config
-
 // Run starts a Syralit app with explicit config. Values left unset are filled
 // from syralit.toml in the working directory if present, then by defaults.
 func Run(cfg Config, fn func()) error {
 	loadFileConfig(".").applyToConfig(&cfg)
 	cfg.applyDefaults()
-	uploadLimitBytes = cfg.uploadLimit()
-	resolvedConfig = cfg
 	s := &server{cfg: cfg, appFn: fn, shell: resolveShell(cfg.Lang, cfg.Dir, cfg.HeadHTML, cfg.UIStrings)}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
@@ -141,8 +131,6 @@ func Run(cfg Config, fn func()) error {
 func Handler(cfg Config, fn func()) http.Handler {
 	loadFileConfig(".").applyToConfig(&cfg)
 	cfg.applyDefaults()
-	uploadLimitBytes = cfg.uploadLimit()
-	resolvedConfig = cfg
 	s := &server{cfg: cfg, appFn: fn, shell: resolveShell(cfg.Lang, cfg.Dir, cfg.HeadHTML, cfg.UIStrings)}
 	return s.handler()
 }
@@ -150,8 +138,14 @@ func Handler(cfg Config, fn func()) http.Handler {
 // GetOption returns a resolved configuration value by key: "title",
 // "server.host", "server.port", "server.max_upload_size_mb", "theme.mode",
 // "theme.accent", "theme.radius". Unknown keys return nil. Values reflect the
-// running server's effective config (code > syralit.toml > defaults).
+// effective config of the server serving the current session (code >
+// syralit.toml > defaults), so call it from inside the page function. Outside
+// a rerun there is no server to ask and the zero Config's values come back.
 func GetOption(key string) any {
+	var resolvedConfig Config
+	if cur != nil {
+		resolvedConfig = cur.sess.cfg
+	}
 	switch key {
 	case "title":
 		return resolvedConfig.Title
@@ -175,6 +169,14 @@ type server struct {
 	cfg   Config
 	appFn func()
 	shell shellConfig // resolved from cfg once; read by every index render
+}
+
+// newSession starts a session that belongs to this server, so the page
+// function sees this server's config rather than some other handler's.
+func (s *server) newSession() *session {
+	sess := newSession(s.appFn)
+	sess.cfg = s.cfg
+	return sess
 }
 
 func (s *server) handler() http.Handler {
@@ -292,14 +294,14 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	limit := int64(32 << 20) // dev restore payloads can be large
-	if l := uploadLimitBytes + (4 << 20); l > limit {
+	if l := s.cfg.uploadLimit() + (4 << 20); l > limit {
 		limit = l // base64 upload + envelope headroom
 	}
 	c.SetReadLimit(limit)
 	defer c.CloseNow()
 
 	ctx := context.Background()
-	sess := newSession(s.appFn)
+	sess := s.newSession()
 	registerSession(sess)
 	defer deregisterSession(sess)
 

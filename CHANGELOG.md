@@ -6,6 +6,20 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Per-request document** (#3) — `Config.DocumentFunc func(*http.Request)
+  Document` is called once per document request, before the shell is rendered
+  and before any session exists. Non-empty fields of the returned `Document`
+  (`Title`, `Lang`, `Dir`, `HeadHTML`) override the `Config` values for that
+  response only, so one handler can send a different `<title>` and `<head>`
+  per query parameter or path — the case the static shell settings from #1
+  could not cover. `Title` also wins over the page-URL title. The returned
+  `HeadHTML` is verbatim: escape anything taken from the request. Under
+  `syralit dev` document requests are now forwarded to the child process
+  while it is up (only it can run `DocumentFunc`, and only it knows which page
+  paths exist, so dev gets real 404s too); the supervisor's own shell is the
+  fallback while the child is rebuilding or failed to compile.
+
 ### Fixed
 - **Upload cap and `sy.GetOption` are per handler** — the last two
   process-wide values from #2. `MaxUploadSizeMB` (the cap an uploader widget

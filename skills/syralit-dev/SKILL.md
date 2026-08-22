@@ -542,6 +542,22 @@ sy.Run(sy.Config{
     // never build it out of user input. Process-wide, not per request.
 }, myApp)
 
+// Per-request document — title and <head> that depend on the request (a
+// headline looked up from ?date=, a canonical URL). Called once per document
+// request before any session exists; empty fields keep the Config value.
+// Title beats the page-URL title. Code only, no syralit.toml key.
+sy.Run(sy.Config{
+    Title: "Daily Report",
+    DocumentFunc: func(r *http.Request) sy.Document {
+        rep := reports.Lookup(r.URL.Query().Get("date"))
+        return sy.Document{
+            Title: rep.Headline,
+            // HeadHTML is verbatim: escape anything taken from the request.
+            HeadHTML: `<meta property="og:title" content="` + html.EscapeString(rep.Headline) + `">`,
+        }
+    },
+}, myApp)
+
 // Secrets (from syralit.toml [secrets] section)
 apiKey := sy.Secrets("api_key")
 

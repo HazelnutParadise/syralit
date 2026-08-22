@@ -499,3 +499,77 @@ func TestHandlersKeepTheirOwnConfig(t *testing.T) {
 		}
 	}
 }
+
+// TestDocumentFunc covers issue #3: a handler can vary the document's title,
+// language, direction and <head> per request, with empty fields falling back
+// to Config and the page-URL title sitting between the two.
+func TestDocumentFunc(t *testing.T) {
+	defer resetPages()
+	AddPage("Home", func() { Text("h") }, PageOrder(1))
+	AddPage("Data Explorer", func() { Text("d") }, PageOrder(2))
+
+	get := func(h http.Handler, path string) string {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("GET %s: %d", path, rec.Code)
+		}
+		return rec.Body.String()
+	}
+	must := func(html string, wants ...string) {
+		t.Helper()
+		for _, w := range wants {
+			if !strings.Contains(html, w) {
+				t.Fatalf("missing %q in:\n%s", w, html)
+			}
+		}
+	}
+
+	base := Config{Title: "App", Lang: "en", HeadHTML: `<meta name="base">`}
+
+	// nil DocumentFunc and a DocumentFunc returning nothing must render the
+	// same bytes as each other — that is the backwards-compatibility line.
+	plain := Handler(base, nil)
+	noop := base
+	noop.DocumentFunc = func(*http.Request) Document { return Document{} }
+	if a, b := get(plain, "/"), get(Handler(noop, nil), "/"); a != b {
+		t.Fatalf("empty Document changed the output:\n%s\n---\n%s", a, b)
+	}
+
+	cfg := base
+	cfg.DocumentFunc = func(r *http.Request) Document {
+		switch r.URL.Query().Get("doc") {
+		case "full":
+			return Document{Title: "Per <request>", Lang: "ja", Dir: "rtl", HeadHTML: `<meta name="per-request">`}
+		case "badlang":
+			return Document{Lang: `x" onload="1`, Dir: "sideways"}
+		case "title":
+			return Document{Title: "Only Title"}
+		}
+		return Document{}
+	}
+	h := Handler(cfg, nil)
+
+	// Every field overrides, the title is escaped, HeadHTML replaces rather
+	// than appends.
+	full := get(h, "/?doc=full")
+	must(full, `<html lang="ja" dir="rtl">`, "<title>Per &lt;request&gt;</title>", `<meta name="per-request">`)
+	if strings.Contains(full, `<meta name="base">`) {
+		t.Fatalf("Document.HeadHTML should replace Config.HeadHTML, not append:\n%s", full)
+	}
+
+	// Empty fields fall back to Config.
+	must(get(h, "/"), `<html lang="en">`, "<title>App</title>", `<meta name="base">`)
+
+	// Invalid per-request values fall back to Config rather than leaking.
+	bad := get(h, "/?doc=badlang")
+	must(bad, `<html lang="en">`)
+	if strings.Contains(bad, "onload") || strings.Contains(bad, " dir=") {
+		t.Fatalf("invalid per-request lang/dir leaked:\n%s", bad)
+	}
+
+	// Precedence on a page URL: Document.Title > page title > Config.Title.
+	must(get(h, "/data_explorer"), "<title>Data Explorer</title>")
+	must(get(h, "/data_explorer?doc=title"), "<title>Only Title</title>")
+}

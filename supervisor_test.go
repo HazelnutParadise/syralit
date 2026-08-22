@@ -218,3 +218,91 @@ connecting = "מתחבר…"
 		}
 	}
 }
+
+const devAppDocument = `package main
+
+import (
+	"net/http"
+
+	sy "github.com/HazelnutParadise/syralit"
+)
+
+func main() {
+	sy.Run(sy.Config{
+		Title: "Child Title",
+		DocumentFunc: func(r *http.Request) sy.Document {
+			if q := r.URL.Query().Get("q"); q != "" {
+				return sy.Document{Title: "Doc " + q, HeadHTML: "<meta name=\"from-child\">"}
+			}
+			return sy.Document{}
+		},
+	}, func() { sy.Title("V1") })
+}
+`
+
+// TestDevDocumentFromChild is the dev half of issue #3: the supervisor owns
+// the outward port, but only the child can run Config.DocumentFunc, so
+// document requests go to the child while it is up and fall back to the
+// supervisor's own shell when it is not.
+func TestDevDocumentFromChild(t *testing.T) {
+	if testing.Short() {
+		t.Skip("shells out to `go build`; skipped in -short")
+	}
+	appDir := "_devdoc_app"
+	if err := os.MkdirAll(appDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(appDir)
+	if err := os.WriteFile(filepath.Join(appDir, "main.go"), []byte(devAppDocument), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, mux, err := startSupervisor(DevOptions{Dir: appDir, Target: ".", Title: "Supervisor Title"})
+	if err != nil {
+		t.Fatalf("startSupervisor: %v", err)
+	}
+	defer s.shutdown()
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	get := func(path string) (int, string) {
+		t.Helper()
+		resp, err := http.Get(srv.URL + path)
+		if err != nil {
+			t.Fatalf("get %s: %v", path, err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return resp.StatusCode, string(b)
+	}
+
+	s.mu.Lock()
+	up := s.childConn != nil
+	s.mu.Unlock()
+	if !up {
+		t.Fatalf("child did not start; build error: %q", s.buildErr)
+	}
+
+	// Child is up: the document comes from it, DocumentFunc included.
+	if code, body := get("/?q=hello"); code != 200 ||
+		!strings.Contains(body, "<title>Doc hello</title>") ||
+		!strings.Contains(body, `<meta name="from-child">`) {
+		t.Fatalf("document not from child: %d\n%s", code, body)
+	}
+	if _, body := get("/"); !strings.Contains(body, "<title>Child Title</title>") {
+		t.Fatalf("empty Document should fall back to the child's Config.Title:\n%s", body)
+	}
+	// The child also knows which page paths exist, so dev gets real 404s now.
+	if code, _ := get("/no-such-page"); code != http.StatusNotFound {
+		t.Fatalf("unknown page path via child returned %d, want 404", code)
+	}
+
+	// Child gone: the supervisor answers with its own shell so the browser can
+	// still connect and show the build-error overlay.
+	s.stopChild()
+	if code, body := get("/?q=hello"); code != 200 ||
+		!strings.Contains(body, "<title>Supervisor Title</title>") ||
+		strings.Contains(body, "from-child") {
+		t.Fatalf("fallback shell wrong: %d\n%s", code, body)
+	}
+}

@@ -115,6 +115,23 @@ func resolveShell(lang, dir, head string, ui map[string]string) shellConfig {
 	return sc
 }
 
+// override returns a copy with the non-empty fields of doc applied. It runs
+// per request, so an invalid lang or dir is dropped silently (the Config value
+// stays) instead of logged the way resolveShell does at startup.
+func (sc shellConfig) override(doc Document) shellConfig {
+	if v := strings.TrimSpace(doc.Lang); v != "" && langValueSafe(v) {
+		sc.lang = v
+	}
+	switch v := strings.ToLower(strings.TrimSpace(doc.Dir)); v {
+	case "ltr", "rtl", "auto":
+		sc.dir = v
+	}
+	if doc.HeadHTML != "" {
+		sc.headHTML = doc.HeadHTML
+	}
+	return sc
+}
+
 // Built-in font stacks selected by the "sans-serif" / "serif" / "monospace"
 // theme keywords. The named families are embedded (assets/fonts) and declared
 // via @font-face in runtime.css; the rest of each stack is the fallback chain.

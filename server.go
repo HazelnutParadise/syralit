@@ -56,6 +56,27 @@ type Config struct {
 	// "menu", "menu_get_help", "menu_report_bug", "menu_about".
 	// Configurable via the [i18n] table in syralit.toml.
 	UIStrings map[string]string
+
+	// DocumentFunc, when non-nil, is called once per document request — before
+	// the shell is rendered and before any session exists — so the title and
+	// <head> can depend on the request (a headline looked up from a query
+	// parameter, a canonical URL). Non-empty fields in the returned Document
+	// override the corresponding Config values for that response only; empty
+	// ones keep them. It is never called during a rerun. The returned HeadHTML
+	// goes in verbatim, so anything taken from the request must be passed
+	// through html.EscapeString first. Code only; there is no syralit.toml key.
+	DocumentFunc func(*http.Request) Document
+}
+
+// Document carries the per-request parts of the HTML shell, returned by
+// Config.DocumentFunc. A zero field means "use the Config value". Title wins
+// over the page-URL title and Config.Title; an invalid Lang or Dir is ignored
+// in favour of the Config value rather than logged, since this runs per request.
+type Document struct {
+	Title    string
+	Lang     string
+	Dir      string
+	HeadHTML string
 }
 
 func (c *Config) uploadLimit() int64 {
@@ -263,8 +284,16 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		// sees the page that was asked for rather than the app-wide name.
 		title = p.title
 	}
+	shell := s.shell
+	if s.cfg.DocumentFunc != nil {
+		doc := s.cfg.DocumentFunc(r)
+		if doc.Title != "" {
+			title = doc.Title
+		}
+		shell = shell.override(doc)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(renderIndex(title, s.cfg.Theme, s.shell, requestBasePath(r))))
+	_, _ = w.Write([]byte(renderIndex(title, s.cfg.Theme, shell, requestBasePath(r))))
 }
 
 // inbound message from the browser (SPEC §13). The __dev_* fields are only used

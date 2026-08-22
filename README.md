@@ -785,9 +785,33 @@ A language does not imply a writing direction, so Arabic, Hebrew, Persian and
 Urdu apps need `Dir: "rtl"` as well as `Lang`. `HeadHTML` is inserted verbatim
 at the end of `<head>`, after the theme block, so it can also override the
 theme's CSS variables. It is neither escaped nor validated — the same trust
-level as `sy.HTML()` — so never build it out of user input. All three apply to
-every request; there is no per-request variant, and `syralit dev` renders the
-same shell as `syralit run`.
+level as `sy.HTML()` — so never build it out of user input. `syralit dev`
+renders the same shell as `syralit run`.
+
+When the title or `<head>` depends on the request — one handler serving a
+different report per `?date=` — set `DocumentFunc`. It runs once per document
+request, before any session exists, and its non-empty fields override the
+`Config` values for that response only. `Title` also wins over the page-URL
+title.
+
+```go
+sy.Run(sy.Config{
+    Title: "Daily Report",
+    DocumentFunc: func(r *http.Request) sy.Document {
+        rep := reports.Lookup(r.URL.Query().Get("date"))
+        return sy.Document{
+            Title:    rep.Headline,
+            HeadHTML: `<meta property="og:title" content="` + html.EscapeString(rep.Headline) + `">`,
+        }
+    },
+}, app)
+```
+
+**The returned `HeadHTML` is inserted verbatim.** `DocumentFunc` sees the raw
+request, so anything taken from it — a query parameter, a path segment — must go
+through `html.EscapeString` before it lands in a tag, or `?date="><script>` is a
+reflected XSS. The framework cannot escape for you without making Open Graph
+tags impossible to write.
 
 ### Runtime Configuration
 

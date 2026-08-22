@@ -107,6 +107,8 @@ func startSupervisor(opts DevOptions) (*supervisor, http.Handler, error) {
 		done:      make(chan struct{}),
 	}
 
+	s.documentProxy = s.childDocumentProxy()
+
 	// A broken initial build still starts the supervisor so the browser shows
 	// the error overlay instead of failing to connect.
 	if out, err := s.build(); err != nil {
@@ -142,12 +144,13 @@ func (s *supervisor) shutdown() {
 }
 
 type supervisor struct {
-	opts      DevOptions
-	shell     shellConfig
-	binPath   string
-	childAddr string
-	sessionID string
-	ctx       context.Context
+	opts          DevOptions
+	shell         shellConfig
+	documentProxy http.Handler // GET / and page paths, forwarded to the child
+	binPath       string
+	childAddr     string
+	sessionID     string
+	ctx           context.Context
 
 	mu           sync.Mutex
 	childCmd     *exec.Cmd
@@ -381,25 +384,50 @@ func (s *supervisor) broadcast(data []byte) {
 // --- http (served by supervisor, independent of child) ---
 
 func (s *supervisor) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		// In dev the supervisor owns the outward port, so it must serve the
-		// project's public/ files itself (the child isn't proxied for HTTP).
-		if s.opts.PublicDir != "" && s.servePublic(w, r) {
-			return
-		}
-		// Anything left is treated as a page URL and gets the app shell. The
-		// page registry lives in the child process, so unlike the real server
-		// the supervisor cannot 404 a path that names no page. A nested path or
-		// one that looks like a filename is still a 404, so a missing asset
-		// does not come back as HTML.
-		name := strings.Trim(r.URL.Path, "/")
-		if strings.Contains(name, "/") || strings.Contains(name, ".") {
-			http.NotFound(w, r)
-			return
-		}
+	// In dev the supervisor owns the outward port, so it serves the project's
+	// public/ files itself from disk (they may not be embedded in the child).
+	if r.URL.Path != "/" && s.opts.PublicDir != "" && s.servePublic(w, r) {
+		return
+	}
+	// The document itself comes from the child whenever it is up: only the
+	// child can run Config.DocumentFunc, and only it knows which page paths
+	// exist. While the child is rebuilding or failed to compile the supervisor
+	// answers with its own shell so the browser still connects and shows the
+	// build-error overlay.
+	s.mu.Lock()
+	childUp := s.childConn != nil
+	s.mu.Unlock()
+	if childUp {
+		s.documentProxy.ServeHTTP(w, r)
+		return
+	}
+	s.serveOwnShell(w, r)
+}
+
+// serveOwnShell is the supervisor's fallback document, rendered without the
+// child. It cannot tell a page path from a typo, so a plain single-segment
+// path gets the shell; a nested path or one that looks like a filename is
+// still a 404, so a missing asset does not come back as HTML.
+func (s *supervisor) serveOwnShell(w http.ResponseWriter, r *http.Request) {
+	if name := strings.Trim(r.URL.Path, "/"); name != "" &&
+		(strings.Contains(name, "/") || strings.Contains(name, ".")) {
+		http.NotFound(w, r)
+		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(renderIndex(s.opts.Title, s.opts.Theme, s.shell)))
+}
+
+// childDocumentProxy forwards document requests to the child; when the child
+// cannot be reached (it just died, or is mid-restart) the supervisor's own
+// shell is served instead of an error page.
+func (s *supervisor) childDocumentProxy() http.Handler {
+	target := &url.URL{Scheme: "http", Host: s.childAddr}
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		s.serveOwnShell(w, r)
+	}
+	return proxy
 }
 
 // servePublic serves a file from the project's public/ dir for the request path,

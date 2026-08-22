@@ -6,6 +6,13 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-22
+
+One handler, many documents: `Config.DocumentFunc` lets the title and `<head>`
+depend on the request, and `syralit dev` now serves the document from the
+child so the hook works there too. Also finishes #2 — the upload cap and
+`sy.GetOption` are per handler.
+
 ### Added
 - **Per-request document** (#3) — `Config.DocumentFunc func(*http.Request)
   Document` is called once per document request, before the shell is rendered

@@ -6,6 +6,15 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-08-22
+
+The document release: an app can finally control the HTML around it. The shell's
+`lang`, writing direction and `<head>` are configurable, and every page in a
+multi-page app gets its own URL — so pages can be linked to, reloaded and
+reached with the back button, and the first response carries the right title.
+Also fixes `[i18n]` being dropped under `syralit dev`, and bumps Insyra to
+v0.3.1.
+
 ### Added
 - **Page URLs** — every page registered with `sy.AddPage` now has its own URL,
   derived from the title (`"Data Explorer"` → `/data_explorer`) or set with the

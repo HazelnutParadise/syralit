@@ -39,10 +39,17 @@ func main() {
 func init() {
     sy.AddPage("Home", homePage, sy.PageIcon("🏠"), sy.PageOrder(1))
     sy.AddPage("Settings", settingsPage, sy.PageIcon("⚙️"), sy.PageOrder(2))
+    sy.AddPage("報表", reportPage, sy.PageOrder(3), sy.PageSlug("reports"))
 }
 
 func main() { sy.App(nil) }
 ```
+Each page has its own URL. The slug comes from the title (lower case, spaces and
+punctuation folded to `_`: "Data Explorer" → `/data_explorer`); `sy.PageSlug`
+overrides it, which is what you want for a title that is not in Latin script.
+Page links can be copied and opened in a new tab, the back button works, and
+opening `/reports` cold renders that page with its own `<title>`. A static file
+in `public/` wins over a page of the same name.
 
 ## API Reference
 

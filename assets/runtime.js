@@ -7,8 +7,12 @@
 // which triggers a rerun on the server and another ui_patch in return.
 //
 // Multi-page: when the server includes "pages" and "active_page" in the
-// ui_patch, we render a sidebar with page links. Clicking a link sends
-// {type:"page_change", page} and the server reruns the target page.
+// ui_patch, we render a sidebar with page links. Each page has its own URL
+// (/<slug>), so a page can be linked to, reloaded and reached with the back
+// button. Clicking a link pushes that URL and sends {type:"page_change", page};
+// the server reruns the target page. The transports carry only a query string,
+// so the page in the address bar rides along as __sy_page on the socket URL —
+// that is how a cold load of /reports renders reports instead of the first page.
 
 (function () {
   var SY_BASE = window.__SY_BASE || "";
@@ -69,9 +73,49 @@
     }
   }
 
+  // --- Page URLs -------------------------------------------------------
+
+  var knownPages = [];   // [{title, slug, icon}] from the last ui_patch
+
+  // currentSlug reads the page slug out of the address bar: everything after
+  // the mount prefix, with no slashes of its own. "" means the app root.
+  function currentSlug() {
+    var path = location.pathname;
+    if (SY_BASE && path.indexOf(SY_BASE) === 0) path = path.slice(SY_BASE.length);
+    return decodeURIComponent(path.replace(/^\/+|\/+$/g, ""));
+  }
+
+  function pageBySlug(slug) {
+    for (var i = 0; i < knownPages.length; i++) {
+      if (knownPages[i].slug === slug) return knownPages[i];
+    }
+    return null;
+  }
+
+  function pageURL(slug) {
+    return SY_BASE + "/" + encodeURIComponent(slug) + (location.search || "");
+  }
+
+  // transportQuery appends the current page to the socket URL. The server strips
+  // it before the app sees the query parameters.
+  function transportQuery() {
+    var qs = location.search || "";
+    var slug = currentSlug();
+    if (!slug) return qs;
+    return qs + (qs ? "&" : "?") + "__sy_page=" + encodeURIComponent(slug);
+  }
+
+  // The back and forward buttons move between pages without a reload. An empty
+  // slug is the app root, which is the first page in the sidebar.
+  window.addEventListener("popstate", function () {
+    var slug = currentSlug();
+    var p = slug ? pageBySlug(slug) : knownPages[0];
+    if (p) sendPageChange(p.title);
+  });
+
   function connect() {
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
-    var qs = location.search || "";
+    var qs = transportQuery();
     try {
       ws = new WebSocket(proto + "//" + location.host + SY_BASE + "/_syralit/ws" + qs);
     } catch (e) {
@@ -94,7 +138,7 @@
     if (usingSSE) return;
     usingSSE = true;
     ws = null;
-    var es = new EventSource(SY_BASE + "/_syralit/sse" + (location.search || ""));
+    var es = new EventSource(SY_BASE + "/_syralit/sse" + transportQuery());
     es.addEventListener("session", function (e) { sessionId = e.data; });
     es.onmessage = function (e) { handleServerMsg(JSON.parse(e.data)); };
     // EventSource auto-reconnects; the server starts a fresh session on
@@ -120,6 +164,7 @@
 
   function renderSidebar(pages, activePage, sidebarNodes) {
     layoutRoot.classList.add("has-sidebar");
+    knownPages = pages;
 
     var header = sidebar.querySelector(".sy-sidebar-header");
     if (!header) {
@@ -142,12 +187,18 @@
         pages.forEach(function (p) {
           var li = document.createElement("li");
           var a = document.createElement("a");
-          a.href = "#";
+          // A real href so the link can be copied, opened in a new tab or
+          // middle-clicked; a plain click still navigates without a reload.
+          a.href = p.slug ? pageURL(p.slug) : "#";
           if (p.icon) a.appendChild(el("span", "sy-sidebar-icon", p.icon));
           a.appendChild(document.createTextNode(p.title));
           if (p.title === activePage) a.classList.add("active");
           a.onclick = function (e) {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
             e.preventDefault();
+            if (p.slug) {
+              try { history.pushState(null, "", pageURL(p.slug)); } catch (err) {}
+            }
             sendPageChange(p.title);
             layoutRoot.classList.remove("sidebar-open");
           };

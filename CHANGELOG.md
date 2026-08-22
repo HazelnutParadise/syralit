@@ -7,6 +7,15 @@ All notable changes to Syralit are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Page URLs** — every page registered with `sy.AddPage` now has its own URL,
+  derived from the title (`"Data Explorer"` → `/data_explorer`) or set with the
+  new `sy.PageSlug` option. Pages can be linked to, bookmarked and reloaded, the
+  back and forward buttons move between them, and the first HTML response for a
+  page path carries that page's `<title>` — so a link preview no longer shows
+  the app-wide name for every page. Static files in `public/` still win over a
+  page of the same name, and an unknown path is a 404. Under `syralit dev` the
+  supervisor serves the shell for any plain path, since the page registry lives
+  in the child process; paths that look like a filename remain 404.
 - **Configurable app shell** (#1) — `Config.Lang` sets the `lang` attribute on
   `<html>` (default `"en"`), `Config.Dir` sets `dir` (`"ltr"` / `"rtl"` /
   `"auto"`; omitted when empty), and `Config.HeadHTML` is inserted verbatim at

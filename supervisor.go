@@ -348,6 +348,14 @@ func (s *supervisor) handleBrowserWS(w http.ResponseWriter, r *http.Request) {
 		bc.write(s.ctx, devBuildError(berr))
 	}
 
+	// The child's session was created when the supervisor connected, long
+	// before this browser opened /reports, so hand it the page from the URL.
+	if slug := r.URL.Query().Get(pageQueryKey); slug != "" {
+		if b, err := json.Marshal(map[string]string{"type": "page_change", "page": slug}); err == nil {
+			s.sendToChild(b)
+		}
+	}
+
 	// Forward browser frames (widget_change) to the child.
 	for {
 		_, data, err := c.Read(s.ctx)
@@ -379,8 +387,16 @@ func (s *supervisor) handleIndex(w http.ResponseWriter, r *http.Request) {
 		if s.opts.PublicDir != "" && s.servePublic(w, r) {
 			return
 		}
-		http.NotFound(w, r)
-		return
+		// Anything left is treated as a page URL and gets the app shell. The
+		// page registry lives in the child process, so unlike the real server
+		// the supervisor cannot 404 a path that names no page. A nested path or
+		// one that looks like a filename is still a 404, so a missing asset
+		// does not come back as HTML.
+		name := strings.Trim(r.URL.Path, "/")
+		if strings.Contains(name, "/") || strings.Contains(name, ".") {
+			http.NotFound(w, r)
+			return
+		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write([]byte(renderIndex(s.opts.Title, s.opts.Theme)))

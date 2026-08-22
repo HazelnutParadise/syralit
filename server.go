@@ -228,18 +228,44 @@ func requestBasePath(r *http.Request) string {
 	return ""
 }
 
+// pageQueryKey marks the page a browser is opening. The client puts it on the
+// WebSocket/SSE URL — not in the address bar — because those transports carry
+// only the query string, so without it the first render would always be the
+// default page even when the visitor asked for /reports.
+const pageQueryKey = "__sy_page"
+
+// takeInitialPage pulls the marker out of a transport's query parameters and
+// returns the page title it names. The key is removed so it never shows up in
+// sy.QueryParams(), which is the app's own namespace.
+func takeInitialPage(qp map[string]string) string {
+	slug := qp[pageQueryKey]
+	delete(qp, pageQueryKey)
+	if p, ok := pageBySlug(slug); ok {
+		return p.title
+	}
+	return ""
+}
+
 func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
+	title := s.cfg.Title
 	if r.URL.Path != "/" {
 		// Non-root paths fall through to user static files (sy.Static / an
-		// embedded public/ dir) before 404.
+		// embedded public/ dir), then to the page URLs, before 404. Files win:
+		// a real robots.txt must stay reachable whatever the pages are called.
 		if serveRootStatic(w, r) {
 			return
 		}
-		http.NotFound(w, r)
-		return
+		p, ok := pageBySlug(strings.Trim(r.URL.Path, "/"))
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		// The shell carries the page's own title, so a crawler or View Source
+		// sees the page that was asked for rather than the app-wide name.
+		title = p.title
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(renderIndex(s.cfg.Title, s.cfg.Theme, requestBasePath(r))))
+	_, _ = w.Write([]byte(renderIndex(title, s.cfg.Theme, requestBasePath(r))))
 }
 
 // inbound message from the browser (SPEC §13). The __dev_* fields are only used
@@ -287,6 +313,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sess.mu.Lock()
+	sess.currentPage = takeInitialPage(qp)
 	sess.queryParams = qp
 	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()
@@ -354,7 +381,15 @@ func (s *server) handleClientMsg(sink uiSink, sess *session, msg clientMsg) bool
 		}
 		return true
 	case "page_change":
-		sess.setCurrentPage(msg.Page)
+		page := msg.Page
+		if pageByTitle(page) == nil {
+			// The dev supervisor forwards the slug from the browser URL; it has
+			// no page registry of its own to resolve it with.
+			if p, ok := pageBySlug(page); ok {
+				page = p.title
+			}
+		}
+		sess.setCurrentPage(page)
 		return pushUI(sink, sess) == nil
 	case "form_submit":
 		for _, ch := range msg.Changes {

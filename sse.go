@@ -86,6 +86,7 @@ func (s *server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sess.mu.Lock()
+	sess.currentPage = takeInitialPage(qp)
 	sess.queryParams = qp
 	sess.reqCtx = captureRequest(r)
 	sess.mu.Unlock()

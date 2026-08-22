@@ -397,10 +397,18 @@ sy.Rerun()  // force rerun
 func init() {
     sy.AddPage("Home", homePage, sy.PageIcon("🏠"), sy.PageOrder(1))
     sy.AddPage("About", aboutPage, sy.PageIcon("ℹ️"), sy.PageOrder(2))
+    sy.AddPage("報表", reportPage, sy.PageOrder(3), sy.PageSlug("reports"))
 }
 
 func main() { sy.App(nil) }
 ```
+
+Every page gets its own URL, derived from the title — "Data Explorer" becomes
+`/data_explorer` — or set explicitly with `sy.PageSlug`, which is the option to
+reach for when the title is not in Latin script. So a page can be linked to,
+bookmarked, reloaded and reached with the back button, and the first HTML
+response already carries that page's `<title>`. Files served from `public/`
+take precedence over a page with the same name.
 
 ### Auth
 

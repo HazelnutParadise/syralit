@@ -205,7 +205,11 @@ func TestE2EProductionWindow(t *testing.T) {
 	// Let WebView2 finish embedding before closing — a WM_CLOSE during
 	// controller creation makes Wails treat the aborted creation as fatal
 	// (80004004), which is a startup race, not the shutdown path under test.
-	time.Sleep(5 * time.Second)
+	// A fixed sleep is not enough: controller creation took under 5s on the
+	// 20260714 runner image and longer on 20260818. The fixture logs from its
+	// page function, which only runs once the webview has loaded the shell
+	// and connected, so that line is the readiness signal.
+	logs.waitMatch(t, regexp.MustCompile(`e2e: rendered`), 60*time.Second)
 
 	// Closing the window shuts the whole app down cleanly.
 	procPostMessageW.Call(hwnd, wmClose, 0, 0)

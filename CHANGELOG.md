@@ -6,6 +6,8 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-08-23
+
 ### Fixed
 - `syralit dev <dir>` and `syralit run <dir>` now run the app with the project
   directory as its working directory. Before, the child inherited the

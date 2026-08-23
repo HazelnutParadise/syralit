@@ -6,6 +6,19 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **`sy.ResolveConfig(cfg)`** (#4) — returns `cfg` with unset fields filled
+  from `syralit.toml` and then the built-in defaults, the same resolution
+  `sy.App` and `sy.Handler` perform internally. An app that mounts `sy.Handler`
+  in its own server can now read the configured `Host`/`Port` to listen on.
+
+### Fixed
+- Documented that `sy.GetOption` only reflects the serving app's config inside
+  the page function. Since 0.10.0 (#2) it has no process-wide fallback, so
+  outside a rerun it returns the zero `Config`'s values (`""`/`0` for
+  `server.host`/`server.port`, not the defaults); embedded apps that used it
+  to pick a listen address silently bound `:0`. Use `sy.ResolveConfig` there.
+
 ## [0.10.1] - 2026-08-23
 
 ### Fixed

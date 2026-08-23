@@ -355,7 +355,7 @@ val := sy.QueryParam("page")
 all := sy.QueryParams()
 sy.SetQueryParam("page", "2")  // updates the browser URL (deep linking); "" removes
 sy.ResetWidget("key")          // delete a widget's stored value (del st.session_state[key])
-port := sy.GetOption("server.port") // read resolved config values
+port := sy.GetOption("server.port") // resolved config of the serving app; inside the page function only
 
 // Request context (headers, cookies, host, IP, locale) — st.context
 ctx := sy.Context()
@@ -561,12 +561,20 @@ sy.Run(sy.Config{
 // Secrets (from syralit.toml [secrets] section)
 apiKey := sy.Secrets("api_key")
 
-// Read resolved config values ("title", "server.port", "theme.accent", ...)
+// Read resolved config values ("title", "server.port", "theme.accent", ...).
+// Inside the page function only: outside a rerun there is no session and the
+// zero Config comes back.
 port := sy.GetOption("server.port")
 _ = port
 
 // Embed the app in an existing Go HTTP server (instead of sy.App)
 // mux.Handle("/dash/", http.StripPrefix("/dash", sy.Handler(sy.Config{}, myApp)))
+
+// Outside a page function (e.g. to bind the host/port syralit.toml configured
+// when you own the listener), resolve the config explicitly — same resolution
+// as sy.App/sy.Handler: code > syralit.toml > defaults.
+// cfg := sy.ResolveConfig(sy.Config{Title: "My App"})
+// http.ListenAndServe(fmt.Sprintf("%s:%d", cfg.Host, cfg.Port), sy.Handler(cfg, myApp))
 
 // Database connection
 db := sy.Connection("mydb")  // DSN from Secrets

@@ -132,8 +132,7 @@ const (
 // Run starts a Syralit app with explicit config. Values left unset are filled
 // from syralit.toml in the working directory if present, then by defaults.
 func Run(cfg Config, fn func()) error {
-	loadFileConfig(".").applyToConfig(&cfg)
-	cfg.applyDefaults()
+	cfg = ResolveConfig(cfg)
 	s := &server{cfg: cfg, appFn: fn, shell: resolveShell(cfg.Lang, cfg.Dir, cfg.HeadHTML, cfg.UIStrings)}
 	if addr := os.Getenv(envDevAddr); addr != "" {
 		log.Printf("syralit[dev-child]: listening on %s", addr)
@@ -142,16 +141,29 @@ func Run(cfg Config, fn func()) error {
 	return s.listenAndServe()
 }
 
+// ResolveConfig returns cfg with unset fields filled from syralit.toml in the
+// working directory (if present) and then from the built-in defaults. This is
+// the same resolution Run and Handler perform internally; it is exported so an
+// app that mounts Handler in its own server can read the configured Host and
+// Port to listen on. cfg is not modified. Like Run and Handler, it also makes
+// the file's [secrets] available to Secrets.
+func ResolveConfig(cfg Config) Config {
+	loadFileConfig(".").applyToConfig(&cfg)
+	cfg.applyDefaults()
+	return cfg
+}
+
 // Handler returns the app as an http.Handler, so a Syralit app can be mounted
 // inside an existing Go HTTP server instead of owning the process:
 //
 //	mux.Handle("/dashboard/", http.StripPrefix("/dashboard", sy.Handler(sy.Config{}, myApp)))
 //
 // Config resolution matches Run (syralit.toml, then defaults); Host/Port are
-// ignored since the caller owns the listener.
+// ignored since the caller owns the listener. To bind the address syralit.toml
+// configured, resolve the config yourself with ResolveConfig and read
+// cfg.Host/cfg.Port from the result.
 func Handler(cfg Config, fn func()) http.Handler {
-	loadFileConfig(".").applyToConfig(&cfg)
-	cfg.applyDefaults()
+	cfg = ResolveConfig(cfg)
 	s := &server{cfg: cfg, appFn: fn, shell: resolveShell(cfg.Lang, cfg.Dir, cfg.HeadHTML, cfg.UIStrings)}
 	return s.handler()
 }
@@ -161,7 +173,8 @@ func Handler(cfg Config, fn func()) http.Handler {
 // "theme.accent", "theme.radius". Unknown keys return nil. Values reflect the
 // effective config of the server serving the current session (code >
 // syralit.toml > defaults), so call it from inside the page function. Outside
-// a rerun there is no server to ask and the zero Config's values come back.
+// a rerun there is no server to ask and the zero Config's values come back;
+// use ResolveConfig there instead.
 func GetOption(key string) any {
 	var resolvedConfig Config
 	if cur != nil {

@@ -150,6 +150,9 @@ if job.Running() {
   HTTP transport: Server-Sent Events downstream + POST upstream. No code change.
 - **`sy.Handler(cfg, fn)`** — mount a Syralit app as a plain `http.Handler`
   inside an existing Go server (works behind `http.StripPrefix` sub-paths).
+  `sy.ResolveConfig(cfg)` gives you the same resolved config (code >
+  `syralit.toml` > defaults) so your own listener can bind the configured
+  host and port.
 - **Native desktop apps** — ship the exact same app code as a desktop window
   via `integrations/desktop` (Wails v3): `sydesktop.App(fn)` instead of
   `sy.App(fn)`, and the Go code runs on the user's machine with direct local

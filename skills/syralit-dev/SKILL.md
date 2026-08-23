@@ -739,7 +739,7 @@ accent = "#f59e0b"
 api_key = "sk-..."
 db_dsn = "postgres://..."
 
-[server]
+[server]                  # host/port are also accepted here (top-level keys win)
 max_upload_size_mb = 50   # FileUploader/CameraInput cap (default 10 MB)
 ssl_cert_file = "cert.pem"  # serve HTTPS when both are set
 ssl_key_file = "key.pem"

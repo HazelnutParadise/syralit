@@ -573,3 +573,32 @@ func TestDocumentFunc(t *testing.T) {
 	must(get(h, "/data_explorer"), "<title>Data Explorer</title>")
 	must(get(h, "/data_explorer?doc=title"), "<title>Only Title</title>")
 }
+
+func TestFileConfigServerSectionHostPort(t *testing.T) {
+	dir := t.TempDir()
+	toml := "[server]\nhost = \"127.0.0.2\"\nport = 9100\n"
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte(toml), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := Config{}
+	loadFileConfig(dir).applyToConfig(&cfg)
+	if cfg.Host != "127.0.0.2" || cfg.Port != 9100 {
+		t.Fatalf("[server] host/port not applied: %+v", cfg)
+	}
+	var o DevOptions
+	loadFileConfig(dir).applyToDev(&o)
+	if o.Host != "127.0.0.2" || o.Port != 9100 {
+		t.Fatalf("[server] host/port not applied to dev: %+v", o)
+	}
+
+	// Top-level keys win when both forms are present.
+	both := "port = 9000\n[server]\nport = 9100\n"
+	if err := os.WriteFile(filepath.Join(dir, ConfigFileName), []byte(both), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg = Config{}
+	loadFileConfig(dir).applyToConfig(&cfg)
+	if cfg.Port != 9000 {
+		t.Fatalf("top-level port should win, got %d", cfg.Port)
+	}
+}

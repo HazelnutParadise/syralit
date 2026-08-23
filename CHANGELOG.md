@@ -22,6 +22,11 @@ All notable changes to Syralit are documented here. The format is based on
   in its own server can now read the configured `Host`/`Port` to listen on.
 
 ### Fixed
+- `syralit.toml` now also accepts `host`/`port` under `[server]`; previously
+  only the top-level keys were read and `[server] port` was silently ignored,
+  so apps using it bound the default 8600. Top-level keys win when both are
+  present. The `embed-scroll`, `insyra-charts` and `insyra-demo` examples used
+  the ignored form and now declare `port` at the top level.
 - Documented that `sy.GetOption` only reflects the serving app's config inside
   the page function. Since 0.10.0 (#2) it has no process-wide fallback, so
   outside a rerun it returns the zero `Config`'s values (`""`/`0` for

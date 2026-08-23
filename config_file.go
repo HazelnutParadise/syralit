@@ -187,6 +187,10 @@ type fileConfig struct {
 	Secrets map[string]string `toml:"secrets"`
 	Theme   fileTheme         `toml:"theme"`
 	Server  struct {
+		// host/port are also accepted here; the top-level keys win when both
+		// forms are present (see loadFileConfig).
+		Host            string `toml:"host"`
+		Port            int    `toml:"port"`
 		MaxUploadSizeMB int    `toml:"max_upload_size_mb"`
 		SSLCertFile     string `toml:"ssl_cert_file"`
 		SSLKeyFile      string `toml:"ssl_key_file"`
@@ -205,6 +209,12 @@ func loadFileConfig(dir string) *fileConfig {
 	if _, err := toml.DecodeFile(path, &fc); err != nil {
 		log.Printf("syralit: ignoring %s: %v", path, err)
 		return nil
+	}
+	if fc.Host == "" {
+		fc.Host = fc.Server.Host
+	}
+	if fc.Port == 0 {
+		fc.Port = fc.Server.Port
 	}
 	return &fc
 }

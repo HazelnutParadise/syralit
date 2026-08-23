@@ -201,7 +201,7 @@ Plus: `DownloadButton`, `LinkButton`, `PageLink`, `Badge`.
 
 ### Display
 
-Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS), IFrame, PDF (embedded viewer), Exception (styled Go `error` box).
+Title, Header, Subheader, Text, Textf, Markdown, Caption, Code (syntax highlighting via highlight.js), LaTeX (KaTeX), JSON (interactive tree), HTML, Image, ImageFromBytes, Audio, Video, Link, Metric (with delta indicators), Progress, Spinner, WriteStream (token-by-token streaming), Component (custom HTML/JS in a sandboxed iframe), Embed (third-party markup in the main document — runs its scripts once and keeps the node across reruns, for ad slots, comment threads, social embeds), IFrame, PDF (embedded viewer), Exception (styled Go `error` box).
 
 ### Agent Artifacts
 
@@ -922,6 +922,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
+| [`embed-widget`](examples/embed-widget/) | `sy.Embed`: a "mount point + loader script" third-party widget that survives reruns |
 | [`theme-fonts`](examples/theme-fonts/) | Theming: built-in Source fonts, custom `@font-face`, palette/link/button-radius/chart colors, sidebar overrides |
 | [`streamlit-parity`](examples/streamlit-parity/) | PDF viewer, multi-file upload, collapsed sidebar, app menu, free-entry MultiSelect, clipped media |
 | [`insyra-interactive`](examples/insyra-interactive/) | Click-to-filter dashboard: selectable GroupBy chart drives an Insyra-filtered table, metrics, and deep-linkable URL state |

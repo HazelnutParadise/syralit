@@ -238,6 +238,28 @@ func HTML(html string) {
 	current().add(&Node{Type: "html", Props: map[string]any{"html": html}})
 }
 
+// Embed inserts third-party markup into the main document and executes any
+// <script> it contains, so "mount point plus loader" integrations (ad slots,
+// comment threads, social embeds, chat widgets) work where HTML (never runs
+// scripts) and Component (sandboxed iframe) do not.
+//
+// The node is identified by Key (or its position); on later reruns, if the
+// html is unchanged, the browser keeps the existing DOM element and does not
+// run its scripts again. At the top level of the page or inside a Fragment the
+// element also stays attached to the document across reruns, so iframes the
+// widget created do not reload; inside layout containers (Columns, Container,
+// Expander, ...) the container is rebuilt and the element is re-attached.
+// Changing the html rebuilds the node and re-runs its scripts.
+//
+// The markup is inserted verbatim with the same trust level as HTML: never
+// build it out of user input.
+func Embed(html string, opts ...Option) {
+	rc := current()
+	o := applyOpts(opts)
+	id := rc.widgetID("embed", o.key)
+	rc.add(&Node{ID: id, Type: "embed", Props: map[string]any{"html": html}})
+}
+
 // Dialog renders a modal dialog overlay. Content is always rendered in the
 // tree (for consistent widget IDs) but only visible when open. Use
 // ShowDialog/CloseDialog to toggle, or let the user click the backdrop/×.

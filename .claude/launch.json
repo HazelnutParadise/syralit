@@ -27,6 +27,15 @@
         "./examples/data-studio"
       ],
       "port": 8600
+    },
+    {
+      "name": "embed-widget",
+      "runtimeExecutable": "go",
+      "runtimeArgs": [
+        "run",
+        "./examples/embed-widget"
+      ],
+      "port": 8603
     }
   ]
 }

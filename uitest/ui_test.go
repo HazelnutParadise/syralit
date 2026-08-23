@@ -44,6 +44,18 @@ func testApp() {
 		sy.Textf("sel:%s/%s/%.0f", sel.Series, sel.X, sel.Value)
 	}
 
+	// Embed: a fake third-party loader — counts its own runs, fills the slot,
+	// and ships an iframe so a reload (re-attach) would be observable.
+	ver := sy.State("embedver", 1)
+	if sy.Button("Swap embed", sy.Key("swapembed")) {
+		ver.Set(ver.Get() + 1)
+	}
+	sy.Embed(fmt.Sprintf(`<div id="emb-slot" data-ver="%d"></div>`+
+		`<iframe id="emb-frame" srcdoc="<p>f</p>"></iframe>`+
+		`<script>window.__embedRuns=(window.__embedRuns||0)+1;`+
+		`document.getElementById("emb-slot").textContent="loaded "+window.__embedRuns;</script>`,
+		ver.Get()), sy.Key("emb"))
+
 	files := sy.FileUploaderMultiple("Files", sy.Key("files"))
 	for _, f := range files {
 		sy.Textf("file:%s:%d", f.Name, f.Size)
@@ -252,5 +264,54 @@ func TestSubPathMount(t *testing.T) {
 	}
 	if title != "Mounted Under Dash" {
 		t.Fatalf("title = %q — WebSocket under sub-path mount failed", title)
+	}
+}
+
+func TestEmbedRunsScriptsOnceAndKeepsNode(t *testing.T) {
+	srv := startApp(t)
+	ctx, cancel := browser(t)
+	defer cancel()
+
+	var slot string
+	var runs1, runs2, runs3 int
+	var sameEl, frameKept bool
+	err := chromedp.Run(ctx,
+		waitApp(srv.URL),
+		chromedp.WaitVisible("#emb-slot", chromedp.ByQuery),
+		chromedp.Text("#emb-slot", &slot, chromedp.ByQuery),
+		chromedp.Evaluate(`window.__embedRuns`, &runs1),
+		// Tag the element and its iframe's window so we can tell a kept node
+		// from a rebuilt or re-attached one after a rerun.
+		chromedp.Evaluate(`(function(){
+			document.getElementById("emb-slot").__tag = 1;
+			document.getElementById("emb-frame").contentWindow.__tag = 1;
+		})()`, nil),
+		chromedp.Click(`//button[contains(., "Greet")]`),
+		chromedp.WaitVisible(".sy-status-success", chromedp.ByQuery),
+		chromedp.Evaluate(`window.__embedRuns`, &runs2),
+		chromedp.Evaluate(`document.getElementById("emb-slot").__tag === 1`, &sameEl),
+		chromedp.Evaluate(`document.getElementById("emb-frame").contentWindow.__tag === 1`, &frameKept),
+		// Changing the html rebuilds the node and re-runs the script.
+		chromedp.Click(`//button[contains(., "Swap embed")]`),
+		chromedp.WaitVisible(`#emb-slot[data-ver="2"]`, chromedp.ByQuery),
+		chromedp.Evaluate(`window.__embedRuns`, &runs3),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slot != "loaded 1" || runs1 != 1 {
+		t.Fatalf("first render: slot=%q runs=%d", slot, runs1)
+	}
+	if runs2 != 1 {
+		t.Fatalf("script re-ran on rerun: runs=%d", runs2)
+	}
+	if !sameEl {
+		t.Fatal("embed element was rebuilt on rerun")
+	}
+	if !frameKept {
+		t.Fatal("embed was re-attached on rerun (iframe reloaded)")
+	}
+	if runs3 != 2 {
+		t.Fatalf("html change should re-run script once: runs=%d", runs3)
 	}
 }

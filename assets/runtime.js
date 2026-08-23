@@ -413,7 +413,7 @@
     var selStart = active && "selectionStart" in active ? active.selectionStart : null;
     var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
 
-    root.replaceChildren.apply(root, nodes.map(buildNode));
+    patchChildren(root, nodes.map(buildNode));
 
     if (activeID) {
       var next = root.querySelector('[data-id="' + cssEscape(activeID) + '"]');
@@ -424,6 +424,22 @@
         }
       }
     }
+  }
+
+  // Replace parent's children with `next`, keeping any element that is already
+  // a child of parent (a reused Embed) attached the whole time — detaching and
+  // re-inserting it would reload every iframe the embed created. Elements not
+  // in `next` are removed first, then each new element is inserted before
+  // whatever currently sits at its index.
+  function patchChildren(parent, next) {
+    Array.prototype.slice.call(parent.childNodes).forEach(function (c) {
+      if (next.indexOf(c) === -1) parent.removeChild(c);
+    });
+    next.forEach(function (n, i) {
+      var cur = parent.childNodes[i];
+      if (cur !== n) parent.insertBefore(n, cur || null);
+    });
+    pruneEmbeds();
   }
 
   function buildNode(node) {
@@ -497,6 +513,7 @@
       case "data_editor": return dataEditorEl(node, p);
       case "dialog":     return dialogEl(node, p);
       case "html":       return htmlEl(node, p);
+      case "embed":      return embedEl(node, p);
       case "component":  return componentEl(node, p);
       case "iframe":     return iframeEl(node, p);
       case "pdf":        return pdfEl(node, p);
@@ -1190,8 +1207,7 @@
   function patchFragment(key, nodes) {
     var target = root.querySelector('[data-fragment-key="' + key + '"]');
     if (!target) return;
-    target.replaceChildren();
-    nodes.forEach(function (n) { target.appendChild(buildNode(n)); });
+    patchChildren(target, nodes.map(buildNode));
   }
 
   function fragmentEl(node) {
@@ -2344,6 +2360,40 @@
     var div = el("div", "sy-html");
     div.innerHTML = p.html || "";
     return div;
+  }
+
+  // --- Embed (third-party markup + scripts) -----------------------------
+
+  // id -> {html, el}. An embed is built once per id; later reruns with the
+  // same html hand back the same element so its scripts run only once and
+  // whatever the widget mounted survives. pruneEmbeds drops entries whose
+  // element left the document.
+  var embeds = {};
+
+  function embedEl(node, p) {
+    var html = p.html || "";
+    var hit = embeds[node.id];
+    if (hit && hit.html === html) return hit.el;
+    var div = el("div", "sy-embed");
+    div.innerHTML = html;
+    // <script> inserted via innerHTML never executes; recreate each one in
+    // place so the browser runs it once the element joins the document.
+    // async=false keeps external scripts in markup order (config, then loader).
+    Array.prototype.slice.call(div.querySelectorAll("script")).forEach(function (old) {
+      var s = document.createElement("script");
+      Array.prototype.slice.call(old.attributes).forEach(function (a) { s.setAttribute(a.name, a.value); });
+      if (old.src) s.async = false;
+      s.textContent = old.textContent;
+      old.parentNode.replaceChild(s, old);
+    });
+    embeds[node.id] = { html: html, el: div };
+    return div;
+  }
+
+  function pruneEmbeds() {
+    Object.keys(embeds).forEach(function (id) {
+      if (!embeds[id].el.isConnected) delete embeds[id];
+    });
   }
 
   // --- Custom Component / IFrame -----------------------------------------

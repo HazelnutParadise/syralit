@@ -1,0 +1,3 @@
+# Syralit project settings. Run "syralit dev" in this dir with no flags.
+title = "sy.Embed"
+port = 8603

@@ -2105,3 +2105,31 @@ func TestWebSocketRejectsCrossOriginHandshake(t *testing.T) {
 		t.Fatalf("expected 403 response, got %#v", res)
 	}
 }
+
+func TestEmbed(t *testing.T) {
+	app := func() {
+		Embed(`<div id="slot"></div><script>x=1</script>`, Key("ad1"))
+		Embed(`<p>auto</p>`)
+		Fragment("frag", func() { Embed(`<p>in-frag</p>`, Key("ad2")) })
+	}
+	at := NewAppTest(app)
+	at.Run()
+	nodes := at.FindAll("embed")
+	if len(nodes) != 3 {
+		t.Fatalf("want 3 embed nodes, got %d", len(nodes))
+	}
+	if nodes[0].ID != "ad1" || nodes[0].Props["html"] != `<div id="slot"></div><script>x=1</script>` {
+		t.Fatalf("unexpected keyed embed: %+v", nodes[0])
+	}
+	if nodes[1].ID != "__embed_1" {
+		t.Fatalf("auto id: got %q", nodes[1].ID)
+	}
+	if nodes[2].ID != "ad2" {
+		t.Fatalf("fragment embed id: got %q", nodes[2].ID)
+	}
+	// The embed node must be addressable by id in the frontend, so it must
+	// not be a bare node like sy.HTML.
+	if nodes[0].Type != "embed" {
+		t.Fatalf("type: %q", nodes[0].Type)
+	}
+}

@@ -151,6 +151,11 @@ sy.Write(args...)                  // auto-detect: string→markdown, error→er
 sy.WriteStream(id, func(w func(string)) { w("token") })  // streaming text
 sy.ArtifactCanvas(store, opts...)  // shared, animated agent-updatable canvas
 sy.Component(html, opts...)        // custom HTML/JS in iframe
+sy.Embed(html, sy.Key("ad-1"))      // third-party markup in the main document; runs its <script>s
+                                   // once per key, keeps the node across reruns (re-runs only
+                                   // when html changes). Top level / Fragment: node never leaves
+                                   // the DOM, so widget-created iframes don't reload. Inside
+                                   // Columns/Container etc. it is re-attached. Same trust as HTML.
 sy.IFrame(url, opts...)
 sy.PDF(src, sy.Height(600))        // embedded PDF viewer (browser renderer)
 ```

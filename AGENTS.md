@@ -2,7 +2,6 @@
 
 ## Follow-ups
 
-- `sy.Embed` inside layout containers (`Columns`, `Container`, `Expander`, …) is
-  re-attached on every rerun because the container element is rebuilt, so
-  iframes the widget created reload there. Keeping it attached needs in-place
-  reconciliation of container children (a keyed DOM diff), out of scope for #5.
+- `sy.Embed` inside layout containers is re-attached on every rerun (iframes
+  reload there) — tracked as #6; needs keyed in-place reconciliation of
+  container children.

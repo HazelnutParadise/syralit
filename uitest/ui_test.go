@@ -56,6 +56,29 @@ func testApp() {
 		`document.getElementById("emb-slot").textContent="loaded "+window.__embedRuns;</script>`,
 		ver.Get()), sy.Key("emb"))
 
+	// #6: embeds nested in layout containers must stay attached across reruns.
+	nest := sy.State("nestcount", 0)
+	if sy.Button("Nest rerun", sy.Key("nestrerun")) {
+		nest.Set(nest.Get() + 1)
+	}
+	cols := sy.Columns(2)
+	cols[0](func() {
+		sy.Container(func() {
+			sy.Embed(`<span id="nest-slot"></span>`+
+				`<iframe id="nest-frame" srcdoc="<p>n</p>"></iframe>`+
+				`<script>window.__nestRuns=(window.__nestRuns||0)+1;`+
+				`document.getElementById("nest-slot").textContent="nest "+window.__nestRuns;</script>`,
+				sy.Key("nested"))
+			sy.Textf("nestcount:%d", nest.Get())
+		})
+	})
+	tab := sy.Tabs([]string{"T1", "T2"}, sy.Key("tabs6"))
+	tab("T1", func() {
+		sy.Embed(`<iframe id="tab-frame" srcdoc="<p>t</p>"></iframe>`+
+			`<script>window.__tabRuns=(window.__tabRuns||0)+1;</script>`, sy.Key("tabemb"))
+	})
+	tab("T2", func() { sy.Text("second tab") })
+
 	files := sy.FileUploaderMultiple("Files", sy.Key("files"))
 	for _, f := range files {
 		sy.Textf("file:%s:%d", f.Name, f.Size)
@@ -313,5 +336,59 @@ func TestEmbedRunsScriptsOnceAndKeepsNode(t *testing.T) {
 	}
 	if runs3 != 2 {
 		t.Fatalf("html change should re-run script once: runs=%d", runs3)
+	}
+}
+
+func TestEmbedInsideContainersStaysAttached(t *testing.T) {
+	srv := startApp(t)
+	ctx, cancel := browser(t)
+	defer cancel()
+
+	var nestRuns, tabRuns int
+	var nestKept, sibUpdated, tabKept, tabVisible bool
+	err := chromedp.Run(ctx,
+		waitApp(srv.URL),
+		chromedp.WaitVisible("#nest-slot", chromedp.ByQuery),
+		chromedp.Evaluate(`(function(){
+			document.getElementById("nest-frame").contentWindow.__tag = 1;
+			document.getElementById("tab-frame").contentWindow.__tag = 1;
+		})()`, nil),
+		// Rerun: the whole tree is re-sent; the embed sits under
+		// Columns > Column > Container and must not be re-attached.
+		chromedp.Click(`//button[contains(., "Nest rerun")]`),
+		chromedp.WaitVisible(`//p[contains(., "nestcount:1")]`),
+		chromedp.Evaluate(`window.__nestRuns`, &nestRuns),
+		chromedp.Evaluate(`document.getElementById("nest-frame").contentWindow.__tag === 1`, &nestKept),
+		chromedp.Evaluate(`document.querySelector(".sy-column .sy-container p") !== null`, &sibUpdated),
+		// Tab switch away and back: panels are all rendered, only display
+		// toggles, so the embed's iframe must survive both switches.
+		chromedp.Click(`//button[contains(@class,"sy-tab-button")][contains(., "T2")]`),
+		chromedp.WaitVisible(`//p[contains(., "second tab")]`),
+		chromedp.Click(`//button[contains(@class,"sy-tab-button")][contains(., "T1")]`),
+		chromedp.Sleep(300*time.Millisecond),
+		chromedp.Evaluate(`window.__tabRuns`, &tabRuns),
+		chromedp.Evaluate(`document.getElementById("tab-frame").contentWindow.__tag === 1`, &tabKept),
+		chromedp.Evaluate(`getComputedStyle(document.getElementById("tab-frame").closest(".sy-tab-panel")).display !== "none"`, &tabVisible),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if nestRuns != 1 {
+		t.Fatalf("nested embed script re-ran: runs=%d", nestRuns)
+	}
+	if !nestKept {
+		t.Fatal("nested embed was re-attached (iframe reloaded)")
+	}
+	if !sibUpdated {
+		t.Fatal("sibling text inside the adopted container is missing")
+	}
+	if tabRuns != 1 {
+		t.Fatalf("tab embed script re-ran: runs=%d", tabRuns)
+	}
+	if !tabKept {
+		t.Fatal("tab embed iframe reloaded across tab switches")
+	}
+	if !tabVisible {
+		t.Fatal("returning to T1 should show the embed's panel again")
 	}
 }

@@ -244,12 +244,13 @@ func HTML(html string) {
 // scripts) and Component (sandboxed iframe) do not.
 //
 // The node is identified by Key (or its position); on later reruns, if the
-// html is unchanged, the browser keeps the existing DOM element and does not
-// run its scripts again. At the top level of the page or inside a Fragment the
-// element also stays attached to the document across reruns, so iframes the
-// widget created do not reload; inside layout containers (Columns, Container,
-// Expander, ...) the container is rebuilt and the element is re-attached.
-// Changing the html rebuilds the node and re-runs its scripts.
+// html is unchanged, the browser keeps the existing DOM element, does not run
+// its scripts again, and keeps it attached to the document — including inside
+// layout containers (Columns, Tabs, Expander, Container, ...), whose shells
+// are kept in place around a surviving Embed as long as their own props are
+// unchanged — so iframes the widget created do not reload. Changing the html
+// (or the props of an enclosing container) rebuilds the node and re-runs its
+// scripts.
 //
 // The markup is inserted verbatim with the same trust level as HTML: never
 // build it out of user input.

@@ -38,6 +38,25 @@ func main() {
 		sy.Text(fmt.Sprintf("Reruns triggered: %d — the widget above was not rebuilt.", count.Get()))
 
 		sy.Divider()
+		sy.Subheader("Inside layout containers")
+		sy.Caption("Since #6 the container shell is kept in place around a surviving embed, " +
+			"so this one — nested in Columns → Container — doesn't reload either:")
+		cols := sy.Columns(2)
+		cols[0](func() {
+			sy.Container(func() {
+				sy.Embed(`<div id="nested-slot" style="padding:8px;border:1px dashed #999;border-radius:8px"></div>
+<script>
+  window.__nestedRuns = (window.__nestedRuns || 0) + 1;
+  document.getElementById("nested-slot").textContent =
+    "Nested widget loaded " + window.__nestedRuns + " time(s).";
+</script>`, sy.Key("nested-ad"))
+			}, sy.Border())
+		})
+		cols[1](func() {
+			sy.Text(fmt.Sprintf("Reruns so far: %d", count.Get()))
+		})
+
+		sy.Divider()
 		sy.Caption("Changing the html for the same key rebuilds the node and runs the loader again:")
 		variant := sy.Toggle("Use alternate widget markup", sy.Key("alt"))
 		html := `<p id="v">Variant A</p><script>document.getElementById("v").textContent += " (script ran)";</script>`

@@ -7,6 +7,13 @@ All notable changes to Syralit are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- Layout containers now keep their DOM shell in place across reruns when a
+  `sy.Embed` below them survived and the container's own props are unchanged
+  (#6). An embed inside `Columns`, `Tabs`, `Expander`, `Container`, `Form`,
+  `Status`, `Dialog`, `Popover`, a chat message, the sidebar or `Bottom` is no
+  longer detached and re-attached — iframes the widget created no longer
+  reload, and switching tabs never touches the embed at all. Changing a
+  container's props (labels, border, state, ...) still rebuilds it.
 - **`sy.Embed(html, opts...)`** (#5) — inserts third-party markup into the
   main document and executes its `<script>`s, for "mount point plus loader"
   integrations (ad slots, comment threads, social embeds, chat widgets) that
@@ -14,8 +21,8 @@ All notable changes to Syralit are documented here. The format is based on
   host. The node is built once per key; reruns with unchanged html reuse the
   element and do not re-run its scripts, and at the top level or inside a
   `Fragment` the element stays attached to the DOM so iframes the widget
-  created don't reload. Changing the html rebuilds and re-runs. Inside layout
-  containers the container is rebuilt, so the embed is re-attached there.
+  created don't reload. Changing the html rebuilds and re-runs. (#6 extends
+  the stays-attached guarantee into layout containers.)
 - **`sy.ResolveConfig(cfg)`** (#4) — returns `cfg` with unset fields filled
   from `syralit.toml` and then the built-in defaults, the same resolution
   `sy.App` and `sy.Handler` perform internally. An app that mounts `sy.Handler`

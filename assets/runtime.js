@@ -215,7 +215,7 @@
         section = el("div", "sy-sidebar-content");
         sidebar.appendChild(section);
       }
-      section.replaceChildren.apply(section, sidebarNodes.map(buildNode));
+      patchChildren(section, sidebarNodes.map(buildNode));
     } else if (section) {
       section.remove();
     }
@@ -414,6 +414,7 @@
     var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
 
     patchChildren(root, nodes.map(buildNode));
+    pruneEmbeds();
 
     if (activeID) {
       var next = root.querySelector('[data-id="' + cssEscape(activeID) + '"]');
@@ -439,7 +440,35 @@
       var cur = parent.childNodes[i];
       if (cur !== n) parent.insertBefore(n, cur || null);
     });
-    pruneEmbeds();
+  }
+
+  // --- Container adoption (issue #6) ------------------------------------
+  // A rebuilt container detaches every reused Embed below it, and a detached
+  // then re-inserted iframe reloads. So when a freshly built child is still
+  // connected mid-build (a reused Embed, or a container that already adopted),
+  // and its current parent was stamped by a same-type container with the same
+  // shell props, the old shell is kept: its children are patched in place and
+  // the stamped outer element is returned. Shell details that may change
+  // without a rebuild (open/active state, trigger buttons) are refreshed by
+  // the caller after adoption. Only reruns with a surviving Embed take this
+  // path; everything else rebuilds exactly as before.
+  function stampHost(host, type, key, outer) {
+    host.__syHost = { type: type, key: key, el: outer || host };
+  }
+
+  function tryAdopt(type, kids, key) {
+    for (var i = 0; i < kids.length; i++) {
+      var k = kids[i];
+      if (k && k.isConnected) {
+        var h = k.parentNode && k.parentNode.__syHost;
+        if (h && h.type === type && h.key === key) {
+          patchChildren(k.parentNode, kids);
+          return h.el;
+        }
+        return null;
+      }
+    }
+    return null;
   }
 
   function buildNode(node) {
@@ -1022,6 +1051,11 @@
   // --- Layout -----------------------------------------------------------
 
   function columns(node, p) {
+    var kids = childNodes(node);
+    var key = JSON.stringify([p.template || "", p.count || 2, p.gap || 0,
+      p.vertical_alignment || "", !!p.border]);
+    var kept = tryAdopt("columns", kids, key);
+    if (kept) return kept;
     var div = el("div", "sy-columns");
     if (p.template) {
       div.style.gridTemplateColumns = p.template;
@@ -1035,17 +1069,26 @@
       div.style.alignItems = va === "center" ? "center" : va === "bottom" ? "flex-end" : "flex-start";
     }
     if (p.border) div.classList.add("sy-columns-bordered");
-    childNodes(node).forEach(function (c) { div.appendChild(c); });
+    kids.forEach(function (c) { div.appendChild(c); });
+    stampHost(div, "columns", key);
     return div;
   }
 
   function column(node) {
+    var kids = childNodes(node);
+    var kept = tryAdopt("column", kids, "");
+    if (kept) return kept;
     var div = el("div", "sy-column");
-    childNodes(node).forEach(function (c) { div.appendChild(c); });
+    kids.forEach(function (c) { div.appendChild(c); });
+    stampHost(div, "column", "");
     return div;
   }
 
   function expander(node, p) {
+    var kids = childNodes(node);
+    var key = JSON.stringify([p.label || "", p.icon || ""]);
+    var kept = tryAdopt("expander", kids, key);
+    if (kept) { kept.open = !!p.expanded; return kept; }
     var details = document.createElement("details");
     details.className = "sy-expander";
     if (p.expanded) details.open = true;
@@ -1054,7 +1097,8 @@
     summary.textContent = p.icon ? (p.icon + " " + p.label) : p.label;
     details.appendChild(summary);
     var content = el("div", "sy-expander-content");
-    childNodes(node).forEach(function (c) { content.appendChild(c); });
+    stampHost(content, "expander", key, details);
+    kids.forEach(function (c) { content.appendChild(c); });
     details.appendChild(content);
     details.addEventListener("toggle", function () {
       send(node.id, details.open, false);
@@ -1063,7 +1107,21 @@
   }
 
   function tabs(node, p) {
-    var wrap = el("div", "sy-tabs");
+    // Panels adopt individually (all tabs are always rendered; switching only
+    // toggles display), so an Embed in any tab survives tab switches too.
+    var panelEls = (node.children || []).map(function (c) {
+      var cp = c.props || {};
+      var kids = (c.children || []).map(buildNode);
+      var pkey = JSON.stringify([node.id || "", cp.label || ""]);
+      var panel = tryAdopt("tab_panel", kids, pkey);
+      if (!panel) {
+        panel = el("div", "sy-tab-panel");
+        kids.forEach(function (gc) { panel.appendChild(gc); });
+        stampHost(panel, "tab_panel", pkey);
+      }
+      panel.style.display = cp.label !== p.active ? "none" : "";
+      return panel;
+    });
     var bar = el("div", "sy-tabs-bar");
     (p.labels || []).forEach(function (label) {
       var btn = el("button", "sy-tab-button", label);
@@ -1071,15 +1129,18 @@
       btn.onclick = function () { send(node.id, label, false); };
       bar.appendChild(btn);
     });
+    var key = JSON.stringify([node.id || "", p.labels || []]);
+    var kept = tryAdopt("tabs", panelEls, key);
+    if (kept) {
+      // The bar is stateful (active class, closures); swap in the fresh one.
+      kept.replaceChild(bar, kept.firstChild);
+      return kept;
+    }
+    var wrap = el("div", "sy-tabs");
     wrap.appendChild(bar);
     var panels = el("div", "sy-tabs-panels");
-    (node.children || []).forEach(function (c) {
-      var panel = el("div", "sy-tab-panel");
-      var cp = c.props || {};
-      if (cp.label !== p.active) panel.style.display = "none";
-      (c.children || []).forEach(function (gc) { panel.appendChild(buildNode(gc)); });
-      panels.appendChild(panel);
-    });
+    stampHost(panels, "tabs", key, wrap);
+    panelEls.forEach(function (pe) { panels.appendChild(pe); });
     wrap.appendChild(panels);
     return wrap;
   }
@@ -1208,14 +1269,21 @@
     var target = root.querySelector('[data-fragment-key="' + key + '"]');
     if (!target) return;
     patchChildren(target, nodes.map(buildNode));
+    pruneEmbeds();
   }
 
   function fragmentEl(node) {
     var p = node.props || {};
     var key = p.key || "";
-    var div = el("div", "sy-fragment");
-    div.setAttribute("data-fragment-key", key);
-    childNodes(node).forEach(function (c) { div.appendChild(c); });
+    var kids = childNodes(node);
+    var hostKey = JSON.stringify([key, p.run_every || 0]);
+    var div = tryAdopt("fragment", kids, hostKey);
+    if (!div) {
+      div = el("div", "sy-fragment");
+      div.setAttribute("data-fragment-key", key);
+      stampHost(div, "fragment", hostKey);
+      kids.forEach(function (c) { div.appendChild(c); });
+    }
     // RunEvery: poll the server to re-run just this fragment on an interval.
     // Reset any prior timer for this key (a full re-render recreates the div).
     if (fragmentTimers[key]) { clearInterval(fragmentTimers[key]); delete fragmentTimers[key]; }
@@ -1229,10 +1297,15 @@
 
   function container(node) {
     var p = node.props || {};
+    var kids = childNodes(node);
+    var key = JSON.stringify([!!p.border, p.height || 0]);
+    var kept = tryAdopt("container", kids, key);
+    if (kept) return kept;
     var div = el("div", "sy-container");
     if (p.border) div.classList.add("sy-container-bordered");
     if (p.height) { div.style.maxHeight = p.height + "px"; div.style.overflowY = "auto"; }
-    childNodes(node).forEach(function (c) { div.appendChild(c); });
+    kids.forEach(function (c) { div.appendChild(c); });
+    stampHost(div, "container", key);
     return div;
   }
 
@@ -1244,8 +1317,13 @@
   }
 
   function bottomEl(node) {
-    var bar = el("div", "sy-bottom");
-    childNodes(node).forEach(function (c) { bar.appendChild(c); });
+    var kids = childNodes(node);
+    var bar = tryAdopt("bottom", kids, "");
+    if (!bar) {
+      bar = el("div", "sy-bottom");
+      stampHost(bar, "bottom", "");
+      kids.forEach(function (c) { bar.appendChild(c); });
+    }
     // Reserve space in the main area so content never hides behind the bar.
     // Deferred: the node is appended to the DOM after this function returns.
     setTimeout(function () {
@@ -1501,6 +1579,10 @@
   }
 
   function statusContainer(node, p) {
+    var skids = childNodes(node);
+    var skey = JSON.stringify([p.label || "", p.state || "running"]);
+    var skept = tryAdopt("status_container", skids, skey);
+    if (skept) return skept;
     var wrap = el("div", "sy-status-container sy-status-container-" + (p.state || "running"));
     var header = el("div", "sy-status-container-header");
     var icon = el("span", "sy-status-container-icon");
@@ -1511,15 +1593,21 @@
     header.appendChild(el("span", "sy-status-container-label", p.label));
     wrap.appendChild(header);
     var body = el("div", "sy-status-container-body");
-    childNodes(node).forEach(function (c) { body.appendChild(c); });
+    stampHost(body, "status_container", skey, wrap);
+    skids.forEach(function (c) { body.appendChild(c); });
     wrap.appendChild(body);
     return wrap;
   }
 
   function formContainer(node) {
+    var kids = childNodes(node);
+    var key = JSON.stringify([node.id || ""]);
+    var kept = tryAdopt("form", kids, key);
+    if (kept) return kept;
     var div = el("div", "sy-form");
     div.dataset.formId = node.id;
-    childNodes(node).forEach(function (c) { div.appendChild(c); });
+    stampHost(div, "form", key);
+    kids.forEach(function (c) { div.appendChild(c); });
     return div;
   }
 
@@ -2241,6 +2329,13 @@
   }
 
   function dialogEl(node, p) {
+    var kids = childNodes(node);
+    var key = JSON.stringify([p.title || "", p.width || 0]);
+    var kept = tryAdopt("dialog", kids, key);
+    if (kept) {
+      kept.classList.toggle("sy-dialog-open", !!p.open);
+      return kept;
+    }
     var outer = el("div", "sy-dialog-backdrop" + (p.open ? " sy-dialog-open" : ""));
     var dialog = el("div", "sy-dialog");
     if (p.width) dialog.style.width = p.width + "px";
@@ -2251,7 +2346,8 @@
     header.appendChild(closeBtn);
     dialog.appendChild(header);
     var body = el("div", "sy-dialog-body");
-    childNodes(node).forEach(function (c) { body.appendChild(c); });
+    stampHost(body, "dialog", key, outer);
+    kids.forEach(function (c) { body.appendChild(c); });
     dialog.appendChild(body);
     outer.appendChild(dialog);
     outer.onclick = function (e) {
@@ -2726,6 +2822,10 @@
   // --- Chat Interface ----------------------------------------------------
 
   function chatMessageEl(node, p) {
+    var ckids = childNodes(node);
+    var ckey = JSON.stringify([p.role || "", p.avatar || ""]);
+    var ckept = tryAdopt("chat_message", ckids, ckey);
+    if (ckept) return ckept;
     var wrap = el("div", "sy-chat-message sy-chat-" + (p.role || "user"));
     var avatar = el("div", "sy-chat-avatar");
     if (p.avatar && /^(https?:|data:|\/)/.test(p.avatar)) {
@@ -2737,7 +2837,8 @@
       avatar.textContent = p.avatar || (p.role === "assistant" ? "🤖" : "👤");
     }
     var content = el("div", "sy-chat-content");
-    childNodes(node).forEach(function (c) { content.appendChild(c); });
+    stampHost(content, "chat_message", ckey, wrap);
+    ckids.forEach(function (c) { content.appendChild(c); });
     wrap.appendChild(avatar);
     wrap.appendChild(content);
     return wrap;
@@ -2946,8 +3047,17 @@
     btn.onclick = function () { if (!p.disabled) send(node.id, !p.open, false); };
     wrap.appendChild(btn);
     if (p.open) {
+      var kids = childNodes(node);
+      var key = JSON.stringify(["popover", node.id || ""]);
+      var kept = tryAdopt("popover", kids, key);
+      if (kept) {
+        // The trigger button is stateful (label, open closure); swap it.
+        kept.replaceChild(btn, kept.firstChild);
+        return kept;
+      }
       var panel = el("div", "sy-popover-panel");
-      childNodes(node).forEach(function (c) { panel.appendChild(c); });
+      stampHost(panel, "popover", key, wrap);
+      kids.forEach(function (c) { panel.appendChild(c); });
       wrap.appendChild(panel);
       setTimeout(function () {
         document.addEventListener("click", function close(e) {

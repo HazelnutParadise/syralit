@@ -4,7 +4,7 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.11.0] - 2026-08-25
 
 ### Added
 - Layout containers now keep their DOM shell in place across reruns when a

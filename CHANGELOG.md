@@ -4,6 +4,14 @@ All notable changes to Syralit are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Insyra bumped to v0.3.4 (core module and `uitest`). Upstream, `ReadJSON` now
+  rejects invalid JSON such as leading-zero numbers, matching `encoding/json`.
+  Insyra v0.3.5 and later require Go 1.26, so Syralit stays on v0.3.4 until its
+  own Go version moves.
+
 ## [0.11.0] - 2026-08-25
 
 ### Added

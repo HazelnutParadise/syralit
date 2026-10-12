@@ -4,6 +4,7 @@
 *.so
 *.dylib
 *.test
+/embed-widget
 
 # Build output
 /bin/

@@ -840,6 +840,13 @@ syi.ListMetrics(dl)                     // count, mean, min, max
 syi.ListDescribe(dl)                    // count/mean/std/min/25%/50%/75%/max
 syi.ListBarChart(dl)                    // also ListLineChart / ListAreaChart
 syi.Histogram(dl, 20)                   // distribution (list-only)
+syi.CandlestickChart(dt,                               // K 線 + technical indicators (quant/ta), Plotly
+    syi.OHLCV{Date: "date", Open: "open", High: "high", Low: "low", Close: "close", Volume: "volume"},
+    syi.Indicators{SMA: []int{5, 20}, Bollinger: &syi.BollingerSpec{N: 20, K: 2},
+        MACD: &syi.MACDSpec{Fast: 12, Slow: 26, Signal: 9}, KD: 9, RSI: 14, Bias: []int{10}})
+// price pane: candles + SMA/EMA/Bollinger; sub-panes: volume, MACD, RSI, KD, Bias.
+// Red = up, green = down (Taiwan); swap with Indicators{UpColor:, DownColor:}.
+// Rows are sorted by date; an indicator that can't be computed is skipped with a warning.
 
 // Statistical analysis (insyra/stats) — rendered in the UI
 syi.Describe(dt)                            // per-column summary table

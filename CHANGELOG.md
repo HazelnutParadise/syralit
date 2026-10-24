@@ -9,6 +9,10 @@ All notable changes to Syralit are documented here. The format is based on
 ### Added
 - `syi.ParseTableWith(name, data, insyra.CSVReadOptions)`: `ParseTable` with explicit
   CSV options, e.g. `RawStrings` to keep IDs like `0050` as text.
+- `syi.CandlestickChart(dt, syi.OHLCV{…}, syi.Indicators{…})`: interactive K-line
+  chart (Plotly) with SMA/EMA/Bollinger overlays and volume, MACD, RSI, KD and
+  Bias (乖離率) sub-panes from Insyra's `quant/ta`. Red-up/green-down by default.
+  New example `examples/insyra-candlestick`.
 
 ### Changed
 - CSV uploads (`UploadTable`/`ParseTable`) now detect the file encoding

@@ -579,6 +579,13 @@ syi.ListBarChart(dl)                    // value over index
 syi.ListLineChart(dl)
 syi.ListAreaChart(dl)
 syi.Histogram(dl, 20)                   // distribution (list-only)
+syi.CandlestickChart(dt,                               // K 線 + technical indicators (quant/ta), Plotly
+    syi.OHLCV{Date: "date", Open: "open", High: "high", Low: "low", Close: "close", Volume: "volume"},
+    syi.Indicators{SMA: []int{5, 20}, Bollinger: &syi.BollingerSpec{N: 20, K: 2},
+        MACD: &syi.MACDSpec{Fast: 12, Slow: 26, Signal: 9}, KD: 9, RSI: 14, Bias: []int{10}})
+// price pane: candles + SMA/EMA/Bollinger; sub-panes: volume, MACD, RSI, KD, Bias.
+// Red = up, green = down (Taiwan); swap with Indicators{UpColor:, DownColor:}.
+// Rows are sorted by date; an indicator that can't be computed is skipped with a warning.
 
 // Statistical analysis (insyra/stats), rendered in the UI
 syi.Describe(dt)                              // full per-column summary table
@@ -921,6 +928,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`mega-demo`](examples/mega-demo/) | 10-page app showcasing every feature: all widgets, charts, layout, forms, data tables, chat, maps, state |
 | [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
+| [`insyra-candlestick`](examples/insyra-candlestick/) | Candlestick chart with SMA/Bollinger/MACD/KD/RSI/Bias indicators |
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 | [`embed-widget`](examples/embed-widget/) | `sy.Embed`: a "mount point + loader script" third-party widget that survives reruns |

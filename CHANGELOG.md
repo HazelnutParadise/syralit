@@ -7,10 +7,12 @@ All notable changes to Syralit are documented here. The format is based on
 ## [Unreleased]
 
 ### Changed
-- Insyra bumped to v0.3.4 (core module and `uitest`). Upstream, `ReadJSON` now
-  rejects invalid JSON such as leading-zero numbers, matching `encoding/json`.
-  Insyra v0.3.5 and later require Go 1.26, so Syralit stays on v0.3.4 until its
-  own Go version moves.
+- Insyra bumped to v0.3.5 (core module and `uitest`). Insyra v0.3.5 requires
+  Go 1.26, so the `go` directive of the core module and every sub-module
+  (`integrations/desktop`, `integrations/oidc`, `uitest`, the desktop/OIDC
+  examples) is now `1.26.9`.
+- The `.xlsx` upload path in `integrations/insyra` uses `insyra.ReadSlice2D`
+  in place of the deprecated `Slice2DToDataTable`.
 
 ## [0.11.0] - 2026-08-25
 

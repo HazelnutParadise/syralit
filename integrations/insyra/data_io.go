@@ -69,7 +69,7 @@ func parseExcel(data []byte) (*insyra.DataTable, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sheet %q: %w", sheet, err)
 	}
-	dt, err := insyra.Slice2DToDataTable(rows)
+	dt, err := insyra.ReadSlice2D(rows)
 	if err != nil {
 		return nil, err
 	}

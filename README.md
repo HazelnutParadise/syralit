@@ -36,7 +36,7 @@ go install github.com/HazelnutParadise/syralit/cmd/syralit@latest
 
 ## Requirements
 
-- Go 1.25+
+- Go 1.26+
 
 ## Quick Start
 

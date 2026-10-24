@@ -2,7 +2,7 @@
 // dependency tree must not leak into the repo's example builds.
 module oidc-login
 
-go 1.25.12
+go 1.26.9
 
 require (
 	github.com/HazelnutParadise/syralit v0.0.0
@@ -16,9 +16,9 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
 
 replace (

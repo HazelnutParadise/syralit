@@ -2,7 +2,7 @@
 // Wails dependency tree must not leak into the repo's example builds.
 module github.com/HazelnutParadise/syralit/examples/desktop-demo
 
-go 1.25.12
+go 1.26.9
 
 require (
 	github.com/HazelnutParadise/syralit v0.0.0
@@ -21,7 +21,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/wailsapp/wails/v3 v3.0.0-alpha2.117 // indirect
 	github.com/yuin/goldmark v1.8.2 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
 
 replace (

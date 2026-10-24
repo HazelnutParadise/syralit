@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/HazelnutParadise/insyra"
 	"github.com/xuri/excelize/v2"
+	"golang.org/x/text/encoding/traditionalchinese"
+	"golang.org/x/text/encoding/unicode"
 )
 
 func TestParseCSV(t *testing.T) {
@@ -46,5 +49,61 @@ func TestParseExcel(t *testing.T) {
 func TestParseUnsupported(t *testing.T) {
 	if _, err := ParseTable("notes.txt", []byte("hello")); err == nil {
 		t.Fatal("expected an error for unsupported extension")
+	}
+}
+
+const csvZh = "股票,收盤\n台積電,1000\n鴻海,200\n聯發科,1500\n中華電,130\n"
+
+func checkZhTable(t *testing.T, dt *insyra.DataTable) {
+	t.Helper()
+	if h := dt.Headers(); len(h) != 2 || h[0] != "股票" || h[1] != "收盤" {
+		t.Fatalf("unexpected headers: %v", h)
+	}
+	rows := dt.To2DSlice()
+	if len(rows) != 4 || rows[0][0] != "台積電" {
+		t.Fatalf("unexpected rows: %v", rows)
+	}
+}
+
+func TestParseCSVBig5(t *testing.T) {
+	data, err := traditionalchinese.Big5.NewEncoder().Bytes([]byte(csvZh))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dt, err := ParseTable("broker.csv", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkZhTable(t, dt)
+}
+
+func TestParseCSVUTF16BOM(t *testing.T) {
+	data, err := unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewEncoder().Bytes([]byte(csvZh))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dt, err := ParseTable("excel.csv", data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkZhTable(t, dt)
+}
+
+func TestParseCSVUTF8BOM(t *testing.T) {
+	dt, err := ParseTable("excel.csv", append([]byte("\xef\xbb\xbf"), csvZh...))
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkZhTable(t, dt)
+}
+
+func TestParseTableWithRawStrings(t *testing.T) {
+	csv := []byte("code,name\n0050,元大台灣50\n0056,元大高股息\n")
+	dt, err := ParseTableWith("etf.csv", csv, insyra.CSVReadOptions{FirstRowToColNames: true, RawStrings: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := dt.To2DSlice()[0][0]; got != "0050" {
+		t.Fatalf("code = %#v, want \"0050\"", got)
 	}
 }

@@ -847,6 +847,12 @@ syi.CandlestickChart(dt,                               // K 線 + technical indi
 // price pane: candles + SMA/EMA/Bollinger; sub-panes: volume, MACD, RSI, KD, Bias.
 // Red = up, green = down (Taiwan); swap with Indicators{UpColor:, DownColor:}.
 // Rows are sorted by date; an indicator that can't be computed is skipped with a warning.
+// Neural-network training views — separate package (pulls in insyra/nn + GPU libs):
+//   import syinn "github.com/HazelnutParadise/syralit/integrations/insyra/nnview"
+syinn.LossChart(result)                      // train (+val) loss per epoch of a nn.FitResult
+h := syinn.FitLive("run1", model, x, y, nn.FitConfig{Epochs: 60, BatchSize: 32, Loss: nn.MSE{}, Optimizer: nn.Adam{Rate: 0.01}})
+// trains in the background (sy.Task) and shows progress bar + growing loss curve + Stop button;
+// h.Done() / h.Running() / h.Result() / h.Err() / h.Cancel(). Don't use the model until h.Done().
 
 // Statistical analysis (insyra/stats) — rendered in the UI
 syi.Describe(dt)                            // per-column summary table

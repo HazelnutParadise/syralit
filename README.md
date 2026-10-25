@@ -586,6 +586,12 @@ syi.CandlestickChart(dt,                               // K 線 + technical indi
 // price pane: candles + SMA/EMA/Bollinger; sub-panes: volume, MACD, RSI, KD, Bias.
 // Red = up, green = down (Taiwan); swap with Indicators{UpColor:, DownColor:}.
 // Rows are sorted by date; an indicator that can't be computed is skipped with a warning.
+// Neural-network training views — separate package (pulls in insyra/nn + GPU libs):
+//   import syinn "github.com/HazelnutParadise/syralit/integrations/insyra/nnview"
+syinn.LossChart(result)                      // train (+val) loss per epoch of a nn.FitResult
+h := syinn.FitLive("run1", model, x, y, nn.FitConfig{Epochs: 60, BatchSize: 32, Loss: nn.MSE{}, Optimizer: nn.Adam{Rate: 0.01}})
+// trains in the background (sy.Task) and shows progress bar + growing loss curve + Stop button;
+// h.Done() / h.Running() / h.Result() / h.Err() / h.Cancel(). Don't use the model until h.Done().
 
 // Statistical analysis (insyra/stats), rendered in the UI
 syi.Describe(dt)                              // full per-column summary table
@@ -930,6 +936,7 @@ The [`examples/`](examples/) directory contains runnable demo apps:
 | [`insyra-demo`](examples/insyra-demo/) | Insyra integration: tables, stats, transforms, file upload, native charts |
 | [`insyra-charts`](examples/insyra-charts/) | Native go-echarts charts (Sankey/gauge/funnel/word cloud) with offline inlining |
 | [`insyra-candlestick`](examples/insyra-candlestick/) | Candlestick chart with SMA/Bollinger/MACD/KD/RSI/Bias indicators |
+| [`insyra-training`](examples/insyra-training/) | Insyra neural-network training with a live progress bar and loss curve (`syinn.FitLive`) |
 | [`insyra-artifact`](examples/insyra-artifact/) | Insyra DSL dynamic computation: `syidsl.DSL` widget and the agent-driveable `insyra` Artifact component |
 | [`embed-scroll`](examples/embed-scroll/) | Themed scrollbars inside embedded `Component` iframes (follow light/dark) |
 | [`embed-widget`](examples/embed-widget/) | `sy.Embed`: a "mount point + loader script" third-party widget that survives reruns |

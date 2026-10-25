@@ -45,6 +45,15 @@
         "./examples/insyra-candlestick"
       ],
       "port": 8603
+    },
+    {
+      "name": "insyra-training",
+      "runtimeExecutable": "go",
+      "runtimeArgs": [
+        "run",
+        "./examples/insyra-training"
+      ],
+      "port": 8603
     }
   ]
 }

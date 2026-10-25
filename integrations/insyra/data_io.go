@@ -36,11 +36,20 @@ func UploadTable(label string, opts ...sy.Option) *insyra.DataTable {
 
 // ParseTable parses raw file bytes into a DataTable by file-name extension.
 // Exposed so callers can parse files from sources other than the uploader
-// (embedded assets, downloads, …).
+// (embedded assets, downloads, …). CSV files are read with the first row as
+// column names and their encoding detected automatically (UTF-8, Big5, GBK,
+// UTF-16 with BOM, …). Use ParseTableWith to change the CSV options.
 func ParseTable(name string, data []byte) (*insyra.DataTable, error) {
+	return ParseTableWith(name, data, insyra.CSVReadOptions{FirstRowToColNames: true})
+}
+
+// ParseTableWith is ParseTable with explicit CSV read options, for example
+// RawStrings to keep IDs such as "0050" as text or Encoding to skip detection.
+// The options only affect .csv files.
+func ParseTableWith(name string, data []byte, csvOpts insyra.CSVReadOptions) (*insyra.DataTable, error) {
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".csv":
-		return insyra.ReadCSV_String(string(data), false, true)
+		return insyra.ReadCSV(bytes.NewReader(data), csvOpts)
 	case ".xlsx", ".xls":
 		return parseExcel(data)
 	case ".json":

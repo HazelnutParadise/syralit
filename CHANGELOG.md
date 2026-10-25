@@ -6,7 +6,15 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- `syi.ParseTableWith(name, data, insyra.CSVReadOptions)`: `ParseTable` with explicit
+  CSV options, e.g. `RawStrings` to keep IDs like `0050` as text.
+
 ### Changed
+- CSV uploads (`UploadTable`/`ParseTable`) now detect the file encoding
+  (UTF-8, Big5, GBK, UTF-16 with BOM, …) via `insyra.ReadCSV`, so Big5 broker
+  exports no longer show up as garbled text. Empty input to `ParseTable` is now
+  an error instead of an empty table (`UploadTable` already ignores empty files).
 - Insyra bumped to v0.3.5 (core module and `uitest`). Insyra v0.3.5 requires
   Go 1.26, so the `go` directive of the core module and every sub-module
   (`integrations/desktop`, `integrations/oidc`, `uitest`, the desktop/OIDC

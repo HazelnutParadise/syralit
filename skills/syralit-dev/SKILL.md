@@ -850,7 +850,8 @@ syi.TTest(dt, "A", "B", false)             // two-sample t-test
 
 // File upload → DataTable (CSV / Excel / JSON; NOT parquet)
 dt := syi.UploadTable("Upload data")       // uploader → *DataTable (nil until uploaded)
-dt, err := syi.ParseTable(name, bytes)     // parse bytes from any source
+dt, err := syi.ParseTable(name, bytes)     // parse bytes from any source (CSV encoding auto-detected: UTF-8/Big5/GBK/UTF-16)
+dt, err := syi.ParseTableWith(name, bytes, insyra.CSVReadOptions{FirstRowToColNames: true, RawStrings: true}) // CSV options, e.g. keep "0050" as text
 
 // Interactive transforms (operate on a Clone — source untouched)
 out := syi.FilterBuilder(dt)               // column/operator/value row filter

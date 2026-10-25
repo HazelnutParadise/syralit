@@ -164,3 +164,12 @@ func TestCandlestickKeepsIntradayTimes(t *testing.T) {
 		t.Errorf("intraday times lost or unsorted: %v", x)
 	}
 }
+
+func TestCandlestickFloatCompactDates(t *testing.T) {
+	dt := ohlcvTable(3, func(i int) any { return float64(20240102 + i) })
+	spec := plotlySpec(t, sy.RenderOnce(func() { CandlestickChart(dt, testCols, Indicators{}) }))
+	x := spec["data"].([]map[string]any)[0]["x"].([]string)
+	if x[0] != "2024-01-02" || x[2] != "2024-01-04" {
+		t.Errorf("float compact dates not converted: %v", x)
+	}
+}

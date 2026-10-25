@@ -142,3 +142,15 @@ func TestFitLiveCancel(t *testing.T) {
 		t.Error("a stopped run should say so")
 	}
 }
+
+func TestFitLiveProgressPanicEndsTheRun(t *testing.T) {
+	model, x, y := toyProblem(t)
+	c := cfg(3)
+	c.Progress = func(nn.FitEpoch) { panic("boom") }
+	var h *FitHandle
+	sy.RenderOnce(func() { h = FitLive("panic", model, x, y, c) })
+	waitDone(t, h)
+	if h.Err() == nil || !strings.Contains(h.Err().Error(), "boom") {
+		t.Fatalf("panic should surface as the run's error, got %v", h.Err())
+	}
+}

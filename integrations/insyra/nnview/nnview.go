@@ -170,11 +170,20 @@ func runFit(st *fitState, model *nn.Sequential, x, y *nn.Tensor, cfg nn.FitConfi
 			userProgress(e)
 		}
 	}
-	res, err := model.FitContext(st.ctx, x, y, cfg)
-	st.cancel()
-	st.mu.Lock()
-	st.res, st.err, st.done = res, err, true
-	st.mu.Unlock()
+	var res *nn.FitResult
+	var err error
+	// A panic (for example in the caller's Progress callback) must still end
+	// the run, or Done would stay false forever.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("training panic: %v", r)
+		}
+		st.cancel()
+		st.mu.Lock()
+		st.res, st.err, st.done = res, err, true
+		st.mu.Unlock()
+	}()
+	res, err = model.FitContext(st.ctx, x, y, cfg)
 }
 
 // renderFit draws the live view from the current snapshot.

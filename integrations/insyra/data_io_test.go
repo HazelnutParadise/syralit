@@ -107,3 +107,20 @@ func TestParseTableWithRawStrings(t *testing.T) {
 		t.Fatalf("code = %#v, want \"0050\"", got)
 	}
 }
+
+func TestParseTableWithExplicitEncoding(t *testing.T) {
+	// A single short column of Big5 text is exactly what detection can guess wrong.
+	data, err := traditionalchinese.Big5.NewEncoder().Bytes([]byte(csvZh))
+	if err != nil {
+		t.Fatal(err)
+	}
+	dt, err := ParseTableWith("broker.csv", data, insyra.CSVReadOptions{FirstRowToColNames: true, Encoding: "big5"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkZhTable(t, dt)
+	bad, err := ParseTableWith("broker.csv", data, insyra.CSVReadOptions{FirstRowToColNames: true, Encoding: "utf-8"})
+	if err == nil && bad.Headers()[0] == "股票" {
+		t.Fatal("forcing utf-8 on Big5 bytes must not decode correctly")
+	}
+}

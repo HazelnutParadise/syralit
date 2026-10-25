@@ -9,6 +9,8 @@ All notable changes to Syralit are documented here. The format is based on
 ### Added
 - `syi.ParseTableWith(name, data, insyra.CSVReadOptions)`: `ParseTable` with explicit
   CSV options, e.g. `RawStrings` to keep IDs like `0050` as text.
+- `syi.UploadTableWith(label, insyra.CSVReadOptions, …)`: `UploadTable` with explicit
+  CSV options, including `Encoding` (e.g. `"big5"`) to override auto-detection.
 - `syi.CandlestickChart(dt, syi.OHLCV{…}, syi.Indicators{…})`: interactive K-line
   chart (Plotly) with SMA/EMA/Bollinger overlays and volume, MACD, RSI, KD and
   Bias (乖離率) sub-panes from Insyra's `quant/ta`. Red-up/green-down by default.
@@ -25,6 +27,10 @@ All notable changes to Syralit are documented here. The format is based on
   examples) is now `1.26.9`.
 - The `.xlsx` upload path in `integrations/insyra` uses `insyra.ReadSlice2D`
   in place of the deprecated `Slice2DToDataTable`.
+
+### Fixed
+- `CandlestickChart` keeps intraday times of `time.Time` date cells and reads
+  float-typed compact dates such as `20240102.0`.
 
 ## [0.11.0] - 2026-08-25
 

@@ -22,11 +22,24 @@ import (
 // every app that uses this adapter. Read parquet directly with
 // github.com/HazelnutParadise/insyra/parquet and pass the result to Table.
 func UploadTable(label string, opts ...sy.Option) *insyra.DataTable {
+	return UploadTableWith(label, insyra.CSVReadOptions{FirstRowToColNames: true}, opts...)
+}
+
+// UploadTableWith is UploadTable with explicit CSV read options. Set
+// csvOpts.Encoding to skip auto-detection, for example "big5", "gbk",
+// "gb18030", "shift_jis" or "utf-8"; the default "" (or "auto") detects it.
+// Let end users correct a wrong guess with a selector:
+//
+//	enc := sy.SelectBox("Encoding", []string{"auto", "utf-8", "big5", "gbk"})
+//	dt := syi.UploadTableWith("CSV", insyra.CSVReadOptions{FirstRowToColNames: true, Encoding: enc})
+//
+// The options only affect .csv files.
+func UploadTableWith(label string, csvOpts insyra.CSVReadOptions, opts ...sy.Option) *insyra.DataTable {
 	f := sy.FileUploader(label, opts...)
 	if f == nil || len(f.Data) == 0 {
 		return nil
 	}
-	dt, err := ParseTable(f.Name, f.Data)
+	dt, err := ParseTableWith(f.Name, f.Data, csvOpts)
 	if err != nil {
 		sy.Exception(err)
 		return nil
@@ -44,7 +57,9 @@ func ParseTable(name string, data []byte) (*insyra.DataTable, error) {
 }
 
 // ParseTableWith is ParseTable with explicit CSV read options, for example
-// RawStrings to keep IDs such as "0050" as text or Encoding to skip detection.
+// RawStrings to keep IDs such as "0050" as text or Encoding (e.g. "big5") to
+// skip encoding detection. An unrecognised Encoding name leaves the bytes
+// undecoded, so use common names such as utf-8, big5, gbk, gb18030, shift_jis.
 // The options only affect .csv files.
 func ParseTableWith(name string, data []byte, csvOpts insyra.CSVReadOptions) (*insyra.DataTable, error) {
 	switch strings.ToLower(filepath.Ext(name)) {

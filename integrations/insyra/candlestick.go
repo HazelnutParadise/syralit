@@ -166,6 +166,9 @@ func dateLabel(v any) string {
 		}
 		return t.Format("2006-01-02 15:04:05") // keep intraday bars apart and ordered
 	}
+	if f, ok := v.(float64); ok && f == math.Trunc(f) && math.Abs(f) < 1e15 {
+		v = int64(f) // 2.0240102e+07 would otherwise miss the compact-date match
+	}
 	s := fmt.Sprint(v)
 	if m := compactDate.FindStringSubmatch(s); m != nil {
 		return m[1] + "-" + m[2] + "-" + m[3]

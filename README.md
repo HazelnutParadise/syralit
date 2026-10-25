@@ -598,6 +598,7 @@ syi.TTest(dt, "A", "B", false)               // two-sample t-test
 dt := syi.UploadTable("Upload data")         // file uploader → *DataTable
 dt, err := syi.ParseTable(name, bytes)       // parse bytes from any source (CSV encoding auto-detected: UTF-8/Big5/GBK/UTF-16)
 dt, err := syi.ParseTableWith(name, bytes, insyra.CSVReadOptions{FirstRowToColNames: true, RawStrings: true}) // CSV options, e.g. keep "0050" as text
+dt := syi.UploadTableWith("Upload CSV", insyra.CSVReadOptions{FirstRowToColNames: true, Encoding: "big5"}) // force an encoding ("auto" = detect)
 
 // Interactive transforms (non-destructive)
 out := syi.FilterBuilder(dt)                 // column/op/value row filter

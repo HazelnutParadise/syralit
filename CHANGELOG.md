@@ -6,6 +6,8 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-25
+
 ### Added
 - New package `integrations/insyra/nnview` (`syinn`): `LossChart(*nn.FitResult)` plots
   train/validation loss per epoch; `FitLive(key, model, x, y, cfg)` trains an

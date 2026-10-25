@@ -36,6 +36,15 @@
         "./examples/embed-widget"
       ],
       "port": 8603
+    },
+    {
+      "name": "insyra-candlestick",
+      "runtimeExecutable": "go",
+      "runtimeArgs": [
+        "run",
+        "./examples/insyra-candlestick"
+      ],
+      "port": 8603
     }
   ]
 }

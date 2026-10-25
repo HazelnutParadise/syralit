@@ -161,7 +161,10 @@ var compactDate = regexp.MustCompile(`^(\d{4})(\d{2})(\d{2})$`)
 // axis; a number such as 20240102 becomes 2024-01-02.
 func dateLabel(v any) string {
 	if t, ok := v.(time.Time); ok {
-		return t.Format("2006-01-02")
+		if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 {
+			return t.Format("2006-01-02")
+		}
+		return t.Format("2006-01-02 15:04:05") // keep intraday bars apart and ordered
 	}
 	s := fmt.Sprint(v)
 	if m := compactDate.FindStringSubmatch(s); m != nil {

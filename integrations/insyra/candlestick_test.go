@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"testing"
+	"time"
 
 	sy "github.com/HazelnutParadise/syralit"
 
@@ -151,5 +152,15 @@ func TestCandlestickNilTable(t *testing.T) {
 	tree := sy.RenderOnce(func() { CandlestickChart(nil, testCols, Indicators{}) })
 	if len(tree.Find("plotly_chart")) != 0 {
 		t.Error("nil table should draw nothing")
+	}
+}
+
+func TestCandlestickKeepsIntradayTimes(t *testing.T) {
+	base := time.Date(2024, 1, 2, 9, 0, 0, 0, time.UTC)
+	dt := ohlcvTable(6, func(i int) any { return base.Add(time.Duration(5-i) * time.Minute) }) // descending
+	spec := plotlySpec(t, sy.RenderOnce(func() { CandlestickChart(dt, testCols, Indicators{}) }))
+	x := spec["data"].([]map[string]any)[0]["x"].([]string)
+	if x[0] != "2024-01-02 09:00:00" || x[5] != "2024-01-02 09:05:00" {
+		t.Errorf("intraday times lost or unsorted: %v", x)
 	}
 }

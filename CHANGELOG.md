@@ -7,6 +7,12 @@ All notable changes to Syralit are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- New package `integrations/insyra/nnview` (`syinn`): `LossChart(*nn.FitResult)` plots
+  train/validation loss per epoch; `FitLive(key, model, x, y, cfg)` trains an
+  `insyra/nn` model in the background with a live progress bar, loss curve and
+  Stop button, returning a handle (`Done`/`Running`/`Result`/`Err`/`Cancel`).
+  Separate package so apps that don't train models don't link `insyra/nn`.
+  New example `examples/insyra-training`.
 - `syi.ParseTableWith(name, data, insyra.CSVReadOptions)`: `ParseTable` with explicit
   CSV options, e.g. `RawStrings` to keep IDs like `0050` as text.
 - `syi.UploadTableWith(label, insyra.CSVReadOptions, …)`: `UploadTable` with explicit

@@ -32,6 +32,13 @@
   var usingSSE = false;    // true once we've fallen back to the SSE transport
   var wsEverOpened = false;
   var sessionId = "";      // SSE transport: correlates POSTs with the SSE stream
+  // Every frame carries this tab's id and a rising seq; pushes echo the highest
+  // seq the server handled per tab ("acks"). textSeq remembers the seq of the
+  // latest keystroke sent for each text widget, so a tree that answers an
+  // older frame cannot roll back the box the user is still typing in.
+  var clientId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  var frameSeq = 0;
+  var textSeq = {};        // widget id -> seq of the latest value sent from it
 
   // syAsset resolves a third-party library URL, honoring any override set via
   // sy.SetAssetURL (window.__SY_ASSETS) so libs can be self-hosted for offline.
@@ -44,16 +51,20 @@
     switch (msg.type) {
       case "ui_patch":
         hideOverlay();
+        var focus = captureFocus();
         if (msg.pages || msg.sidebar) {
           renderSidebar(msg.pages || [], msg.active_page || "", msg.sidebar || []);
         }
         if (msg.page_config) applyPageConfig(msg.page_config);
         if (msg.set_query) applyQueryParams(msg.set_query);
         render(msg.nodes || []);
+        restoreFocus(focus, msg.acks);
         if (msg.toasts) msg.toasts.forEach(handleToast);
         break;
       case "fragment_patch":
+        var fragFocus = captureFocus();
         patchFragment(msg.fragment_key, msg.nodes || []);
+        restoreFocus(fragFocus, msg.acks);
         if (msg.set_query) applyQueryParams(msg.set_query);
         if (msg.toasts) msg.toasts.forEach(handleToast);
         break;
@@ -146,10 +157,16 @@
   }
 
   // sendMsg routes a client frame to the active transport.
+  // It returns the frame's seq, or 0 when no transport could take it.
   function sendMsg(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) {
+      obj.client = clientId;
+      obj.seq = ++frameSeq;
       ws.send(JSON.stringify(obj));
+      return obj.seq;
     } else if (usingSSE) {
+      obj.client = clientId;
+      obj.seq = ++frameSeq;
       obj.session_id = sessionId;
       fetch(SY_BASE + "/_syralit/msg", {
         method: "POST",
@@ -157,7 +174,9 @@
         body: JSON.stringify(obj),
         keepalive: true,
       });
+      return obj.seq;
     }
+    return 0;
   }
 
   // --- Sidebar ---------------------------------------------------------
@@ -340,12 +359,19 @@
   // --- Widget communication --------------------------------------------
 
   function send(widgetID, value, isButton) {
-    sendMsg({
+    return sendMsg({
       type: "widget_change",
       widget_id: widgetID,
       value: value,
       is_button: !!isButton,
     });
+  }
+
+  // sendText sends a keystroke-driven text value and remembers its seq, so
+  // restoreFocus can keep what the user typed while older trees arrive.
+  function sendText(widgetID, value) {
+    var seq = send(widgetID, value, false);
+    if (seq) textSeq[widgetID] = seq;
   }
 
   function submitForm(formEl, submitId) {
@@ -408,22 +434,43 @@
   // --- Render ----------------------------------------------------------
 
   function render(nodes) {
-    var active = document.activeElement;
-    var activeID = active && active.dataset ? active.dataset.id : null;
-    var selStart = active && "selectionStart" in active ? active.selectionStart : null;
-    var selEnd = active && "selectionEnd" in active ? active.selectionEnd : null;
-
     patchChildren(root, nodes.map(buildNode));
     pruneEmbeds();
+  }
 
-    if (activeID) {
-      var next = root.querySelector('[data-id="' + cssEscape(activeID) + '"]');
-      if (next && typeof next.focus === "function") {
-        next.focus();
-        if (selStart != null && "setSelectionRange" in next) {
-          try { next.setSelectionRange(selStart, selEnd); } catch (e) {}
-        }
+  // captureFocus records the focused widget before a patch rebuilds it.
+  function captureFocus() {
+    var a = document.activeElement;
+    if (!a || !a.dataset || !a.dataset.id) return null;
+    var sel = "selectionStart" in a;
+    return {
+      el: a,
+      id: a.dataset.id,
+      value: a.value,
+      selStart: sel ? a.selectionStart : null,
+      selEnd: sel ? a.selectionEnd : null,
+    };
+  }
+
+  // restoreFocus moves focus and caret onto the rebuilt widget. When the tree
+  // answers a frame older than the latest keystroke sent from that widget, its
+  // value is stale (more was typed while the rerun ran), so the box keeps what
+  // the user typed. A tree that answers the latest keystroke, or a server-side
+  // change such as ResetWidget, is applied as sent.
+  function restoreFocus(f, acks) {
+    if (!f) return;
+    var next = document.querySelector('[data-id="' + cssEscape(f.id) + '"]');
+    if (!next || typeof next.focus !== "function") return;
+    if (next !== f.el) {
+      var acked = acks ? acks[clientId] : undefined;
+      if (textSeq[f.id] && acked != null && acked < textSeq[f.id] &&
+          "value" in next && next.value !== f.value) {
+        next.value = f.value;
       }
+    }
+    next.focus();
+    if (f.selStart != null && "setSelectionRange" in next) {
+      try { next.setSelectionRange(f.selStart, f.selEnd); } catch (e) {}
     }
   }
 
@@ -623,7 +670,7 @@
     if (p.disabled) input.disabled = true;
     if (p.max_chars) input.maxLength = p.max_chars;
     input.oninput = function () {
-      if (!inForm(input)) send(node.id, input.value, false);
+      if (!inForm(input)) sendText(node.id, input.value);
     };
     if (p.formula) {
       // Formula-bar look: fx marker inside the box, input borderless within.
@@ -874,7 +921,7 @@
     if (p.placeholder) ta.placeholder = p.placeholder;
     if (p.disabled) ta.disabled = true;
     ta.oninput = function () {
-      if (!inForm(ta)) send(node.id, ta.value, false);
+      if (!inForm(ta)) sendText(node.id, ta.value);
     };
     return field(p.label, ta, p.help);
   }

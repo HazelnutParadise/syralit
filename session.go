@@ -37,6 +37,10 @@ type session struct {
 	clearOnSubmit map[string]bool   // form id -> reset inputs after submit
 	formWidgets   map[string]string // widget id -> form id (members of a form)
 
+	// acks maps a browser tab's client id to the highest frame seq handled for
+	// it; pushes echo it so the tab can spot trees that predate its typing.
+	acks map[string]int64
+
 	wake chan struct{} // server-initiated rerun signal (background Tasks)
 	sink uiSink        // SSE transport: where pushes go for POST-driven updates
 }
@@ -126,6 +130,33 @@ func (s *session) resetTransient() {
 	s.mu.Lock()
 	clear(s.transient)
 	s.mu.Unlock()
+}
+
+// maxAckClients caps how many tabs' acks one session remembers. A normal
+// session serves one tab; the dev supervisor shares one child session among
+// every tab and reload, which would otherwise grow the map without bound.
+const maxAckClients = 16
+
+// recordAck notes that frame seq from client has been handled. Frames without
+// a client id (older runtimes, supervisor-internal frames) are ignored.
+func (s *session) recordAck(client string, seq int64) {
+	if client == "" || seq <= 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.acks == nil {
+		s.acks = map[string]int64{}
+	}
+	if _, ok := s.acks[client]; !ok && len(s.acks) >= maxAckClients {
+		for k := range s.acks {
+			delete(s.acks, k)
+			break
+		}
+	}
+	if seq > s.acks[client] {
+		s.acks[client] = seq
+	}
 }
 
 // applyChange records an incoming widget_change from the browser. Buttons are

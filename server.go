@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"maps"
 	"net/http"
 	"os"
 	"strings"
@@ -321,6 +322,11 @@ type clientMsg struct {
 	State       *sessionState  `json:"state,omitempty"`        // for __dev_restore
 	FragmentKey string         `json:"fragment_key,omitempty"` // for fragment_rerun
 	SessionID   string         `json:"session_id,omitempty"`   // SSE transport (POST /_syralit/msg)
+	// Client and Seq identify a browser tab and the order of its frames. Every
+	// push echoes the highest Seq handled per Client ("acks"), so the tab can
+	// tell a tree that predates its latest keystroke from a current one.
+	Client string `json:"client,omitempty"`
+	Seq    int64  `json:"seq,omitempty"`
 }
 
 type widgetChange struct {
@@ -409,6 +415,7 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 // handleClientMsg processes one inbound frame, pushing any resulting UI through
 // sink. It returns false if the connection should be torn down (write error).
 func (s *server) handleClientMsg(sink uiSink, sess *session, msg clientMsg) bool {
+	sess.recordAck(msg.Client, msg.Seq)
 	switch msg.Type {
 	case "widget_change":
 		sess.applyChange(msg.WidgetID, msg.Value, msg.IsButton)
@@ -516,6 +523,9 @@ func pushUI(sink uiSink, sess *session, transforms ...func(*Node)) error {
 	}
 
 	sess.mu.Lock()
+	if len(sess.acks) > 0 {
+		msg["acks"] = maps.Clone(sess.acks)
+	}
 	if sess.queryDirty {
 		msg["set_query"] = cloneStrMap(sess.queryParams)
 		sess.queryDirty = false
@@ -586,6 +596,9 @@ func pushFragmentUI(sink uiSink, sess *session, key string, fn func()) error {
 	}
 
 	sess.mu.Lock()
+	if len(sess.acks) > 0 {
+		msg["acks"] = maps.Clone(sess.acks)
+	}
 	if sess.queryDirty {
 		msg["set_query"] = cloneStrMap(sess.queryParams)
 		sess.queryDirty = false

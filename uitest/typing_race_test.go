@@ -3,6 +3,7 @@ package uitest
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -43,6 +44,9 @@ func raceApp() {
 	})
 
 	resettable := sy.TextInput("Resettable", sy.Key("resettable"))
+	if resettable != "" {
+		time.Sleep(typingRaceDelay)
+	}
 	if resettable == "reset" {
 		sy.ResetWidget("resettable")
 		sy.Rerun()
@@ -52,6 +56,22 @@ func raceApp() {
 func startRaceServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(sy.Handler(sy.Config{Title: "Race"}, raceApp))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// startRaceServerSSE refuses the WebSocket upgrade so the runtime falls back
+// to SSE, where each frame is its own POST.
+func startRaceServerSSE(t *testing.T) *httptest.Server {
+	t.Helper()
+	h := sy.Handler(sy.Config{Title: "Race"}, raceApp)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/_syralit/ws" {
+			http.NotFound(w, r)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}))
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -231,5 +251,50 @@ func TestRaceResetWidgetClearsInput(t *testing.T) {
 
 	if got := raceInputValue(t, ctx, raceResetInput); got != "" {
 		t.Fatalf("input value = %q, want empty after ResetWidget", got)
+	}
+}
+
+func TestRaceSSEFastTypingKeepsFullValue(t *testing.T) {
+	srv := startRaceServerSSE(t)
+	ctx, cancel := browser(t)
+	defer cancel()
+
+	openRaceApp(t, ctx, srv.URL)
+	typeRace(t, ctx, raceSlowInput, "abcdefgh")
+	waitRaceText(t, ctx, "echo:abcdefgh")
+
+	if got := raceInputValue(t, ctx, raceSlowInput); got != "abcdefgh" {
+		t.Fatalf("input value = %q, want %q", got, "abcdefgh")
+	}
+}
+
+// A RunEvery fragment rerun must not touch a focused input it did not rebuild:
+// the selection, including its direction, stays as the user left it.
+func TestRaceFragmentTickKeepsOtherSelection(t *testing.T) {
+	app := func() {
+		sy.TextInput("Outside", sy.Key("outside"), sy.DefaultValue("abcdef"))
+		sy.Fragment("tick", func() { sy.Text(time.Now().Format(time.RFC3339Nano)) },
+			sy.RunEvery(100*time.Millisecond))
+	}
+	srv := httptest.NewServer(sy.Handler(sy.Config{Title: "Tick"}, app))
+	t.Cleanup(srv.Close)
+	ctx, cancel := browser(t)
+	defer cancel()
+
+	var dir string
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(srv.URL),
+		chromedp.WaitVisible(`input[data-id="outside"]`, chromedp.ByQuery),
+		chromedp.Evaluate(`(function(){var el=document.querySelector('input[data-id="outside"]');`+
+			`el.focus();el.setSelectionRange(1,4,"backward");})()`, nil),
+		chromedp.Sleep(800*time.Millisecond), // several fragment ticks
+		chromedp.Evaluate(`(function(){var el=document.activeElement;`+
+			`return el.dataset.id+":"+el.selectionStart+"-"+el.selectionEnd+":"+el.selectionDirection;})()`, &dir),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dir != "outside:1-4:backward" {
+		t.Fatalf("selection after fragment ticks = %q, want outside:1-4:backward", dir)
 	}
 }

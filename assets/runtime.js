@@ -39,6 +39,7 @@
   var clientId = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var frameSeq = 0;
   var textSeq = {};        // widget id -> seq of the latest value sent from it
+  var ssePosts = Promise.resolve(); // SSE: POSTs go out one after another
 
   // syAsset resolves a third-party library URL, honoring any override set via
   // sy.SetAssetURL (window.__SY_ASSETS) so libs can be self-hosted for offline.
@@ -168,12 +169,18 @@
       obj.client = clientId;
       obj.seq = ++frameSeq;
       obj.session_id = sessionId;
-      fetch(SY_BASE + "/_syralit/msg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(obj),
-        keepalive: true,
-      });
+      // Parallel POSTs can reach the server out of order, letting an older
+      // keystroke overwrite a newer value; chain them so each waits for the
+      // previous one (the server answers after its rerun is pushed).
+      var body = JSON.stringify(obj);
+      ssePosts = ssePosts.then(function () {
+        return fetch(SY_BASE + "/_syralit/msg", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: body,
+          keepalive: true,
+        });
+      }).catch(function () {});
       return obj.seq;
     }
     return 0;
@@ -449,6 +456,7 @@
       value: a.value,
       selStart: sel ? a.selectionStart : null,
       selEnd: sel ? a.selectionEnd : null,
+      selDir: sel ? a.selectionDirection : null,
     };
   }
 
@@ -460,17 +468,17 @@
   function restoreFocus(f, acks) {
     if (!f) return;
     var next = document.querySelector('[data-id="' + cssEscape(f.id) + '"]');
-    if (!next || typeof next.focus !== "function") return;
-    if (next !== f.el) {
-      var acked = acks ? acks[clientId] : undefined;
-      if (textSeq[f.id] && acked != null && acked < textSeq[f.id] &&
-          "value" in next && next.value !== f.value) {
-        next.value = f.value;
-      }
+    // Not rebuilt (outside the patched fragment): it still has its focus,
+    // caret and selection direction, so leave it alone.
+    if (!next || next === f.el || typeof next.focus !== "function") return;
+    var acked = acks ? acks[clientId] : undefined;
+    if (textSeq[f.id] && acked != null && acked < textSeq[f.id] &&
+        "value" in next && next.value !== f.value) {
+      next.value = f.value;
     }
     next.focus();
     if (f.selStart != null && "setSelectionRange" in next) {
-      try { next.setSelectionRange(f.selStart, f.selEnd); } catch (e) {}
+      try { next.setSelectionRange(f.selStart, f.selEnd, f.selDir || "none"); } catch (e) {}
     }
   }
 

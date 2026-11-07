@@ -117,7 +117,10 @@ func (s *server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-sess.wake:
-			if err := pushUI(sink, sess); err != nil {
+			sess.handleMu.Lock()
+			err := pushUI(sink, sess)
+			sess.handleMu.Unlock()
+			if err != nil {
 				return
 			}
 		}

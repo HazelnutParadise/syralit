@@ -415,6 +415,8 @@ func (s *server) handleWS(w http.ResponseWriter, r *http.Request) {
 // handleClientMsg processes one inbound frame, pushing any resulting UI through
 // sink. It returns false if the connection should be torn down (write error).
 func (s *server) handleClientMsg(sink uiSink, sess *session, msg clientMsg) bool {
+	sess.handleMu.Lock()
+	defer sess.handleMu.Unlock()
 	sess.recordAck(msg.Client, msg.Seq)
 	switch msg.Type {
 	case "widget_change":

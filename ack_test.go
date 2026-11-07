@@ -101,7 +101,25 @@ func TestRecordAckCapsClients(t *testing.T) {
 	}
 	s.recordAck(last, 0)
 	s.recordAck("", 9)
+	s.recordAck(strings.Repeat("x", maxClientIDLen+1), 9)
 	if s.acks[last] != 1 || len(s.acks) != maxAckClients {
-		t.Fatalf("zero seq or empty client should be ignored: %v", s.acks)
+		t.Fatalf("zero seq, empty or oversized client should be ignored: %v", s.acks)
+	}
+}
+
+// The tab that sent a frame least recently is evicted, not an arbitrary one,
+// so a tab that is still typing keeps its ack.
+func TestRecordAckEvictsStalestClient(t *testing.T) {
+	s := newSession(nil)
+	for i := range maxAckClients {
+		s.recordAck(fmt.Sprintf("c%d", i), 1)
+	}
+	s.recordAck("c0", 2) // c0 is active again; c1 is now the stalest
+	s.recordAck("new", 1)
+	if _, ok := s.acks["c1"]; ok {
+		t.Fatalf("stalest client c1 should have been evicted: %v", s.acks)
+	}
+	if s.acks["c0"] != 2 || s.acks["new"] != 1 {
+		t.Fatalf("active clients lost: %v", s.acks)
 	}
 }

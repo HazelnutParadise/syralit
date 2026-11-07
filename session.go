@@ -37,6 +37,19 @@ type session struct {
 	clearOnSubmit map[string]bool   // form id -> reset inputs after submit
 	formWidgets   map[string]string // widget id -> form id (members of a form)
 
+	// acks maps a browser tab's client id to the highest frame seq handled for
+	// it; pushes echo it so the tab can spot trees that predate its typing.
+	// ackSeen orders the tabs by last frame, for evicting the stalest one.
+	acks    map[string]int64
+	ackSeen map[string]uint64
+	ackTick uint64
+
+	// handleMu serializes frame handling and pushes for one session. A
+	// WebSocket session already handles one frame at a time; SSE handles each
+	// POST on its own goroutine, where an ack recorded mid-rerun would
+	// otherwise be echoed on a tree that never saw that frame.
+	handleMu sync.Mutex
+
 	wake chan struct{} // server-initiated rerun signal (background Tasks)
 	sink uiSink        // SSE transport: where pushes go for POST-driven updates
 }
@@ -126,6 +139,44 @@ func (s *session) resetTransient() {
 	s.mu.Lock()
 	clear(s.transient)
 	s.mu.Unlock()
+}
+
+// maxAckClients caps how many tabs' acks one session remembers. A normal
+// session serves one tab; the dev supervisor shares one child session among
+// every tab and reload, which would otherwise grow the map without bound.
+const maxAckClients = 16
+
+// maxClientIDLen bounds a client id; the runtime sends about 20 characters.
+const maxClientIDLen = 64
+
+// recordAck notes that frame seq from client has been handled. Frames without
+// a usable client id (older runtimes, supervisor-internal frames) are ignored.
+// When the map is full, the tab that sent a frame least recently is dropped.
+func (s *session) recordAck(client string, seq int64) {
+	if client == "" || len(client) > maxClientIDLen || seq <= 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.acks == nil {
+		s.acks = map[string]int64{}
+		s.ackSeen = map[string]uint64{}
+	}
+	if _, ok := s.acks[client]; !ok && len(s.acks) >= maxAckClients {
+		stalest, oldest := "", uint64(0)
+		for k, t := range s.ackSeen {
+			if stalest == "" || t < oldest {
+				stalest, oldest = k, t
+			}
+		}
+		delete(s.acks, stalest)
+		delete(s.ackSeen, stalest)
+	}
+	s.ackTick++
+	s.ackSeen[client] = s.ackTick
+	if seq > s.acks[client] {
+		s.acks[client] = seq
+	}
 }
 
 // applyChange records an incoming widget_change from the browser. Buttons are

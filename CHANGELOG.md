@@ -6,6 +6,17 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+### Fixed
+- `TextInput`, `PasswordInput` and `TextArea` outside a form no longer lose
+  keystrokes or jump the caret back when typing faster than the rerun round
+  trip (#13). Each client frame now carries a sequence number and every push
+  echoes the latest one handled, so a tree that answers an older keystroke
+  keeps what the user has typed. Server-side changes such as `ResetWidget` still
+  apply. Over the SSE fallback, frames from one tab are now sent in order and
+  handled one at a time, so fast typing no longer drops characters there either.
+- Typing into a text input inside a `Fragment` no longer drops focus after each
+  keystroke; fragment reruns now restore focus and caret like full reruns.
+
 ## [0.12.0] - 2026-10-25
 
 ### Added

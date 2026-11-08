@@ -6,6 +6,8 @@ All notable changes to Syralit are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-11-08
+
 ### Fixed
 - `TextInput`, `PasswordInput` and `TextArea` outside a form no longer lose
   keystrokes or jump the caret back when typing faster than the rerun round
